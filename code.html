@@ -3,51 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>VL13 - Supabase Dashboard</title>
-<style>
-  :root{
-    --bg:#e9ecef;
-    --card:#edf0f3;
-    --muted:#777;
-    --radius:16px;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
-  body{
-    background: linear-gradient(180deg, #eef2f5 0%, #e6eaee 100%);
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding:32px;
-    color:#222;
-  }
-  .wrap{width:95%; max-width:1100px;}
-  header{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
-  h1{font-size:20px;margin:0;}
-  .sub{color:var(--muted); font-size:13px;}
-  .card{background:var(--card); border-radius:var(--radius); padding:20px; box-shadow:9px 9px 20px rgba(163,177,198,0.35), -9px -9px 20px rgba(255,255,255,0.9); margin-bottom:18px;}
-  .controls{display:flex; gap:8px; align-items:center;}
-  .btn{background:var(--card); border:none; padding:10px 14px; border-radius:12px; box-shadow:5px 5px 10px rgba(163,177,198,0.25), -5px -5px 10px rgba(255,255,255,0.9); cursor:pointer; font-weight:600;}
-  .btn:active{transform:translateY(1px);}
-  .table-wrap{overflow:auto; max-height:450px; border-radius:12px; box-shadow: inset 3px 3px 8px rgba(163,177,198,0.08), inset -3px -3px 8px rgba(255,255,255,0.9);}
-  table{width:100%; border-collapse:collapse; min-width:600px;}
-  thead th{position:sticky; top:0; background: linear-gradient(180deg,#f6f7f9,#eef2f3); padding:12px 14px; text-align:left; font-size:13px; color:#333; border-bottom:1px solid #e0e6ec;}
-  tbody td{padding:11px 14px; background:#fff; border-bottom:1px solid #f1f4f7; font-size:13px; color:#222;}
-  tr:nth-child(even) td{background: linear-gradient(90deg,#ffffff,#fbfdff);}
-  .info{font-size:13px;color:var(--muted);margin-top:8px}
-  .error{color:#b00020;font-weight:700}
-  .small{font-size:12px;color:#666}
-</style>
+<title>VL13 Dashboard</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div>
-      <h1>📊 VL13 - Supabase Dashboard</h1>
+      <h1>📊 VL13 Dashboard</h1>
       <div class="sub">Tablo: <strong>VL13</strong> — İlk 4 alan gösteriliyor</div>
     </div>
     <div class="controls">
       <button id="refreshBtn" class="btn">Yenile</button>
-      <button id="downloadBtn" class="btn">Excel'den Yükle (placeholder)</button>
       <button id="approveBtn" class="btn">Onayla</button>
     </div>
   </header>
@@ -68,105 +35,94 @@
   </div>
 </div>
 
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<script>
+const refreshBtn = document.getElementById('refreshBtn');
+const approveBtn = document.getElementById('approveBtn');
+const statusEl = document.getElementById('status');
+const theadRow = document.getElementById('theadRow');
+const tbody = document.getElementById('tbody');
+const meta = document.getElementById('meta');
 
-const SUPABASE_URL = "https://vhxjyfappvmtwfdkhkoc.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeGp5ZmFwcHZtdHdmZGtoa29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MDUxMzEsImV4cCI6MjA3NzE4MTEzMX0.p0N5O5kOz0c9Fu1AJ7EnM97FPupNsy9NK4dvLBIL9eU";
-const TABLE_NAME = "VL13";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const statusEl = document.getElementById("status");
-const theadRow = document.getElementById("theadRow");
-const tbody = document.getElementById("tbody");
-const meta = document.getElementById("meta");
-const refreshBtn = document.getElementById("refreshBtn");
-const approveBtn = document.getElementById("approveBtn");
-
-refreshBtn.addEventListener("click", fetchAndRender);
-approveBtn.addEventListener("click", handleApproval);
+refreshBtn.addEventListener('click', fetchAndRender);
+approveBtn.addEventListener('click', handleApproval);
 
 async function fetchAndRender(){
-  statusEl.textContent = "Supabase'den veri çekiliyor...";
+  statusEl.textContent = 'Veriler yükleniyor...';
   theadRow.innerHTML = "<th>Yükleniyor...</th>";
   tbody.innerHTML = `<tr><td class="small">Yükleniyor...</td></tr>`;
-  meta.textContent = "";
+  meta.textContent = '';
 
   try {
-    const { data, error } = await supabase.from(TABLE_NAME).select("*").limit(100);
-    if (error) throw error;
+    const res = await fetch('/api/supabase');
+    const data = await res.json();
 
-    if (!data || data.length === 0) {
-      statusEl.innerHTML = `<span class="small">Tablo boş ya da erişim yok. (VL13)</span>`;
+    if(!data || data.length===0){
+      statusEl.innerHTML = `<span class="small">Tablo boş veya erişim yok.</span>`;
       theadRow.innerHTML = "<th>Boş</th>";
-      tbody.innerHTML = `<tr><td class="small">Tabloda gösterilecek kayıt yok.</td></tr>`;
+      tbody.innerHTML = `<tr><td class="small">Kayıt yok.</td></tr>`;
       return;
     }
 
     const firstRow = data[0];
     const allKeys = Object.keys(firstRow);
-    const showKeys = allKeys.slice(0, 4);
+    const showKeys = allKeys.slice(0,4);
 
-    theadRow.innerHTML = "";
-    showKeys.forEach(k => {
-      const th = document.createElement("th");
+    theadRow.innerHTML = '';
+    showKeys.forEach(k=>{
+      const th = document.createElement('th');
       th.textContent = k;
       theadRow.appendChild(th);
     });
 
-    tbody.innerHTML = "";
-    data.forEach(row => {
-      const tr = document.createElement("tr");
-      showKeys.forEach(k => {
-        const td = document.createElement("td");
-        td.textContent = row[k] ?? "";
+    tbody.innerHTML = '';
+    data.forEach(row=>{
+      const tr = document.createElement('tr');
+      showKeys.forEach(k=>{
+        const td = document.createElement('td');
+        td.textContent = row[k] ?? '';
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
     });
 
-    statusEl.textContent = `Başarılı: ${data.length} kayıt alındı. Gösterilen sütunlar: ${showKeys.join(", ")}`;
-    meta.textContent = `Tüm sütun sayısı: ${allKeys.length}. (ilk 4 gösteriliyor)`;
+    statusEl.textContent = `Başarılı: ${data.length} kayıt alındı.`;
+    meta.textContent = `Toplam sütun: ${allKeys.length} (ilk 4 gösteriliyor)`;
 
-  } catch (err) {
-    console.error("VL13 hata:", err);
-    statusEl.innerHTML = `<span class="error">Hata: ${err.message || err}</span>`;
-    theadRow.innerHTML = "<th>Hata</th>";
-    tbody.innerHTML = `<tr><td class="small">Veri alınırken hata oluştu. Konsolu kontrol et.</td></tr>`;
+  } catch(err){
+    console.error(err);
+    statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
   }
 }
 
-async function handleApproval() {
+async function handleApproval(){
   try {
-    statusEl.textContent = "Onaylama işlemi başlatıldı...";
-
+    statusEl.textContent = 'Onaylama işlemi başlatıldı...';
     const now = new Date();
     const roundedTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:00`;
 
-    const { data, error } = await supabase.from(TABLE_NAME)
-      .select("Tarife_Saati, Onaylanan, Durum")
-      .order("Tarife_Saati", { ascending: true });
-
-    if (error) throw error;
-    if (!data || data.length === 0) throw new Error("Tablo boş.");
+    // Önce tabloyu çek
+    const res = await fetch('/api/supabase');
+    const data = await res.json();
+    if(!data || data.length===0){
+      statusEl.innerHTML = `<span class="error">Tablo boş.</span>`;
+      return;
+    }
 
     const nowMinutes = now.getHours()*60 + now.getMinutes();
-    let closest = null;
-    let closestDiff = Infinity;
-
-    for (const row of data) {
+    let closest=null;
+    let closestDiff=Infinity;
+    for(const row of data){
       const [h,m] = row.Tarife_Saati.split(':').map(Number);
       const rowMinutes = h*60 + m;
       const diff = Math.abs(rowMinutes - nowMinutes);
-      if(diff <=10 && diff < closestDiff){
-        closest = row;
-        closestDiff = diff;
+      if(diff<=10 && diff<closestDiff){
+        closest=row;
+        closestDiff=diff;
       }
     }
 
     if(!closest){
-      statusEl.innerHTML = `<span class="error">Uygun zaman aralığında kayıt bulunamadı (±10 dk).</span>`;
+      statusEl.innerHTML = `<span class="error">±10 dk içinde kayıt bulunamadı.</span>`;
       return;
     }
 
@@ -179,17 +135,20 @@ async function handleApproval() {
     if(diffMinutes>0) durum="Geç Çıkış";
     else if(diffMinutes<0) durum="Erken Çıkış";
 
-    const { error: updateError } = await supabase.from(TABLE_NAME)
-      .update({ Onaylanan: roundedTime, Durum: durum })
-      .eq("Tarife_Saati", tarifeTime);
-
-    if(updateError) throw updateError;
+    // POST ile onayla
+    const postRes = await fetch('/api/supabase',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ Tarife_Saati: tarifeTime, Onaylanan: roundedTime, Durum: durum })
+    });
+    const result = await postRes.json();
+    if(result.error) throw new Error(result.error);
 
     statusEl.textContent = `✅ Onaylandı (${tarifeTime}) → ${roundedTime} (${durum})`;
     fetchAndRender();
 
   } catch(err){
-    console.error("Onaylama hatası:", err);
+    console.error(err);
     statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
   }
 }
