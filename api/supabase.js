@@ -8,10 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export default async function handler(req, res) {
   try {
     if(req.method === 'GET'){
-      const { data, error } = await supabase
-        .from('VL13')
-        .select('*')
-        .limit(100);
+      const { data, error } = await supabase.from('VL13').select('*').limit(100);
       if(error) throw error;
       res.status(200).json(data);
     }
