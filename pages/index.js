@@ -1,12 +1,10 @@
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
 
 export default function Home() {
-  const router = useRouter();
-
   useEffect(() => {
-    router.replace('/code.html');
-  }, [router]);
+    // Doğrudan HTML dosyasına yönlendir
+    window.location.href = '/code.html';
+  }, []);
 
-  return null;
+  return <div style={{ textAlign: 'center', padding: '20px' }}>Yönlendiriliyor...</div>;
 }
