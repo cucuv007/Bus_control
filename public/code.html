@@ -136,8 +136,10 @@ async function handleApproval(){
       return;
     }
 
-    // Tarife saatini ayır
-    const tarifeTime = closest.Tarife_Saati;
+    // En yakın satırdaki Tarife ve Tarife_Saati değerlerini al
+    const tarife = closest.Tarife;           // T1, T2, T3... vb
+    const tarifeTime = closest.Tarife_Saati; // HH:MM:SS
+    
     const [th, tm] = tarifeTime.split(':').map(Number);
     const [ch, cm] = roundedTime.split(':').map(Number);
     
@@ -157,6 +159,7 @@ async function handleApproval(){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ 
+        Tarife: tarife,           // ← EKLENDI
         Tarife_Saati: tarifeTime, 
         Onaylanan: roundedTime, 
         Durum: durum 
