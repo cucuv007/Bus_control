@@ -31,15 +31,15 @@ export default async function handler(req, res) {
     } 
     
     else if (req.method === 'POST') {
-      const { Tarife_Saati, Onaylanan, Durum } = req.body;
+      const { Tarife, Tarife_Saati, Onaylanan, Durum } = req.body;
 
-      if (!Tarife_Saati || !Onaylanan || !Durum) {
-        return res.status(400).json({ error: 'Eksik alan: Tarife_Saati, Onaylanan, Durum gerekli' });
+      if (!Tarife || !Tarife_Saati || !Onaylanan || !Durum) {
+        return res.status(400).json({ error: 'Eksik alan: Tarife, Tarife_Saati, Onaylanan, Durum gerekli' });
       }
 
       const { data, error } = await supabase
         .from('VL13')
-        .insert([{ Tarife_Saati, Onaylanan, Durum }]);
+        .insert([{ Tarife, Tarife_Saati, Onaylanan, Durum }]);
 
       if (error) {
         console.error('Supabase POST error:', error);
