@@ -1,3 +1,4 @@
+// pages/api/supabase.js
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -18,9 +19,13 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      // Şu anki saati al (saat:dakika:00 formatında)
+      // Türkiye saati (UTC+3)
       const now = new Date();
-      const onaylanan = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:00`;
+      const turkeyTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+      
+      const onaylanan = `${turkeyTime.getHours().toString().padStart(2, '0')}:${turkeyTime.getMinutes().toString().padStart(2, '0')}:00`;
+
+      console.log('Şu anki saat (Türkiye):', onaylanan);
 
       // Tüm kayıtları çek
       const { data: allRows, error: fetchError } = await supabase
@@ -33,8 +38,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Tablo boş.' });
       }
 
+      console.log('Tüm kayıtlar:', allRows);
+
       // Şu anki saate en yakın Tarife_Saati'ni bul (±10 dakika içinde)
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const nowMinutes = turkeyTime.getHours() * 60 + turkeyTime.getMinutes();
       let closestRow = null;
       let closestDiff = Infinity;
 
@@ -42,6 +49,8 @@ export default async function handler(req, res) {
         const [h, m] = row.Tarife_Saati.split(':').map(Number);
         const rowMinutes = h * 60 + m;
         const diff = Math.abs(rowMinutes - nowMinutes);
+
+        console.log(`Tarife: ${row.Tarife} ${row.Tarife_Saati} → Fark: ${diff} dakika`);
 
         if (diff <= 10 && diff < closestDiff) {
           closestRow = row;
@@ -52,7 +61,13 @@ export default async function handler(req, res) {
       if (!closestRow) {
         return res.status(400).json({ 
           error: '±10 dakika içinde kayıt bulunamadı.',
-          current_time: onaylanan
+          current_time: onaylanan,
+          current_minutes: nowMinutes,
+          all_records: allRows.map(r => ({
+            tarife: r.Tarife,
+            saat: r.Tarife_Saati,
+            fark: Math.abs((r.Tarife_Saati.split(':').map(Number)[0] * 60 + r.Tarife_Saati.split(':').map(Number)[1]) - nowMinutes)
+          }))
         });
       }
 
@@ -67,7 +82,7 @@ export default async function handler(req, res) {
       if (diffMinutes < 0) durum = 'Erken Çıkış';
       else if (diffMinutes > 0) durum = 'Geç Çıkış';
 
-      // Tarife_Saati'ye göre güncelle (UNIQUE olduğu için sorun olmaz)
+      // Tarife_Saati'ye göre güncelle
       const { data: updateData, error: updateError } = await supabase
         .from('VL13')
         .update({ 
@@ -80,11 +95,12 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ 
         success: true, 
-        message: `✅ Onaylandı: ${closestRow.Tarife_Adi} ${closestRow.Tarife_Saati} → ${onaylanan} (${durum})`,
+        message: `✅ Onaylandı: ${closestRow.Tarife} ${closestRow.Tarife_Saati} → ${onaylanan} (${durum})`,
         data: updateData
       });
 
     } catch (err) {
+      console.error('API Hatası:', err);
       return res.status(500).json({ error: err.message });
     }
   }
