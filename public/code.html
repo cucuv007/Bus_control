@@ -138,15 +138,37 @@ async function handleApproval(){
 
     // En yakın satırdaki Tarife ve Tarife_Saati değerlerini al
     const tarife = closest.Tarife;           // T1, T2, T3... vb
-    const tarifeTime = closest.Tarife_Saati; // HH:MM:SS
+    let tarifeTime = closest.Tarife_Saati;   // HH:MM:SS
     
-    const [th, tm] = tarifeTime.split(':').map(Number);
-    const [ch, cm] = roundedTime.split(':').map(Number);
+    // Time formatını standardize et
+    if(tarifeTime && !tarifeTime.includes(':')) {
+      console.warn('Tarife_Saati format hatası:', tarifeTime);
+    }
+    
+    // Tarife_Saati'nden saat ve dakika çıkar
+    const tarifeTimeParts = String(tarifeTime).split(':');
+    const th = parseInt(tarifeTimeParts[0]);
+    const tm = parseInt(tarifeTimeParts[1]);
+    
+    // Şu anki zamanından saat ve dakika çıkar
+    const roundedTimeParts = roundedTime.split(':');
+    const ch = parseInt(roundedTimeParts[0]);
+    const cm = parseInt(roundedTimeParts[1]);
     
     // Dakika cinsinden fark hesapla (negative = erken, positive = geç)
     const tarife_minutes = th * 60 + tm;
     const current_minutes = ch * 60 + cm;
     const diffMinutes = current_minutes - tarife_minutes;
+
+    console.log('Debug:', {
+      tarife,
+      tarifeTime,
+      roundedTime,
+      th, tm, ch, cm,
+      tarife_minutes,
+      current_minutes,
+      diffMinutes
+    });
 
     // Durum belirle
     let durum = "Zamanında";
@@ -154,14 +176,14 @@ async function handleApproval(){
     else if(diffMinutes > 0) durum = "Geç Çıkış";   // Saat daha büyük = sonra
     // diffMinutes === 0 ise "Zamanında" kalır
 
-    // POST ile kaydet
+    // POST ile kaydet - Time tipini ISO 8601 formatında gönder
     const postRes = await fetch('/api/supabase',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ 
-        Tarife: tarife,           // ← EKLENDI
-        Tarife_Saati: tarifeTime, 
-        Onaylanan: roundedTime, 
+        Tarife: tarife,
+        Tarife_Saati: `${String(th).padStart(2,'0')}:${String(tm).padStart(2,'0')}:00`,
+        Onaylanan: roundedTime,
         Durum: durum 
       })
     });
