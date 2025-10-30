@@ -1,10 +1,9 @@
-import { useEffect } from 'react';
-
 export default function Home() {
-  useEffect(() => {
-    // Doğrudan HTML dosyasına yönlendir
-    window.location.href = '/code.html';
-  }, []);
-
-  return <div style={{ textAlign: 'center', padding: '20px' }}>Yönlendiriliyor...</div>;
+  return (
+    <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'Arial' }}>
+      <h1>Yönlendiriliyor...</h1>
+      <p>Lütfen bekleyin...</p>
+      <script dangerouslySetInnerHTML={{__html: `window.location.href = '/code.html';`}} />
+    </div>
+  );
 }
