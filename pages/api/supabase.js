@@ -6,51 +6,72 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Helper: Get Turkey time (UTC+3)
+function getTurkeyTime() {
+  const now = new Date();
+  // Add 3 hours to UTC
+  const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+  return turkeyTime;
+}
+
+// Helper: Format time as HH:MM:SS
+function formatTime(date) {
+  return `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}:00`;
+}
+
+// Helper: Convert HH:MM:SS to minutes
+function timeToMinutes(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
 export default async function handler(req, res) {
+  // GET: Fetch all records
   if (req.method === 'GET') {
     const { data, error } = await supabase
       .from('VL13')
       .select('*')
       .order('Tarife_Saati', { ascending: true });
     
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('GET Error:', error);
+      return res.status(500).json({ error: 'Veri alınamadı' });
+    }
     return res.status(200).json(data);
   }
 
+  // POST: Approve a departure
   if (req.method === 'POST') {
     try {
-      // Türkiye saati (UTC+3)
-      const now = new Date();
-      const turkeyTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
-      
-      const onaylanan = `${turkeyTime.getHours().toString().padStart(2, '0')}:${turkeyTime.getMinutes().toString().padStart(2, '0')}:00`;
+      // Get current Turkey time
+      const turkeyTime = getTurkeyTime();
+      const currentTimeStr = formatTime(turkeyTime);
+      const currentMinutes = timeToMinutes(currentTimeStr);
 
-      console.log('Şu anki saat (Türkiye):', onaylanan);
+      console.log('[APPROVAL] Current Turkey time:', currentTimeStr);
 
-      // Tüm kayıtları çek
+      // Fetch all records
       const { data: allRows, error: fetchError } = await supabase
         .from('VL13')
         .select('*')
         .order('Tarife_Saati', { ascending: true });
 
-      if (fetchError) return res.status(500).json({ error: fetchError.message });
-      if (!allRows || allRows.length === 0) {
-        return res.status(400).json({ error: 'Tablo boş.' });
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        return res.status(500).json({ error: 'Veri alınamadı' });
       }
 
-      console.log('Tüm kayıtlar:', allRows);
+      if (!allRows || allRows.length === 0) {
+        return res.status(400).json({ error: 'Tablo boş' });
+      }
 
-      // Şu anki saate en yakın Tarife_Saati'ni bul (±10 dakika içinde)
-      const nowMinutes = turkeyTime.getHours() * 60 + turkeyTime.getMinutes();
+      // Find the closest Tarife_Saati within ±10 minutes
       let closestRow = null;
       let closestDiff = Infinity;
 
       for (const row of allRows) {
-        const [h, m] = row.Tarife_Saati.split(':').map(Number);
-        const rowMinutes = h * 60 + m;
-        const diff = Math.abs(rowMinutes - nowMinutes);
-
-        console.log(`Tarife: ${row.Tarife} ${row.Tarife_Saati} → Fark: ${diff} dakika`);
+        const rowMinutes = timeToMinutes(row.Tarife_Saati);
+        const diff = Math.abs(rowMinutes - currentMinutes);
 
         if (diff <= 10 && diff < closestDiff) {
           closestRow = row;
@@ -58,50 +79,61 @@ export default async function handler(req, res) {
         }
       }
 
+      // No match found
       if (!closestRow) {
+        console.log('[APPROVAL] No record within ±10 minutes');
         return res.status(400).json({ 
-          error: '±10 dakika içinde kayıt bulunamadı.',
-          current_time: onaylanan,
-          current_minutes: nowMinutes,
-          all_records: allRows.map(r => ({
-            tarife: r.Tarife,
-            saat: r.Tarife_Saati,
-            fark: Math.abs((r.Tarife_Saati.split(':').map(Number)[0] * 60 + r.Tarife_Saati.split(':').map(Number)[1]) - nowMinutes)
-          }))
+          error: '±10 dakika içinde sefer bulunamadı',
+          current_time: currentTimeStr
         });
       }
 
-      // Durum belirle
-      const [th, tm] = closestRow.Tarife_Saati.split(':').map(Number);
-      const [oh, om] = onaylanan.split(':').map(Number);
-      const tarifeMinutes = th * 60 + tm;
-      const onayMinutes = oh * 60 + om;
-      const diffMinutes = onayMinutes - tarifeMinutes;
+      // Calculate status (durum)
+      const scheduleMinutes = timeToMinutes(closestRow.Tarife_Saati);
+      const diffMinutes = currentMinutes - scheduleMinutes;
 
       let durum = 'Zamanında';
-      if (diffMinutes < 0) durum = 'Erken Çıkış';
-      else if (diffMinutes > 0) durum = 'Geç Çıkış';
+      if (diffMinutes < 0) {
+        durum = 'Erken Çıkış';
+      } else if (diffMinutes > 0) {
+        durum = 'Geç Çıkış';
+      }
 
-      // Tarife_Saati'ye göre güncelle
-      const { data: updateData, error: updateError } = await supabase
+      console.log('[APPROVAL] Match found:', {
+        tarife: closestRow.Tarife,
+        scheduled: closestRow.Tarife_Saati,
+        actual: currentTimeStr,
+        diff_minutes: diffMinutes,
+        durum
+      });
+
+      // Update the record
+      const { error: updateError } = await supabase
         .from('VL13')
         .update({ 
-          Onaylanan: onaylanan, 
+          Onaylanan: currentTimeStr,
           Durum: durum 
         })
+        .eq('Tarife', closestRow.Tarife)
         .eq('Tarife_Saati', closestRow.Tarife_Saati);
 
-      if (updateError) return res.status(500).json({ error: updateError.message });
+      if (updateError) {
+        console.error('Update error:', updateError);
+        return res.status(500).json({ error: 'Güncelleme başarısız' });
+      }
 
       return res.status(200).json({ 
-        success: true, 
-        message: `✅ Onaylandı: ${closestRow.Tarife} ${closestRow.Tarife_Saati} → ${onaylanan} (${durum})`,
-        data: updateData
+        success: true,
+        tarife: closestRow.Tarife,
+        scheduled_time: closestRow.Tarife_Saati,
+        actual_time: currentTimeStr,
+        durum: durum,
+        message: `${closestRow.Tarife} seferi onaylandı: ${currentTimeStr} (${durum})`
       });
 
     } catch (err) {
-      console.error('API Hatası:', err);
-      return res.status(500).json({ error: err.message });
+      console.error('[APPROVAL] Error:', err);
+      return res.status(500).json({ error: 'Sistem hatası' });
     }
   }
 
