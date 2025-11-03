@@ -29,8 +29,20 @@
       </div>
       <div class="modal-body">
         
-        <!-- Step 1: Dosyaları Listele -->
+        <!-- Step 1: Seçim -->
         <div id="step1" class="step">
+          <div class="form-group">
+            <label>Yükleme Yöntemi Seçin:</label>
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
+              <button id="methodAutoBtn" class="btn" style="flex: 1;">🔄 Otomatik Listele</button>
+              <button id="methodManualBtn" class="btn" style="flex: 1;">📝 Manuel Dosya</button>
+            </div>
+          </div>
+          <div id="methodStatus" class="info" style="display: none;"></div>
+        </div>
+
+        <!-- Step 2A: Otomatik Listele -->
+        <div id="step2Auto" class="step" style="display: none;">
           <div class="form-group">
             <label>Paylaşılan Klasördeki Dosyalar</label>
             <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 12px;">
@@ -41,8 +53,17 @@
           <div id="listStatus" class="info" style="display: none;"></div>
         </div>
 
-        <!-- Step 2: Dosya Seçimi -->
-        <div id="step2" class="step" style="display: none;">
+        <!-- Step 2B: Manuel Dosya -->
+        <div id="step2Manual" class="step" style="display: none;">
+          <div class="form-group">
+            <label>Excel Dosyası Seçin:</label>
+            <input type="file" id="manualFileInput" accept=".xlsx,.xls" class="input-field" />
+          </div>
+          <div id="manualStatus" class="info" style="display: none;"></div>
+        </div>
+
+        <!-- Step 3: Dosya Seçimi (Otomatik) -->
+        <div id="step3" class="step" style="display: none;">
           <div class="form-group">
             <label>Dosyaları Seçin:</label>
             <div id="filesList" class="files-list"></div>
@@ -102,13 +123,22 @@ const confirmUploadBtn = document.getElementById('confirmUploadBtn');
 
 // Step elements
 const step1 = document.getElementById('step1');
-const step2 = document.getElementById('step2');
+const step2Auto = document.getElementById('step2Auto');
+const step2Manual = document.getElementById('step2Manual');
+const step3 = document.getElementById('step3');
+
+const methodAutoBtn = document.getElementById('methodAutoBtn');
+const methodManualBtn = document.getElementById('methodManualBtn');
+const methodStatus = document.getElementById('methodStatus');
 
 const listFilesBtn = document.getElementById('listFilesBtn');
 const listStatus = document.getElementById('listStatus');
 const filesList = document.getElementById('filesList');
 const selectStatus = document.getElementById('selectStatus');
 const uploadStatus = document.getElementById('uploadStatus');
+
+const manualFileInput = document.getElementById('manualFileInput');
+const manualStatus = document.getElementById('manualStatus');
 
 // Table selection
 const tableSelection = document.getElementById('tableSelection');
@@ -118,6 +148,7 @@ let selectedFiles = [];
 let currentTable = null;
 let isLoading = false;
 let allFiles = [];
+let uploadMethod = null;
 
 // Event listeners
 uploadBtn.addEventListener('click', openUploadModal);
@@ -125,9 +156,15 @@ refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
+
+methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
+methodManualBtn.addEventListener('click', () => selectMethod('manual'));
+
 listFilesBtn.addEventListener('click', handleListFiles);
 confirmUploadBtn.addEventListener('click', handleUpload);
 tableSelect.addEventListener('change', handleTableSelect);
+
+manualFileInput.addEventListener('change', handleManualFileSelect);
 
 // Modal functions
 function openUploadModal() {
@@ -142,16 +179,22 @@ function closeUploadModal() {
 
 function resetModal() {
   selectedFiles = [];
+  uploadMethod = null;
   
   step1.style.display = 'block';
-  step2.style.display = 'none';
+  step2Auto.style.display = 'none';
+  step2Manual.style.display = 'none';
+  step3.style.display = 'none';
   confirmUploadBtn.style.display = 'none';
   
+  methodStatus.style.display = 'none';
   listStatus.style.display = 'none';
   selectStatus.style.display = 'none';
   uploadStatus.style.display = 'none';
+  manualStatus.style.display = 'none';
   
   filesList.innerHTML = '';
+  manualFileInput.value = '';
 }
 
 // Close modal when clicking outside
@@ -161,7 +204,19 @@ uploadModal.addEventListener('click', (e) => {
   }
 });
 
-// List Files
+// Select upload method
+function selectMethod(method) {
+  uploadMethod = method;
+  step1.style.display = 'none';
+  
+  if (method === 'auto') {
+    step2Auto.style.display = 'block';
+  } else {
+    step2Manual.style.display = 'block';
+  }
+}
+
+// List Files (Otomatik)
 async function handleListFiles() {
   listStatus.innerHTML = '⏳ Dosyalar yükleniyor...';
   listStatus.style.display = 'block';
@@ -169,7 +224,6 @@ async function handleListFiles() {
   
   try {
     const res = await fetch('/api/scrape-drive-folder');
-    
     const result = await res.json();
     
     if (!res.ok) {
@@ -177,7 +231,7 @@ async function handleListFiles() {
     }
     
     if (!result.success || result.files.length === 0) {
-      throw new Error(result.message || 'Dosya bulunamadı');
+      throw new Error(result.message || 'Dosya bulunamadı. Lütfen manuel yöntemi kullanın.');
     }
     
     allFiles = result.files;
@@ -221,8 +275,7 @@ async function handleListFiles() {
     });
     
     listStatus.innerHTML = `✅ ${allFiles.length} dosya bulundu`;
-    
-    step2.style.display = 'block';
+    step3.style.display = 'block';
     
   } catch (err) {
     console.error('List files error:', err);
@@ -230,6 +283,34 @@ async function handleListFiles() {
   } finally {
     listFilesBtn.disabled = false;
   }
+}
+
+// Manual File Select
+function handleManualFileSelect(e) {
+  const file = e.target.files[0];
+  
+  if (!file) {
+    manualStatus.style.display = 'none';
+    confirmUploadBtn.style.display = 'none';
+    return;
+  }
+  
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    manualStatus.innerHTML = '❌ Hata: Sadece Excel dosyaları (.xlsx, .xls) kabul edilir';
+    manualStatus.style.display = 'block';
+    confirmUploadBtn.style.display = 'none';
+    return;
+  }
+  
+  selectedFiles = [{
+    name: file.name,
+    file: file,
+    isManual: true
+  }];
+  
+  manualStatus.innerHTML = `✅ ${file.name} seçildi`;
+  manualStatus.style.display = 'block';
+  confirmUploadBtn.style.display = 'block';
 }
 
 // Upload
@@ -252,19 +333,27 @@ async function handleUpload() {
     try {
       uploadStatus.innerHTML = `⏳ ${file.name} yükleniyor...`;
       
-      // Dosyayı indir
-      const downloadRes = await fetch('/api/download-from-drive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileId: file.id
-        })
-      });
+      let fileData;
       
-      const downloadResult = await downloadRes.json();
-      
-      if (!downloadRes.ok) {
-        throw new Error(downloadResult.error);
+      if (file.isManual) {
+        // Manuel dosya - doğrudan oku
+        const arrayBuffer = await file.file.arrayBuffer();
+        fileData = Buffer.from(arrayBuffer).toString('base64');
+      } else {
+        // Drive dosyası - indir
+        const downloadRes = await fetch('/api/download-from-drive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileId: file.id })
+        });
+        
+        const downloadResult = await downloadRes.json();
+        
+        if (!downloadRes.ok) {
+          throw new Error(downloadResult.error);
+        }
+        
+        fileData = downloadResult.data;
       }
       
       // Excel'i işle
@@ -273,7 +362,7 @@ async function handleUpload() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileName: file.name,
-          fileData: downloadResult.data
+          fileData: fileData
         })
       });
       
