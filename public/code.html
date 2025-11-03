@@ -3,39 +3,104 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Otobüs Hareket Saati Listesi</title>
+<title>Otobüs Hareket Saati Yönetimi</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div>
-      <h1>📊 Otobüs Hareket Saati Yönetimi</h1>
-      <div class="sub">
-        Tablo: <strong id="currentTable">Seçilmedi</strong>
-      </div>
+    <h1>📊 Otobüs Hareket Saati Yönetimi</h1>
+    <div class="sub">Google Drive'dan veri yükle ve yönet</div>
     </div>
     <div class="controls">
-      <select id="tableSelect" class="select">
-        <option value="">Tablo Seçin</option>
-      </select>
-      <button id="uploadBtn" class="btn btn-primary">Yükle</button>
-      <button id="refreshBtn" class="btn">Yenile</button>
-      <button id="approveBtn" class="btn" disabled>Onayla</button>
+    <button id="uploadBtn" class="btn btn-upload">📤 Yükle</button>
+    <button id="refreshBtn" class="btn">🔄 Yenile</button>
+    <button id="approveBtn" class="btn">✅ Onayla</button>
     </div>
   </header>
 
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="modal" style="display: none;">
+    <div class="modal-content">
+    <div class="modal-header">
+    <h2>Google Drive'dan Yükle</h2>
+    <button id="closeModal" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+    
+    <!-- Step 1: Seçim -->
+    <div id="step1" class="step">
+    <div class="form-group">
+    <label>Yükleme Yöntemi Seçin:</label>
+    <div style="display: flex; gap: 10px; margin-top: 12px;">
+    <button id="methodAutoBtn" class="btn" style="flex: 1;">🔄 Otomatik Listele</button>
+    <button id="methodManualBtn" class="btn" style="flex: 1;">📝 Manuel Dosya</button>
+    </div>
+    </div>
+    <div id="methodStatus" class="info" style="display: none;"></div>
+    </div>
+
+    <!-- Step 2A: Otomatik Listele -->
+    <div id="step2Auto" class="step" style="display: none;">
+    <div class="form-group">
+    <label>Paylaşılan Klasördeki Dosyalar</label>
+    <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 12px;">
+    🔗 Klasör: <code>10GaVA2Pe7v0AC8bv94UPgonDZVe4UdgV</code>
+    </p>
+    <button id="listFilesBtn" class="btn">📂 Dosyaları Listele</button>
+    </div>
+    <div id="listStatus" class="info" style="display: none;"></div>
+    </div>
+
+    <!-- Step 2B: Manuel Dosya -->
+    <div id="step2Manual" class="step" style="display: none;">
+    <div class="form-group">
+    <label>Excel Dosyası Seçin:</label>
+    <input type="file" id="manualFileInput" accept=".xlsx,.xls" class="input-field" />
+    </div>
+    <div id="manualStatus" class="info" style="display: none;"></div>
+    </div>
+
+    <!-- Step 3: Dosya Seçimi (Otomatik) -->
+    <div id="step3" class="step" style="display: none;">
+    <div class="form-group">
+    <label>Dosyaları Seçin:</label>
+    <div id="filesList" class="files-list"></div>
+    </div>
+    <div id="selectStatus" class="info" style="display: none;"></div>
+    </div>
+
+    <div id="uploadStatus" class="info" style="display: none;"></div>
+    </div>
+    <div class="modal-footer">
+    <button id="cancelBtn" class="btn btn-secondary">İptal</button>
+    <button id="confirmUploadBtn" class="btn" style="display: none;">Yükle</button>
+    </div>
+    </div>
+  </div>
+
   <div id="mainCard" class="card">
-    <div id="status" class="info">Lütfen bir tablo seçin veya Google Drive'dan yükleyin.</div>
+    <!-- Table Selection -->
+    <div id="tableSelection" style="display: none; margin-bottom: 20px;">
+    <div class="form-group">
+    <label for="tableSelect">Tablo Seçin:</label>
+    <select id="tableSelect" class="input-field">
+    <option value="">-- Tablo Seçin --</option>
+    </select>
+    </div>
+    </div>
+
+    <div id="status" class="info">Veriler hazırlanıyor...</div>
     <div class="table-wrap" style="margin-top:12px;">
-      <table id="dataTable" aria-describedby="status">
-        <thead>
-          <tr id="theadRow"><th>Tablo Seçilmedi</th></tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td class="small">Henüz veri yok.</td></tr>
-        </tbody>
-      </table>
+    <table id="dataTable" aria-describedby="status">
+    <thead>
+    <tr id="theadRow"><th>Yükleniyor...</th></tr>
+    </thead>
+    <tbody id="tbody">
+    <tr><td class="small">Henüz veri yok.</td></tr>
+    </tbody>
+    </table>
     </div>
     <div id="meta" class="info" style="margin-top:12px"></div>
   </div>
@@ -45,61 +110,342 @@
 const uploadBtn = document.getElementById('uploadBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const approveBtn = document.getElementById('approveBtn');
-const tableSelect = document.getElementById('tableSelect');
 const statusEl = document.getElementById('status');
-const currentTableEl = document.getElementById('currentTable');
 const theadRow = document.getElementById('theadRow');
 const tbody = document.getElementById('tbody');
 const meta = document.getElementById('meta');
 
+// Modal elements
+const uploadModal = document.getElementById('uploadModal');
+const closeModal = document.getElementById('closeModal');
+const cancelBtn = document.getElementById('cancelBtn');
+const confirmUploadBtn = document.getElementById('confirmUploadBtn');
+
+// Step elements
+const step1 = document.getElementById('step1');
+const step2Auto = document.getElementById('step2Auto');
+const step2Manual = document.getElementById('step2Manual');
+const step3 = document.getElementById('step3');
+
+const methodAutoBtn = document.getElementById('methodAutoBtn');
+const methodManualBtn = document.getElementById('methodManualBtn');
+const methodStatus = document.getElementById('methodStatus');
+
+const listFilesBtn = document.getElementById('listFilesBtn');
+const listStatus = document.getElementById('listStatus');
+const filesList = document.getElementById('filesList');
+const selectStatus = document.getElementById('selectStatus');
+const uploadStatus = document.getElementById('uploadStatus');
+
+const manualFileInput = document.getElementById('manualFileInput');
+const manualStatus = document.getElementById('manualStatus');
+
+// Table selection
+const tableSelection = document.getElementById('tableSelection');
+const tableSelect = document.getElementById('tableSelect');
+
+let selectedFiles = [];
+let currentTable = null;
 let isLoading = false;
-let selectedTable = null;
+let allFiles = [];
+let uploadMethod = null;
 
-// Event Listeners
-uploadBtn.addEventListener('click', handleUpload);
-refreshBtn.addEventListener('click', loadTables);
+// Event listeners
+uploadBtn.addEventListener('click', openUploadModal);
+refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
-tableSelect.addEventListener('change', handleTableChange);
+closeModal.addEventListener('click', closeUploadModal);
+cancelBtn.addEventListener('click', closeUploadModal);
 
-// Load tables on page load
-loadTables();
+methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
+methodManualBtn.addEventListener('click', () => selectMethod('manual'));
 
-async function loadTables() {
+listFilesBtn.addEventListener('click', handleListFiles);
+confirmUploadBtn.addEventListener('click', handleUpload);
+tableSelect.addEventListener('change', handleTableSelect);
+
+manualFileInput.addEventListener('change', handleManualFileSelect);
+
+// Modal functions
+function openUploadModal() {
+  uploadModal.style.display = 'flex';
+  resetModal();
+}
+
+function closeUploadModal() {
+  uploadModal.style.display = 'none';
+  resetModal();
+}
+
+function resetModal() {
+  selectedFiles = [];
+  uploadMethod = null;
+  
+  step1.style.display = 'block';
+  step2Auto.style.display = 'none';
+  step2Manual.style.display = 'none';
+  step3.style.display = 'none';
+  confirmUploadBtn.style.display = 'none';
+  
+  methodStatus.style.display = 'none';
+  listStatus.style.display = 'none';
+  selectStatus.style.display = 'none';
+  uploadStatus.style.display = 'none';
+  manualStatus.style.display = 'none';
+  
+  filesList.innerHTML = '';
+  manualFileInput.value = '';
+}
+
+// Close modal when clicking outside
+uploadModal.addEventListener('click', (e) => {
+  if (e.target === uploadModal) {
+    closeUploadModal();
+  }
+});
+
+// Select upload method
+function selectMethod(method) {
+  uploadMethod = method;
+  step1.style.display = 'none';
+  
+  if (method === 'auto') {
+    step2Auto.style.display = 'block';
+  } else {
+    step2Manual.style.display = 'block';
+  }
+}
+
+// List Files (Otomatik)
+async function handleListFiles() {
+  listStatus.innerHTML = '⏳ Dosyalar yükleniyor...';
+  listStatus.style.display = 'block';
+  listFilesBtn.disabled = true;
+  
+  try {
+    const res = await fetch('/api/scrape-drive-folder');
+    const result = await res.json();
+    
+    if (!res.ok) {
+    throw new Error(result.error || 'Dosyalar alınamadı');
+    }
+    
+    if (!result.success || result.files.length === 0) {
+    throw new Error(result.message || 'Dosya bulunamadı. Lütfen manuel yöntemi kullanın.');
+    }
+    
+    allFiles = result.files;
+    
+    // Dosyaları listele
+    filesList.innerHTML = '';
+    selectedFiles = [];
+    
+    allFiles.forEach(file => {
+    const label = document.createElement('label');
+    label.className = 'file-checkbox';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = file.id;
+    checkbox.dataset.name = file.name;
+    
+    checkbox.addEventListener('change', (e) => {
+    if (e.target.checked) {
+    selectedFiles.push({
+    id: file.id,
+    name: file.name
+    });
+    } else {
+    selectedFiles = selectedFiles.filter(f => f.id !== file.id);
+    }
+    
+    if (selectedFiles.length > 0) {
+    selectStatus.innerHTML = `✅ ${selectedFiles.length} dosya seçildi`;
+    selectStatus.style.display = 'block';
+    confirmUploadBtn.style.display = 'block';
+    } else {
+    selectStatus.style.display = 'none';
+    confirmUploadBtn.style.display = 'none';
+    }
+    });
+    
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(file.name));
+    filesList.appendChild(label);
+    });
+    
+    listStatus.innerHTML = `✅ ${allFiles.length} dosya bulundu`;
+    step3.style.display = 'block';
+    
+  } catch (err) {
+    console.error('List files error:', err);
+    listStatus.innerHTML = `❌ Hata: ${err.message}`;
+  } finally {
+    listFilesBtn.disabled = false;
+  }
+}
+
+// Manual File Select
+function handleManualFileSelect(e) {
+  const file = e.target.files[0];
+  
+  if (!file) {
+    manualStatus.style.display = 'none';
+    confirmUploadBtn.style.display = 'none';
+    return;
+  }
+  
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    manualStatus.innerHTML = '❌ Hata: Sadece Excel dosyaları (.xlsx, .xls) kabul edilir';
+    manualStatus.style.display = 'block';
+    confirmUploadBtn.style.display = 'none';
+    return;
+  }
+  
+  selectedFiles = [{
+    name: file.name,
+    file: file,
+    isManual: true
+  }];
+  
+  manualStatus.innerHTML = `✅ ${file.name} seçildi`;
+  manualStatus.style.display = 'block';
+  confirmUploadBtn.style.display = 'block';
+}
+
+// Upload
+async function handleUpload() {
+  if (selectedFiles.length === 0) {
+    uploadStatus.innerHTML = '❌ Hata: Dosya seçiniz';
+    uploadStatus.style.display = 'block';
+    return;
+  }
+  
+  confirmUploadBtn.disabled = true;
+  uploadStatus.innerHTML = '⏳ Dosyalar yükleniyor...';
+  uploadStatus.style.display = 'block';
+  
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+  
+  for (const file of selectedFiles) {
+    try {
+    uploadStatus.innerHTML = `⏳ ${file.name} yükleniyor...`;
+    
+    let fileData;
+    
+    if (file.isManual) {
+    // Manuel dosya - FileReader ile base64'e dönüştür
+    fileData = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+    // data:application/vnd.ms-excel;base64,... formatından base64'ü çıkar
+    const base64 = reader.result.split(',')[1];
+    resolve(base64);
+    };
+    reader.onerror = () => reject(new Error('Dosya okunamadı'));
+    reader.readAsDataURL(file.file);
+    });
+    } else {
+    // Drive dosyası - indir
+    const downloadRes = await fetch('/api/download-from-drive', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileId: file.id })
+    });
+    
+    const downloadResult = await downloadRes.json();
+    
+    if (!downloadRes.ok) {
+    throw new Error(downloadResult.error);
+    }
+    
+    fileData = downloadResult.data;
+    }
+    
+    // Excel'i işle
+    const processRes = await fetch('/api/process-excel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+    fileName: file.name,
+    fileData: fileData
+    })
+    });
+    
+    const processResult = await processRes.json();
+    
+    if (!processRes.ok) {
+    throw new Error(processResult.error);
+    }
+    
+    console.log(`✅ ${file.name} başarıyla yüklendi`);
+    successCount++;
+    
+    } catch (err) {
+    console.error(`❌ ${file.name} yüklenemedi:`, err);
+    errors.push(`${file.name}: ${err.message}`);
+    errorCount++;
+    }
+  }
+  
+  let message = `✅ ${successCount} dosya yüklendi`;
+  if (errorCount > 0) {
+    message += `<br>❌ ${errorCount} dosya hata`;
+  }
+  
+  uploadStatus.innerHTML = message;
+  
+  // Modal'ı kapat ve tabloları yenile
+  setTimeout(() => {
+    closeUploadModal();
+    handleRefresh();
+  }, 2000);
+}
+
+// Refresh - Tabloları listele
+async function handleRefresh() {
   if (isLoading) return;
   
   isLoading = true;
   statusEl.textContent = 'Tablolar yükleniyor...';
   refreshBtn.disabled = true;
-
+  
   try {
     const res = await fetch('/api/list-tables');
     
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+    throw new Error('Tablolar alınamadı');
     }
     
-    const data = await res.json();
-    const tables = data.tables || [];
-
-    // Update select dropdown
-    tableSelect.innerHTML = '<option value="">Tablo Seçin</option>';
-    tables.forEach(table => {
-      const option = document.createElement('option');
-      option.value = table;
-      option.textContent = table;
-      tableSelect.appendChild(option);
-    });
-
-    statusEl.textContent = `${tables.length} tablo bulundu. Lütfen bir tablo seçin.`;
-
-    // If a table was previously selected, reload it
-    if (selectedTable && tables.includes(selectedTable)) {
-      tableSelect.value = selectedTable;
-      await loadTableData(selectedTable);
+    const result = await res.json();
+    const tables = result.tables || [];
+    
+    if (tables.length === 0) {
+    statusEl.innerHTML = '<span class="small">Henüz tablo yok. Yükle butonuna tıklayarak dosya yükleyiniz.</span>';
+    tableSelection.style.display = 'none';
+    theadRow.innerHTML = "<th>Boş</th>";
+    tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+    return;
     }
-
+    
+    // Tabloları dropdown'a ekle
+    tableSelect.innerHTML = '<option value="">-- Tablo Seçin --</option>';
+    tables.forEach(table => {
+    const option = document.createElement('option');
+    option.value = table;
+    option.textContent = table;
+    tableSelect.appendChild(option);
+    });
+    
+    tableSelection.style.display = 'block';
+    statusEl.textContent = `${tables.length} tablo bulundu. Lütfen bir tablo seçiniz.`;
+    theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
+    tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
+    
   } catch (err) {
-    console.error('Load tables error:', err);
+    console.error('Refresh error:', err);
     statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
   } finally {
     isLoading = false;
@@ -107,175 +453,120 @@ async function loadTables() {
   }
 }
 
-async function handleTableChange(e) {
-  const tableName = e.target.value;
+// Table Select
+async function handleTableSelect() {
+  const selectedOption = tableSelect.options[tableSelect.selectedIndex];
   
-  if (!tableName) {
-    selectedTable = null;
-    currentTableEl.textContent = 'Seçilmedi';
-    approveBtn.disabled = true;
-    theadRow.innerHTML = '<th>Tablo Seçilmedi</th>';
-    tbody.innerHTML = '<tr><td class="small">Henüz veri yok.</td></tr>';
-    meta.textContent = '';
-    statusEl.textContent = 'Lütfen bir tablo seçin.';
+  if (!selectedOption.value) {
+    currentTable = null;
+    statusEl.textContent = 'Tablo seçiniz';
+    theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
+    tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
     return;
   }
-
-  selectedTable = tableName;
-  currentTableEl.textContent = tableName;
-  await loadTableData(tableName);
-}
-
-async function loadTableData(tableName) {
-  if (isLoading) return;
   
-  isLoading = true;
-  statusEl.textContent = `${tableName} veriler yükleniyor...`;
-  theadRow.innerHTML = "<th>Yükleniyor...</th>";
-  tbody.innerHTML = `<tr><td class="small">Yükleniyor...</td></tr>`;
-  meta.textContent = '';
-  approveBtn.disabled = true;
-
+  currentTable = selectedOption.value;
+  statusEl.textContent = `${currentTable} tablosu yükleniyor...`;
+  
   try {
-    const res = await fetch(`/api/table-data?tableName=${encodeURIComponent(tableName)}`);
+    const res = await fetch('/api/get-table-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+    tableName: currentTable
+    })
+    });
+    
+    const result = await res.json();
     
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+    throw new Error(result.error);
     }
     
-    const data = await res.json();
-
-    if (!data || data.length === 0) {
-      statusEl.innerHTML = `<span class="small">Tablo boş.</span>`;
-      theadRow.innerHTML = "<th>Boş</th>";
-      tbody.innerHTML = `<tr><td class="small">Kayıt yok.</td></tr>`;
-      return;
+    const data = result.data || [];
+    
+    if (data.length === 0) {
+    statusEl.innerHTML = `<span class="small">${currentTable} tablosu boş.</span>`;
+    theadRow.innerHTML = "<th>Boş</th>";
+    tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+    return;
     }
-
+    
+    // Tablo başlıklarını oluştur
     const firstRow = data[0];
     const allKeys = Object.keys(firstRow);
-    const showKeys = allKeys;
-
+    
     theadRow.innerHTML = '';
-    showKeys.forEach(k => {
-      const th = document.createElement('th');
-      th.textContent = k;
-      theadRow.appendChild(th);
+    allKeys.forEach(k => {
+    const th = document.createElement('th');
+    th.textContent = k;
+    theadRow.appendChild(th);
     });
-
+    
+    // Tablo verilerini oluştur
     tbody.innerHTML = '';
     data.forEach(row => {
-      const tr = document.createElement('tr');
-      showKeys.forEach(k => {
-        const td = document.createElement('td');
-        const value = row[k];
-        td.textContent = value !== null && value !== undefined ? value : '';
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
+    const tr = document.createElement('tr');
+    allKeys.forEach(k => {
+    const td = document.createElement('td');
+    const value = row[k];
+    td.textContent = value !== null && value !== undefined ? value : '';
+    tr.appendChild(td);
     });
-
+    tbody.appendChild(tr);
+    });
+    
     statusEl.textContent = `Başarılı: ${data.length} kayıt alındı.`;
-    meta.textContent = `Toplam sütun: ${allKeys.length} (tümü gösteriliyor)`;
-    approveBtn.disabled = false;
-
+    meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
+    
   } catch (err) {
-    console.error('Fetch error:', err);
+    console.error('Get table data error:', err);
     statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
-  } finally {
-    isLoading = false;
   }
 }
 
-async function handleUpload() {
-  if (isLoading) return;
-  
-  if (!confirm('Google Drive\'daki tüm Excel dosyaları yüklenecek ve mevcut veriler silinecek. Devam etmek istiyor musunuz?')) {
+// Approval
+async function handleApproval() {
+  if (!currentTable) {
+    statusEl.innerHTML = '<span class="error">❌ Hata: Önce bir tablo seçiniz</span>';
     return;
   }
-
-  isLoading = true;
-  const originalText = statusEl.textContent;
-  statusEl.textContent = 'Google Drive dosyaları yükleniyor... Bu işlem birkaç dakika sürebilir.';
-  uploadBtn.disabled = true;
-  refreshBtn.disabled = true;
-  approveBtn.disabled = true;
-
-  try {
-    const res = await fetch('/api/upload-from-drive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const result = await res.json();
-
-    if (!res.ok || result.error) {
-      throw new Error(result.error || 'Yükleme başarısız');
-    }
-
-    // Show success message
-    const successCount = result.results.filter(r => r.status === 'success').length;
-    const errorCount = result.results.filter(r => r.status === 'error').length;
-    
-    statusEl.innerHTML = `<span style="color: #27ae60;">✅ Yükleme tamamlandı! ${successCount} dosya başarılı, ${errorCount} hata</span>`;
-    
-    // Show detailed results
-    console.log('Upload results:', result.results);
-    
-    // Reload tables after 2 seconds
-    setTimeout(() => {
-      loadTables();
-    }, 2000);
-
-  } catch (err) {
-    console.error('Upload error:', err);
-    statusEl.innerHTML = `<span class="error">❌ Hata: ${err.message}</span>`;
-    
-    setTimeout(() => {
-      statusEl.textContent = originalText;
-    }, 5000);
-  } finally {
-    isLoading = false;
-    uploadBtn.disabled = false;
-    refreshBtn.disabled = false;
-  }
-}
-
-async function handleApproval() {
-  if (isLoading || !selectedTable) return;
+  
+  if (isLoading) return;
   
   isLoading = true;
   const originalText = statusEl.textContent;
   statusEl.textContent = 'Onaylama işlemi başlatılıyor...';
   approveBtn.disabled = true;
   refreshBtn.disabled = true;
-
+  
   try {
-    const res = await fetch(`/api/table-data?tableName=${encodeURIComponent(selectedTable)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+    const res = await fetch('/api/approve-entry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+    tableName: currentTable
+    })
     });
-
+    
     const result = await res.json();
-
-    if (!res.ok || result.error) {
-      throw new Error(result.error || 'Onaylama başarısız');
+    
+    if (!res.ok) {
+    throw new Error(result.error || 'Onaylama başarısız');
     }
-
-    // Show success message
+    
     statusEl.innerHTML = `<span style="color: #27ae60;">✅ ${result.message}</span>`;
     
-    // Refresh table after 1.5 seconds
     setTimeout(() => {
-      loadTableData(selectedTable);
+    handleTableSelect();
     }, 1500);
-
+    
   } catch (err) {
     console.error('Approval error:', err);
     statusEl.innerHTML = `<span class="error">❌ Hata: ${err.message}</span>`;
     
     setTimeout(() => {
-      statusEl.textContent = originalText;
+    statusEl.textContent = originalText;
     }, 3000);
   } finally {
     isLoading = false;
@@ -283,6 +574,9 @@ async function handleApproval() {
     refreshBtn.disabled = false;
   }
 }
+
+// Initial load
+handleRefresh();
 </script>
 </body>
 </html>
