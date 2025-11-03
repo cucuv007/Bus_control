@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   // GET: Fetch all records
   if (req.method === 'GET') {
     const { data, error } = await supabase
-      .from('VL13')
+      .from(tableName)  // ← Parametreden geliyor
       .select('*')
       .order('Tarife_Saati', { ascending: true });
     
