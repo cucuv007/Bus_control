@@ -1,4 +1,4 @@
-
+// pages/api/list-tables.js
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -12,26 +12,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Supabase'deki tüm tabloları listele
+    console.log('📋 Fetching table names...');
+
+    // Supabase'deki get_table_names() fonksiyonunu çağır
     const { data, error } = await supabase
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public');
+      .rpc('get_table_names');
 
     if (error) {
-      console.error('List tables error:', error);
-      return res.status(500).json({ error: 'Tablolar alınamadı' });
+      console.error('RPC error:', error);
+      return res.status(500).json({ 
+        error: 'Tablolar alınamadı: ' + error.message 
+      });
     }
 
-    // Sistem tablolarını filtrele
-    const tables = data
-      .map(t => t.table_name)
-      .filter(name => !name.startsWith('pg_') && !name.startsWith('_') && name !== 'information_schema')
+    // Sonuçları işle
+    const tables = (data || [])
+      .map(row => row.tablename)
+      .filter(name => name && !name.startsWith('pg_') && !name.startsWith('_'))
       .sort();
+
+    console.log(`✅ Found ${tables.length} tables:`, tables);
 
     return res.status(200).json({
       success: true,
-      tables: tables
+      tables: tables,
+      count: tables.length
     });
 
   } catch (err) {
