@@ -313,7 +313,7 @@ function handleManualFileSelect(e) {
   confirmUploadBtn.style.display = 'block';
 }
 
-// Upload - DÜZELTILMIŞ VERSİYON
+// Upload
 async function handleUpload() {
   if (selectedFiles.length === 0) {
     uploadStatus.innerHTML = '❌ Hata: Dosya seçiniz';
@@ -336,37 +336,32 @@ async function handleUpload() {
     let fileData;
     
     if (file.isManual) {
-    // Manuel dosya - FormData ile gönder
-    const formData = new FormData();
-    formData.append('file', file.file);
-    
-    const downloadRes = await fetch('/api/download-from-drive', {
-    method: 'POST',
-    body: formData
+    // Manuel dosya - FileReader ile base64'e dönüştür
+    fileData = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+    // data:application/vnd.ms-excel;base64,... formatından base64'ü çıkar
+    const base64 = reader.result.split(',')[1];
+    resolve(base64);
+    };
+    reader.onerror = () => reject(new Error('Dosya okunamadı'));
+    reader.readAsDataURL(file.file);
     });
-    
-    const downloadResult = await downloadRes.json();
-    
-    if (!downloadRes.ok) {
-    throw new Error(downloadResult.error || 'Dosya işlenemedi');
-    }
-    
-    fileData = downloadResult.fileData;
     } else {
     // Drive dosyası - indir
     const downloadRes = await fetch('/api/download-from-drive', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileId: file.id, fileName: file.name })
+    body: JSON.stringify({ fileId: file.id })
     });
     
     const downloadResult = await downloadRes.json();
     
     if (!downloadRes.ok) {
-    throw new Error(downloadResult.error || 'Dosya indirilmedi');
+    throw new Error(downloadResult.error);
     }
     
-    fileData = downloadResult.fileData;
+    fileData = downloadResult.data;
     }
     
     // Excel'i işle
@@ -382,7 +377,7 @@ async function handleUpload() {
     const processResult = await processRes.json();
     
     if (!processRes.ok) {
-    throw new Error(processResult.error || 'Excel işlenemedi');
+    throw new Error(processResult.error);
     }
     
     console.log(`✅ ${file.name} başarıyla yüklendi`);
