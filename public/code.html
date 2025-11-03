@@ -313,7 +313,7 @@ function handleManualFileSelect(e) {
   confirmUploadBtn.style.display = 'block';
 }
 
-// Upload
+// Upload - DÜZELTILMIŞ VERSİYON
 async function handleUpload() {
   if (selectedFiles.length === 0) {
     uploadStatus.innerHTML = '❌ Hata: Dosya seçiniz';
@@ -348,7 +348,7 @@ async function handleUpload() {
     const downloadResult = await downloadRes.json();
     
     if (!downloadRes.ok) {
-    throw new Error(downloadResult.error);
+    throw new Error(downloadResult.error || 'Dosya işlenemedi');
     }
     
     fileData = downloadResult.fileData;
@@ -363,7 +363,7 @@ async function handleUpload() {
     const downloadResult = await downloadRes.json();
     
     if (!downloadRes.ok) {
-    throw new Error(downloadResult.error);
+    throw new Error(downloadResult.error || 'Dosya indirilmedi');
     }
     
     fileData = downloadResult.fileData;
@@ -382,31 +382,10 @@ async function handleUpload() {
     const processResult = await processRes.json();
     
     if (!processRes.ok) {
-    throw new Error(processResult.error);
+    throw new Error(processResult.error || 'Excel işlenemedi');
     }
     
-    console.log(`✅ ${file.name} başarıyla işlendi`);
-    
-    // Şimdi Supabase'e yükle
-    for (const sheet of processResult.sheets) {
-    const approveRes = await fetch('/api/approve-entry', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-    sheet: sheet.sheet,
-    records: sheet.records
-    })
-    });
-    
-    const approveResult = await approveRes.json();
-    
-    if (!approveRes.ok) {
-    throw new Error(approveResult.error);
-    }
-    
-    console.log(`✅ ${sheet.sheet}: ${sheet.records.length} kayıt yüklendi`);
-    }
-    
+    console.log(`✅ ${file.name} başarıyla yüklendi`);
     successCount++;
     
     } catch (err) {
@@ -571,8 +550,7 @@ async function handleApproval() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-    sheet: currentTable,
-    records: []
+    tableName: currentTable
     })
     });
     
