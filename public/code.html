@@ -567,6 +567,7 @@ async function handleTableSelect() {
 }
 
 // Timer Functions
+// Timer Functions
 function startTimer(tableName) {
   // Önceki timer'ı temizle
   if (timerInterval) {
@@ -584,10 +585,20 @@ function startTimer(tableName) {
 
 async function updateTimer(tableName) {
   try {
+    // Client'ın gerçek saatini al
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const currentTime = `${hours}:${minutes}:${seconds}`;
+    
     const res = await fetch('/api/get-next-bus', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tableName: tableName })
+      body: JSON.stringify({ 
+        tableName: tableName,
+        currentTime: currentTime  // Client saatini gönder
+      })
     });
     
     const result = await res.json();
@@ -606,8 +617,8 @@ async function updateTimer(tableName) {
       
       // Zamanı formatla
       const minutes = Math.floor(remainingSeconds / 60);
-      const seconds = remainingSeconds % 60;
-      timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const secs = remainingSeconds % 60;
+      timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
       
       // Timer'ı göster
       timerContainer.style.display = 'block';
