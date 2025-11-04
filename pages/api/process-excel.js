@@ -51,20 +51,40 @@ function isYellowCell(cell) {
 }
 
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    console.log('\n🚀 API Request received');
+    console.log('Body size:', JSON.stringify(req.body).length);
+    
     const { fileName, fileData } = req.body;
 
     if (!fileName || !fileData) {
-      return res.status(400).json({ error: 'File name ve data gerekli' });
+      console.error('❌ Missing parameters');
+      return res.status(400).json({ 
+        success: false,
+        error: 'fileName ve fileData gerekli' 
+      });
     }
+
+    console.log(`📄 File: ${fileName}`);
+    console.log(`📦 Data length: ${fileData.length}`);
 
     const tableName = extractTableName(fileName);
     if (!tableName) {
       return res.status(400).json({ 
+        success: false,
         error: `Tablo adı çıkarılamadı. Format: XX_TABLENAME_YYYY.xlsx (Dosya: ${fileName})` 
       });
     }
@@ -114,8 +134,27 @@ export default async function handler(req, res) {
     }
 
     if (tarifeColumns.length === 0) {
+      console.error('❌ No tarife columns found');
+      console.log('First row values:', (() => {
+        const vals = [];
+        for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
+          const cell = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
+          vals.push(cell ? cell.v : null);
+        }
+        return vals;
+      })());
+      
       return res.status(400).json({ 
-        error: 'T01, T02... sütunları bulunamadı'
+        success: false,
+        error: 'T01, T02... sütunları bulunamadı',
+        firstRow: (() => {
+          const vals = [];
+          for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
+            const cell = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
+            vals.push(cell ? cell.v : null);
+          }
+          return vals;
+        })()
       });
     }
 
@@ -167,6 +206,7 @@ export default async function handler(req, res) {
 
     if (dataToInsert.length === 0) {
       return res.status(400).json({ 
+        success: false,
         error: 'Sarı hücre bulunamadı. Lütfen hücreleri Fill Color ile sarıya boyayın.',
         debug: {
           yellowFound: yellowCount,
@@ -195,6 +235,7 @@ export default async function handler(req, res) {
     if (createError) {
       console.error('❌ Create error:', createError);
       return res.status(500).json({ 
+        success: false,
         error: 'Tablo oluşturulamadı: ' + createError.message,
         hint: 'Supabase SQL Editor\'de exec_sql fonksiyonunu oluşturun'
       });
@@ -214,6 +255,7 @@ export default async function handler(req, res) {
     if (insertError) {
       console.error('❌ Insert error:', insertError);
       return res.status(500).json({ 
+        success: false,
         error: 'Veri eklenemedi: ' + insertError.message
       });
     }
@@ -230,9 +272,22 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error('❌ FATAL ERROR:', err);
+    console.error('Stack:', err.stack);
     return res.status(500).json({ 
-      error: err.message
+      success: false,
+      error: 'Sistem hatası: ' + err.message,
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 }
+
+// Vercel serverless function config
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb'
+    },
+    responseLimit: '50mb'
+  }
+};
