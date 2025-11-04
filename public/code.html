@@ -183,6 +183,7 @@ let isLoading = false;
 let allFiles = [];
 let uploadMethod = null;
 let timerInterval = null;
+let lastBusTime = null;
 
 // Event listeners
 uploadBtn.addEventListener('click', openUploadModal);
@@ -556,7 +557,7 @@ async function handleTableSelect() {
     statusEl.textContent = `Başarılı: ${data.length} kayıt alındı.`;
     meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
     
-    // Timer'ı başlat
+    // Timer'ı başlat - Sürekli dinamik olarak çalışacak
     startTimer(currentTable);
     
   } catch (err) {
@@ -566,13 +567,14 @@ async function handleTableSelect() {
   }
 }
 
-// Timer Functions
-// Timer Functions
+// Timer Functions - Sürekli dinamik olarak çalışacak
 function startTimer(tableName) {
   // Önceki timer'ı temizle
   if (timerInterval) {
     clearInterval(timerInterval);
   }
+  
+  lastBusTime = null;
   
   // Her saniye güncelle
   timerInterval = setInterval(() => {
@@ -609,23 +611,28 @@ async function updateTimer(tableName) {
     }
     
     if (result.success && result.nextBus) {
-      const { plaka, tarife, remainingSeconds } = result.nextBus;
+      const { plaka, tarife, tarifeSaati, remainingSeconds } = result.nextBus;
       
-      // Bilgileri güncelle
-      timerPlaka.textContent = plaka || '-';
-      timerTarife.textContent = tarife || '-';
+      // Eğer otobüs değişmişse (yeni otobüs bulunmuşsa)
+      if (lastBusTime !== tarifeSaati) {
+        lastBusTime = tarifeSaati;
+        
+        // Bilgileri güncelle
+        timerPlaka.textContent = plaka || '-';
+        timerTarife.textContent = tarife || '-';
+        
+        // Timer'ı göster
+        timerContainer.style.display = 'block';
+      }
       
-      // Zamanı formatla
-      const minutes = Math.floor(remainingSeconds / 60);
+      // Zamanı formatla ve güncelle
+      const mins = Math.floor(remainingSeconds / 60);
       const secs = remainingSeconds % 60;
-      timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
       
-      // Timer'ı göster
-      timerContainer.style.display = 'block';
-      
-      // Eğer zaman bittiyse timer'ı kapat
+      // Eğer zaman bittiyse (0 olmuşsa), bir sonraki aramayı yap
       if (remainingSeconds <= 0) {
-        closeTimer();
+        lastBusTime = null; // Sıfırla, bir sonraki otobüsü bulsun
       }
     } else {
       closeTimer();
@@ -641,6 +648,7 @@ function closeTimer() {
     timerInterval = null;
   }
   timerContainer.style.display = 'none';
+  lastBusTime = null;
 }
 
 // Approval
