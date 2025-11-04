@@ -136,6 +136,121 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* TIMER STYLES */
+.timer-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.timer-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  min-width: 280px;
+  border-left: 4px solid #27ae60;
+}
+
+.timer-header {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timer-header h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.close-timer-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.close-timer-btn:hover {
+  transform: scale(1.2);
+}
+
+.timer-content {
+  padding: 16px;
+}
+
+.bus-info {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-row .label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.info-row .value {
+  color: #27ae60;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.countdown {
+  text-align: center;
+}
+
+.timer-display {
+  font-size: 48px;
+  font-weight: 700;
+  color: #27ae60;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.timer-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 @media (max-width: 768px) {
   header {
     flex-direction: column;
@@ -160,5 +275,19 @@ tbody tr:last-child td {
 
   .info {
     font-size: 12px;
+  }
+
+  .timer-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .timer-card {
+    min-width: auto;
+  }
+
+  .timer-display {
+    font-size: 36px;
   }
 }
