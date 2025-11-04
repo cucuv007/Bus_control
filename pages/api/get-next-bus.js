@@ -11,10 +11,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { tableName } = req.body;
+    const { tableName, currentTime } = req.body;
 
     if (!tableName) {
       return res.status(400).json({ error: 'Table name gerekli' });
+    }
+
+    if (!currentTime) {
+      return res.status(400).json({ error: 'currentTime gerekli' });
     }
 
     // Tablodan tüm verileri al
@@ -35,51 +39,47 @@ export default async function handler(req, res) {
       });
     }
 
-    // Şu anki zamanı al
-    const now = new Date();
-    const currentHours = String(now.getHours()).padStart(2, '0');
-    const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-    const currentSeconds = now.getSeconds();
-    const currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + currentSeconds;
+    // Client'tan gelen zamanı parse et (format: "HH:MM:SS")
+    const [hours, minutes, seconds] = currentTime.split(':').map(Number);
+    const currentTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
 
-    // Sonraki otobüsü bul (10 dakika içinde)
     let nextBus = null;
-    const tenMinutesInSeconds = 10 * 60;
+    let minDifference = Infinity;
 
+    // Tüm satırları kontrol et ve en yakın saati bul
     for (const row of data) {
       const tarifeSaati = row.Tarife_Saati; // Format: "HH:MM"
-      
+
       if (!tarifeSaati) continue;
 
-      const [hours, minutes] = tarifeSaati.split(':').map(Number);
-      const tarifeSaatiInSeconds = hours * 3600 + minutes * 60;
+      const [tarHours, tarMinutes] = tarifeSaati.split(':').map(Number);
+      const tarifeSaatiInSeconds = tarHours * 3600 + tarMinutes * 60;
 
       // Kalan zamanı hesapla
       let remainingSeconds = tarifeSaatiInSeconds - currentTimeInSeconds;
 
-      // Eğer negatifse, yarın için hesapla
+      // Eğer negatifse (geçmiş saatse), yarın için hesapla
       if (remainingSeconds < 0) {
         remainingSeconds += 24 * 3600;
       }
 
-      // 10 dakika içindeyse ve en yakın olanı seç
-      if (remainingSeconds > 0 && remainingSeconds <= tenMinutesInSeconds) {
-        if (!nextBus || remainingSeconds < nextBus.remainingSeconds) {
-          nextBus = {
-            plaka: row.Plaka || '-',
-            tarife: row.Tarife || '-',
-            tarifeSaati: tarifeSaati,
-            remainingSeconds: Math.max(0, remainingSeconds)
-          };
-        }
+      // En yakın gelecek saati bul (0'dan büyük olmalı)
+      if (remainingSeconds > 0 && remainingSeconds < minDifference) {
+        minDifference = remainingSeconds;
+        nextBus = {
+          plaka: row.Plaka || '-',
+          tarife: row.Tarife || '-',
+          tarifeSaati: tarifeSaati,
+          remainingSeconds: Math.max(0, remainingSeconds)
+        };
       }
     }
 
     return res.status(200).json({
       success: !!nextBus,
       nextBus: nextBus,
-      currentTime: `${currentHours}:${currentMinutes}`,
-      message: nextBus ? 'Sonraki otobüs bulundu' : 'Sonraki 10 dakika içinde otobüs yok'
+      receivedTime: currentTime,
+      message: nextBus ? 'Sonraki otobüs bulundu' : 'Otobüs bulunamadı'
     });
 
   } catch (err) {
