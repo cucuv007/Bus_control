@@ -20,6 +20,32 @@
     </div>
   </header>
 
+  <!-- COUNTDOWN TIMER BÖLÜMÜ -->
+  <div id="timerContainer" class="timer-container" style="display: none;">
+    <div class="timer-card">
+      <div class="timer-header">
+        <h3>⏱️ Sonraki Otobüs</h3>
+        <button id="closeTimerBtn" class="close-timer-btn">×</button>
+      </div>
+      <div class="timer-content">
+        <div class="bus-info">
+          <div class="info-row">
+            <span class="label">Plaka:</span>
+            <span id="timerPlaka" class="value">-</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Tarife:</span>
+            <span id="timerTarife" class="value">-</span>
+          </div>
+        </div>
+        <div class="countdown">
+          <div id="timerDisplay" class="timer-display">00:00</div>
+          <div class="timer-label">Kalan Süre</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Modal -->
   <div id="uploadModal" class="modal" style="display: none;">
     <div class="modal-content">
@@ -115,6 +141,13 @@ const theadRow = document.getElementById('theadRow');
 const tbody = document.getElementById('tbody');
 const meta = document.getElementById('meta');
 
+// Timer elements
+const timerContainer = document.getElementById('timerContainer');
+const timerDisplay = document.getElementById('timerDisplay');
+const timerPlaka = document.getElementById('timerPlaka');
+const timerTarife = document.getElementById('timerTarife');
+const closeTimerBtn = document.getElementById('closeTimerBtn');
+
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
 const closeModal = document.getElementById('closeModal');
@@ -149,6 +182,7 @@ let currentTable = null;
 let isLoading = false;
 let allFiles = [];
 let uploadMethod = null;
+let timerInterval = null;
 
 // Event listeners
 uploadBtn.addEventListener('click', openUploadModal);
@@ -156,6 +190,7 @@ refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
+closeTimerBtn.addEventListener('click', closeTimer);
 
 methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
 methodManualBtn.addEventListener('click', () => selectMethod('manual'));
@@ -462,6 +497,7 @@ async function handleTableSelect() {
     statusEl.textContent = 'Tablo seçiniz';
     theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
     tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
+    closeTimer();
     return;
   }
   
@@ -489,6 +525,7 @@ async function handleTableSelect() {
     statusEl.innerHTML = `<span class="small">${currentTable} tablosu boş.</span>`;
     theadRow.innerHTML = "<th>Boş</th>";
     tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+    closeTimer();
     return;
     }
     
@@ -519,10 +556,80 @@ async function handleTableSelect() {
     statusEl.textContent = `Başarılı: ${data.length} kayıt alındı.`;
     meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
     
+    // Timer'ı başlat
+    startTimer(currentTable);
+    
   } catch (err) {
     console.error('Get table data error:', err);
     statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
+    closeTimer();
   }
+}
+
+// Timer Functions
+function startTimer(tableName) {
+  // Önceki timer'ı temizle
+  if (timerInterval) {
+    clearInterval(timerInterval);
+  }
+  
+  // Her saniye güncelle
+  timerInterval = setInterval(() => {
+    updateTimer(tableName);
+  }, 1000);
+  
+  // İlk güncelleme
+  updateTimer(tableName);
+}
+
+async function updateTimer(tableName) {
+  try {
+    const res = await fetch('/api/get-next-bus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableName: tableName })
+    });
+    
+    const result = await res.json();
+    
+    if (!res.ok) {
+      closeTimer();
+      return;
+    }
+    
+    if (result.success && result.nextBus) {
+      const { plaka, tarife, remainingSeconds } = result.nextBus;
+      
+      // Bilgileri güncelle
+      timerPlaka.textContent = plaka || '-';
+      timerTarife.textContent = tarife || '-';
+      
+      // Zamanı formatla
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      // Timer'ı göster
+      timerContainer.style.display = 'block';
+      
+      // Eğer zaman bittiyse timer'ı kapat
+      if (remainingSeconds <= 0) {
+        closeTimer();
+      }
+    } else {
+      closeTimer();
+    }
+  } catch (err) {
+    console.error('Timer update error:', err);
+  }
+}
+
+function closeTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  timerContainer.style.display = 'none';
 }
 
 // Approval
