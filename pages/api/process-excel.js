@@ -36,20 +36,29 @@ export default async function handler(req, res) {
 
   try {
     console.log('\n🚀 API Request received');
+    console.log('Headers:', JSON.stringify(req.headers));
     
     const { fileName, fileData } = req.body;
+
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('fileName:', fileName);
+    console.log('fileData exists:', !!fileData);
+    console.log('fileData length:', fileData?.length);
 
     if (!fileName || !fileData) {
       console.error('❌ Missing parameters');
       return res.status(400).json({ 
         success: false,
-        error: 'fileName ve fileData gerekli' 
+        error: 'fileName ve fileData gerekli',
+        received: { fileName: !!fileName, fileData: !!fileData }
       });
     }
 
     console.log(`📄 File: ${fileName}`);
 
     const tableName = extractTableName(fileName);
+    console.log(`🔍 Extracted table name: ${tableName}`);
+    
     if (!tableName) {
       return res.status(400).json({ 
         success: false,
@@ -63,7 +72,10 @@ export default async function handler(req, res) {
     console.log(`${'='.repeat(60)}`);
 
     // Excel dosyasını oku
+    console.log('📖 Reading Excel buffer...');
     const buffer = Buffer.from(fileData, 'base64');
+    console.log(`✅ Buffer created: ${buffer.length} bytes`);
+    
     const workbook = XLSX.read(buffer, { 
       cellFormula: false, 
       cellStyles: false,
@@ -80,6 +92,7 @@ export default async function handler(req, res) {
     const range = XLSX.utils.decode_range(worksheet['!ref']);
     
     console.log(`📊 Range: ${worksheet['!ref']}`);
+    console.log(`📊 Rows: ${range.s.r} to ${range.e.r}, Cols: ${range.s.c} to ${range.e.c}`);
 
     // B sütunu = 1 (0-indexed)
     const B_COL = 1;
