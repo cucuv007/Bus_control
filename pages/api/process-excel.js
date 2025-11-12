@@ -97,37 +97,42 @@ export default async function handler(req, res) {
     // B sütunu = 1 (0-indexed)
     const B_COL = 1;
     
-    // İlk satırın tüm değerlerini logla (DEBUG)
-    console.log('\n📋 İLK SATIR İÇERİĞİ (Header):');
-    for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-      const cell = worksheet[cellAddress];
-      const colLetter = XLSX.utils.encode_col(col);
-      console.log(`  ${colLetter}(${col}): ${cell ? JSON.stringify(cell.v) : 'EMPTY'}`);
+    // İlk 10 satırın tüm değerlerini logla (DEBUG)
+    console.log('\n📋 İLK 10 SATIR İÇERİĞİ:');
+    for (let r = 0; r <= Math.min(9, range.e.r); r++) {
+      console.log(`\n  Satır ${r + 1}:`);
+      for (let col = 0; col <= Math.min(range.e.c, 15); col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r, c: col });
+        const cell = worksheet[cellAddress];
+        const colLetter = XLSX.utils.encode_col(col);
+        if (cell && cell.v) {
+          console.log(`    ${colLetter}(${col}): "${cell.v}"`);
+        }
+      }
     }
     
     // D sütunundan başlayarak T ile başlayan sütunları bul
     const tarifeColumns = [];
     
     // Önce tüm satırları tara (başlık farklı satırda olabilir)
-    console.log('\n🔍 Tarife sütunlarını arıyor...');
-    for (let headerRow = 0; headerRow <= Math.min(10, range.e.r); headerRow++) {
-      console.log(`\nSatır ${headerRow + 1} kontrol ediliyor:`);
-      for (let col = 0; col <= range.e.c; col++) {
+    console.log('\n🔍 Tarife sütunlarını arıyor (T01, T02 gibi)...');
+    for (let headerRow = 0; headerRow <= Math.min(15, range.e.r); headerRow++) {
+      for (let col = 3; col <= range.e.c; col++) {  // D sütundan başla (col=3)
         const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: col });
         const cell = worksheet[cellAddress];
         
         if (cell && cell.v) {
-          const value = String(cell.v).trim();
+          const value = String(cell.v).trim().toUpperCase();
           const colLetter = XLSX.utils.encode_col(col);
           
-          if (value.match(/^T\d+$/i)) {
-            console.log(`  ✅ BULUNDU: ${colLetter}(${col}) = ${value}`);
+          // T01, T02 gibi başlıkları bul
+          if (value.match(/^T\d+$/)) {
+            console.log(`  ✅ BULUNDU: ${colLetter}(${col}) Satır ${headerRow + 1} = ${value}`);
             
             // Henüz eklenmemişse ekle
-            if (!tarifeColumns.find(t => t.name === value.toUpperCase())) {
+            if (!tarifeColumns.find(t => t.name === value)) {
               tarifeColumns.push({
-                name: value.toUpperCase(),
+                name: value,
                 colIndex: col,
                 colLetter: colLetter,
                 headerRow: headerRow
@@ -189,26 +194,39 @@ export default async function handler(req, res) {
     const mainHeaderRow = parseInt(Object.keys(headerRowCounts).sort((a, b) => 
       headerRowCounts[b] - headerRowCounts[a]
     )[0]);
+    
+    console.log(`\n📊 Main header row: ${mainHeaderRow + 1}`);
 
     // Verileri topla
     const dataToInsert = [];
+    
+    // B sütunundaki tüm değerleri göster (debug)
+    console.log('\n🔍 B sütunundaki değerler:');
+    for (let r = 0; r <= Math.min(20, range.e.r); r++) {
+      const bCellAddress = XLSX.utils.encode_cell({ r, c: 1 });
+      const bCell = worksheet[bCellAddress];
+      if (bCell && bCell.v) {
+        console.log(`  Satır ${r + 1}: "${bCell.v}"`);
+      }
+    }
 
     // Her satırı kontrol et
-    for (let row = 1; row <= range.e.r; row++) {
+    console.log('\n🔄 Satırları işleme başlıyor...');
+    for (let row = 0; row <= range.e.r; row++) {
       // B sütunundaki değeri al
-      const bCellAddress = XLSX.utils.encode_cell({ r: row, c: B_COL });
+      const bCellAddress = XLSX.utils.encode_cell({ r: row, c: 1 });  // B = index 1
       const bCell = worksheet[bCellAddress];
       
       if (!bCell || !bCell.v) continue;
       
       const hareketValue = String(bCell.v).trim();
       
-      // Sadece "Kalkış" veya "Dönüş" satırlarını işle
+      // Sadece "Kalkış" veya "Dönüş" satırlarını işle (küçük-büyük harf duyarsız)
       if (hareketValue !== 'Kalkış' && hareketValue !== 'Dönüş') {
         continue;
       }
 
-      console.log(`\n📍 Row ${row + 1}: Hareket = ${hareketValue}`);
+      console.log(`\n📍 Row ${row + 1}: Hareket = "${hareketValue}"`);
 
       // Her tarife sütunu için değeri al
       for (const tarife of tarifeColumns) {
@@ -218,34 +236,45 @@ export default async function handler(req, res) {
         // Birleştirilmiş hücre kontrolü
         const merges = worksheet['!merges'] || [];
         let isMerged = false;
+        let mergedCell = cell;
         
         for (const merge of merges) {
+          // Mevcut hücre merged range içindeyse
           if (row >= merge.s.r && row <= merge.e.r && 
               tarife.colIndex >= merge.s.c && tarife.colIndex <= merge.e.c) {
             isMerged = true;
+            // Top-left hücresinin değerini al
+            const topLeftAddr = XLSX.utils.encode_cell({ r: merge.s.r, c: merge.s.c });
+            mergedCell = worksheet[topLeftAddr];
+            console.log(`  ⚠️ ${cellAddress} merged, top-left: ${topLeftAddr}`);
             break;
           }
         }
 
-        // Birleştirilmiş hücreleri atla
-        if (isMerged) {
-          console.log(`  ⚠️ ${cellAddress} birleştirilmiş, atlandı`);
-          continue;
-        }
-
-        if (cell && cell.v) {
-          let timeValue = String(cell.v).trim();
+        // Birleştirilmiş veya normal hücrelerin değerini al
+        const targetCell = isMerged ? mergedCell : cell;
+        
+        if (targetCell && targetCell.v) {
+          let timeValue = String(targetCell.v).trim();
           
-          // Excel time formatını düzelt
-          if (typeof cell.v === 'number' && cell.v > 0 && cell.v < 1) {
-            const totalSeconds = Math.round(cell.v * 86400);
+          // Excel time formatını kontrol et ve düzelt
+          if (typeof targetCell.v === 'number' && targetCell.v > 0 && targetCell.v < 1) {
+            // Excel time format (0-1 arasında decimal)
+            const totalSeconds = Math.round(targetCell.v * 86400);
             const hours = Math.floor(totalSeconds / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             timeValue = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+            console.log(`  📊 ${cellAddress}: ${targetCell.v} -> ${timeValue} (decimal format)`);
           } else if (timeValue.match(/^\d{1,2}:\d{2}$/)) {
+            // HH:MM format
             timeValue = `${timeValue}:00`;
-          } else if (!timeValue.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
-            console.warn(`  ⚠️ Invalid time: ${cellAddress}: "${timeValue}"`);
+            console.log(`  ✅ ${cellAddress} (${tarife.name}): ${timeValue}`);
+          } else if (timeValue.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
+            // HH:MM:SS format (zaten doğru)
+            console.log(`  ✅ ${cellAddress} (${tarife.name}): ${timeValue}`);
+          } else {
+            // Tanımlanamayan format
+            console.warn(`  ⚠️ Unknown time format in ${cellAddress}: "${timeValue}"`);
             continue;
           }
           
@@ -257,8 +286,6 @@ export default async function handler(req, res) {
             Durum: null,
             Plaka: null
           });
-
-          console.log(`  ✅ ${cellAddress} (${tarife.name}): ${timeValue}`);
         }
       }
     }
