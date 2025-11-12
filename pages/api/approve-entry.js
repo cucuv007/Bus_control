@@ -1,3 +1,4 @@
+// pages/api/approve-entry.js
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { tableName } = req.body;
+    const { tableName, hareket } = req.body;
 
     if (!tableName) {
       return res.status(400).json({ error: 'Table name gerekli' });
@@ -42,12 +43,20 @@ export default async function handler(req, res) {
 
     console.log('[APPROVAL] Current Turkey time:', currentTimeStr);
     console.log('[APPROVAL] Table:', tableName);
+    console.log('[APPROVAL] Hareket filter:', hareket || 'Tümü');
 
-    // Fetch all records from selected table
-    const { data: allRows, error: fetchError } = await supabase
+    // Fetch all records from selected table (with Hareket filter if provided)
+    let query = supabase
       .from(tableName)
       .select('*')
       .order('Tarife_Saati', { ascending: true });
+
+    // Hareket filtresi varsa uygula
+    if (hareket) {
+      query = query.eq('Hareket', hareket);
+    }
+
+    const { data: allRows, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Fetch error:', fetchError);
@@ -55,7 +64,7 @@ export default async function handler(req, res) {
     }
 
     if (!allRows || allRows.length === 0) {
-      return res.status(400).json({ error: 'Tablo boş' });
+      return res.status(400).json({ error: 'Tablo boş veya filtre ile eşleşen kayıt yok' });
     }
 
     // Find the closest Tarife_Saati within ±10 minutes
@@ -94,6 +103,7 @@ export default async function handler(req, res) {
 
     console.log('[APPROVAL] Match found:', {
       tarife: closestRow.Tarife,
+      hareket: closestRow.Hareket,
       scheduled: closestRow.Tarife_Saati,
       actual: currentTimeStr,
       diff_minutes: diffMinutes,
@@ -107,7 +117,8 @@ export default async function handler(req, res) {
         Onaylanan: currentTimeStr,
         Durum: durum
       })
-      .eq('Tarife_Saati', closestRow.Tarife_Saati);
+      .eq('Tarife_Saati', closestRow.Tarife_Saati)
+      .eq('Hareket', closestRow.Hareket);
 
     if (updateError) {
       console.error('Update error:', updateError);
@@ -118,10 +129,11 @@ export default async function handler(req, res) {
       success: true,
       tableName: tableName,
       tarife: closestRow.Tarife,
+      hareket: closestRow.Hareket,
       scheduled_time: closestRow.Tarife_Saati,
       actual_time: currentTimeStr,
       durum: durum,
-      message: `${closestRow.Tarife} seferi onaylandı: ${currentTimeStr} (${durum})`
+      message: `${closestRow.Tarife} (${closestRow.Hareket}) seferi onaylandı: ${currentTimeStr} (${durum})`
     });
 
   } catch (err) {
