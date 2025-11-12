@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Debug - Sistem Testi</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f5f5;
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.container {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+h1 {
+  color: #2c3e50;
+  margin-bottom: 30px;
+}
+.test-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+}
+.test-section h2 {
+  margin-top: 0;
+  color: #34495e;
+  font-size: 18px;
+}
+.status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+.status.success {
+  background: #d4edda;
+  color: #155724;
+}
+.status.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+.status.loading {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+pre {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.info {
+  background: #e7f3ff;
+  border-left: 4px solid #2196F3;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.warning {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.error-box {
+  background: #f8d7da;
+  border-left: 4px solid #dc3545;
+  padding: 15px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔍 Sistem Testi & Debug</h1>
+  
+  <div class="info">
+    <strong>ℹ️ Bu sayfa sisteminizin doğru çalışıp çalışmadığını test eder.</strong><br>
+    Tüm testler yeşil olmalı. Kırmızı varsa, aşağıdaki talimatları takip edin.
+  </div>
+
+  <div style="margin-bottom: 30px;">
+    <button onclick="runAllTests()">🔄 Tüm Testleri Çalıştır</button>
+    <button onclick="testFileUpload()">📤 Dosya Yükleme Testi</button>
+    <button onclick="window.location.href='/code.html'">← Ana Sayfaya Dön</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: API Bağlantısı</h2>
+    <div id="test1-status" class="status loading">Bekleniyor...</div>
+    <pre id="test1-result">Test başlatılmadı</pre>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Supabase Bağlantısı</h2>
+    <div id="test2-status" class="status loading">Bekleniyor...</div>
+    <pre id="test2-result">Test başlatılmadı</pre>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: exec_sql Fonksiyonu</h2>
+    <div id="test3-status" class="status loading">Bekleniyor...</div>
+    <pre id="test3-result">Test başlatılmadı</pre>
+    <div id="test3-hint" style="display: none;" class="warning">
+      <strong>⚠️ Çözüm:</strong><br>
+      Supabase Dashboard → SQL Editor → New Query:<br>
+      <pre style="margin-top: 10px;">CREATE OR REPLACE FUNCTION exec_sql(sql text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  EXECUTE sql;
+END;
+$$;</pre>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: get_table_names Fonksiyonu</h2>
+    <div id="test4-status" class="status loading">Bekleniyor...</div>
+    <pre id="test4-result">Test başlatılmadı</pre>
+    <div id="test4-hint" style="display: none;" class="warning">
+      <strong>⚠️ Çözüm:</strong><br>
+      Supabase Dashboard → SQL Editor → New Query:<br>
+      <pre style="margin-top: 10px;">CREATE OR REPLACE FUNCTION get_table_names()
+RETURNS TABLE (tablename text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT table_name::text
+  FROM information_schema.tables
+  WHERE table_schema = 'public'
+    AND table_type = 'BASE TABLE';
+END;
+$$;</pre>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Manuel Dosya Yükleme</h2>
+    <div id="test5-status" class="status loading">Bekleniyor...</div>
+    <input type="file" id="testFile" accept=".xlsx,.xls" style="margin: 10px 0;" />
+    <pre id="test5-result">Dosya seçin ve "Dosya Yükleme Testi" butonuna tıklayın</pre>
+  </div>
+
+  <div id="console-output" style="display: none;">
+    <h2>📋 Konsol Çıktısı</h2>
+    <pre id="console-content" style="max-height: 400px; overflow-y: auto;"></pre>
+  </div>
+</div>
+
+<script>
+let consoleLog = [];
+
+// Console'u yakala
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = function(...args) {
+  consoleLog.push(['LOG', ...args]);
+  updateConsoleOutput();
+  originalLog.apply(console, args);
+};
+
+console.error = function(...args) {
+  consoleLog.push(['ERROR', ...args]);
+  updateConsoleOutput();
+  originalError.apply(console, args);
+};
+
+function updateConsoleOutput() {
+  const consoleDiv = document.getElementById('console-output');
+  const consoleContent = document.getElementById('console-content');
+  
+  consoleDiv.style.display = 'block';
+  consoleContent.textContent = consoleLog.map(([type, ...args]) => {
+    return `[${type}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ')}`;
+  }).join('\n');
+  
+  consoleContent.scrollTop = consoleContent.scrollHeight;
+}
+
+async function runAllTests() {
+  console.log('🚀 Starting all tests...');
+  
+  try {
+    const response = await fetch('/api/test-connection');
+    const result = await response.json();
+    
+    console.log('Test results:', result);
+    
+    // Test 1: Environment
+    const env = result.environment;
+    document.getElementById('test1-status').className = 'status success';
+    document.getElementById('test1-status').textContent = '✅ Başarılı';
+    document.getElementById('test1-result').textContent = JSON.stringify(env, null, 2);
+    
+    // Test 2: Supabase Connection
+    const supaTest = result.tests.supabaseConnection;
+    if (supaTest.success) {
+      document.getElementById('test2-status').className = 'status success';
+      document.getElementById('test2-status').textContent = '✅ Başarılı';
+    } else {
+      document.getElementById('test2-status').className = 'status error';
+      document.getElementById('test2-status').textContent = '❌ Başarısız';
+    }
+    document.getElementById('test2-result').textContent = JSON.stringify(supaTest, null, 2);
+    
+    // Test 3: exec_sql
+    const execTest = result.tests.execSqlFunction;
+    if (execTest.success) {
+      document.getElementById('test3-status').className = 'status success';
+      document.getElementById('test3-status').textContent = '✅ Başarılı';
+      document.getElementById('test3-hint').style.display = 'none';
+    } else {
+      document.getElementById('test3-status').className = 'status error';
+      document.getElementById('test3-status').textContent = '❌ Başarısız';
+      document.getElementById('test3-hint').style.display = 'block';
+    }
+    document.getElementById('test3-result').textContent = JSON.stringify(execTest, null, 2);
+    
+    // Test 4: get_table_names
+    const tablesTest = result.tests.getTableNamesFunction;
+    if (tablesTest.success) {
+      document.getElementById('test4-status').className = 'status success';
+      document.getElementById('test4-status').textContent = '✅ Başarılı';
+      document.getElementById('test4-hint').style.display = 'none';
+    } else {
+      document.getElementById('test4-status').className = 'status error';
+      document.getElementById('test4-status').textContent = '❌ Başarısız';
+      document.getElementById('test4-hint').style.display = 'block';
+    }
+    document.getElementById('test4-result').textContent = JSON.stringify(tablesTest, null, 2);
+    
+    console.log('✅ All tests completed');
+    
+  } catch (err) {
+    console.error('Test error:', err);
+    document.getElementById('test1-status').className = 'status error';
+    document.getElementById('test1-status').textContent = '❌ Hata';
+    document.getElementById('test1-result').textContent = `Error: ${err.message}`;
+  }
+}
+
+async function testFileUpload() {
+  const fileInput = document.getElementById('testFile');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Lütfen önce bir dosya seçin!');
+    return;
+  }
+  
+  console.log('📤 Testing file upload:', file.name);
+  
+  document.getElementById('test5-status').className = 'status loading';
+  document.getElementById('test5-status').textContent = '⏳ Yükleniyor...';
+  document.getElementById('test5-result').textContent = 'Dosya yükleniyor...';
+  
+  try {
+    // Dosyayı base64'e çevir
+    const fileData = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    
+    console.log('✅ File read, size:', fileData.length, 'chars');
+    
+    // API'ye gönder
+    const response = await fetch('/api/process-excel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileData: fileData
+      })
+    });
+    
+    const result = await response.json();
+    console.log('Upload result:', result);
+    
+    if (response.ok && result.success) {
+      document.getElementById('test5-status').className = 'status success';
+      document.getElementById('test5-status').textContent = '✅ Başarılı';
+      document.getElementById('test5-result').textContent = JSON.stringify(result, null, 2);
+    } else {
+      document.getElementById('test5-status').className = 'status error';
+      document.getElementById('test5-status').textContent = '❌ Başarısız';
+      document.getElementById('test5-result').textContent = JSON.stringify(result, null, 2);
+    }
+    
+  } catch (err) {
+    console.error('Upload error:', err);
+    document.getElementById('test5-status').className = 'status error';
+    document.getElementById('test5-status').textContent = '❌ Hata';
+    document.getElementById('test5-result').textContent = `Error: ${err.message}`;
+  }
+}
+
+// Sayfa yüklendiğinde otomatik test başlat
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('🔍 Debug page loaded');
+  runAllTests();
+});
+</script>
+</body>
+</html>
