@@ -80,6 +80,9 @@ async function createTableIfNotExists(tableName) {
       return { success: false, created: false, message: `Tablo oluşturulamadı. Supabase'de manuel oluşturun: CREATE TABLE public."${tableName}" (...)` };
     }
     
+    // Tablo oluşturulduktan sonra Supabase cache'in güncellenmesi için bekle
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     return { success: true, created: true, message: `Tablo "${tableName}" başarıyla oluşturuldu` };
   } catch (err) {
     console.error('Table creation error:', err);
@@ -193,13 +196,23 @@ export default async function handler(req, res) {
     // Tablo oluştur (yoksa)
     const tableCreation = await createTableIfNotExists(tableName);
     if (!tableCreation.success && tableCreation.message.includes('Supabase\'de manuel')) {
-      // exec_sql RPC yoksa, hata döndür fakat INSERT'i dene (tablo zaten varsa çalışacak)
       console.warn(tableCreation.message);
     }
 
+    // Eğer tablo yeni oluşturulduysa, fresh Supabase client kullan
+    let upsertClient = supabase;
+    if (tableCreation.created) {
+      // Yeni bir Supabase client instance oluştur (schema cache'i temiz olacak)
+      upsertClient = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+      // Cache refresh için bekle
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
     // Upsert: tablo tarafında Tarife_Saati primary key olarak tanımlı, ona göre onConflict kullan
-    // Tablo adını çift tırnak ile gönder (case-sensitive identifier)
-    const { data, error } = await supabase
+    const { data, error } = await upsertClient
       .from(`"${tableName}"`)
       .upsert(dataToInsert, { onConflict: 'Tarife_Saati' });
 
