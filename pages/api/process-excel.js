@@ -97,33 +97,98 @@ export default async function handler(req, res) {
     // B sütunu = 1 (0-indexed)
     const B_COL = 1;
     
-    // D sütunundan başlayarak T ile başlayan sütunları bul
-    const tarifeColumns = [];
-    for (let col = 3; col <= range.e.c; col++) { // D sütunu = 3
+    // İlk satırın tüm değerlerini logla (DEBUG)
+    console.log('\n📋 İLK SATIR İÇERİĞİ (Header):');
+    for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
       const cell = worksheet[cellAddress];
-      
-      if (cell && cell.v) {
-        const value = String(cell.v).trim();
-        if (value.match(/^T\d+$/i)) {
-          tarifeColumns.push({
-            name: value.toUpperCase(),
-            colIndex: col,
-            colLetter: XLSX.utils.encode_col(col)
-          });
+      const colLetter = XLSX.utils.encode_col(col);
+      console.log(`  ${colLetter}(${col}): ${cell ? JSON.stringify(cell.v) : 'EMPTY'}`);
+    }
+    
+    // D sütunundan başlayarak T ile başlayan sütunları bul
+    const tarifeColumns = [];
+    
+    // Önce tüm satırları tara (başlık farklı satırda olabilir)
+    console.log('\n🔍 Tarife sütunlarını arıyor...');
+    for (let headerRow = 0; headerRow <= Math.min(10, range.e.r); headerRow++) {
+      console.log(`\nSatır ${headerRow + 1} kontrol ediliyor:`);
+      for (let col = 0; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: col });
+        const cell = worksheet[cellAddress];
+        
+        if (cell && cell.v) {
+          const value = String(cell.v).trim();
+          const colLetter = XLSX.utils.encode_col(col);
+          
+          if (value.match(/^T\d+$/i)) {
+            console.log(`  ✅ BULUNDU: ${colLetter}(${col}) = ${value}`);
+            
+            // Henüz eklenmemişse ekle
+            if (!tarifeColumns.find(t => t.name === value.toUpperCase())) {
+              tarifeColumns.push({
+                name: value.toUpperCase(),
+                colIndex: col,
+                colLetter: colLetter,
+                headerRow: headerRow
+              });
+            }
+          }
         }
       }
     }
 
     if (tarifeColumns.length === 0) {
       console.error('❌ No tarife columns found');
+      console.log('\n📋 EXCEL YAPISI:');
+      console.log('Sheet adı:', sheetName);
+      console.log('Toplam satır:', range.e.r + 1);
+      console.log('Toplam sütun:', range.e.c + 1);
+      
+      // İlk 5 satırı göster
+      console.log('\nİlk 5 satır:');
+      for (let r = 0; r <= Math.min(4, range.e.r); r++) {
+        const rowData = [];
+        for (let c = 0; c <= Math.min(10, range.e.c); c++) {
+          const cell = worksheet[XLSX.utils.encode_cell({ r, c })];
+          rowData.push(cell ? cell.v : null);
+        }
+        console.log(`Satır ${r + 1}:`, rowData);
+      }
+      
       return res.status(400).json({ 
         success: false,
-        error: 'T01, T02... sütunları bulunamadı (D sütunundan itibaren)'
+        error: 'T01, T02... sütunları bulunamadı',
+        debug: {
+          sheetName: sheetName,
+          totalRows: range.e.r + 1,
+          totalCols: range.e.c + 1,
+          firstRowSample: (() => {
+            const row = [];
+            for (let c = 0; c <= Math.min(10, range.e.c); c++) {
+              const cell = worksheet[XLSX.utils.encode_cell({ r: 0, c })];
+              row.push(cell ? cell.v : null);
+            }
+            return row;
+          })(),
+          instructions: 'Excel dosyanızda T01, T02, T03 gibi başlıklar olmalı. Lütfen dosyanızın yapısını kontrol edin.'
+        }
       });
     }
 
-    console.log(`🚌 Tarifeler: ${tarifeColumns.map(t => `${t.name}(${t.colLetter})`).join(', ')}`);
+    console.log(`\n🚌 ${tarifeColumns.length} Tarife sütunu bulundu:`);
+    tarifeColumns.forEach(t => {
+      console.log(`  ${t.name} -> ${t.colLetter} (satır ${t.headerRow + 1})`);
+    });
+    
+    // En yaygın headerRow'u bul
+    const headerRowCounts = {};
+    tarifeColumns.forEach(t => {
+      headerRowCounts[t.headerRow] = (headerRowCounts[t.headerRow] || 0) + 1;
+    });
+    const mainHeaderRow = parseInt(Object.keys(headerRowCounts).sort((a, b) => 
+      headerRowCounts[b] - headerRowCounts[a]
+    )[0]);
 
     // Verileri topla
     const dataToInsert = [];
@@ -241,22 +306,35 @@ export default async function handler(req, res) {
     await supabase.rpc('exec_sql', { sql: disableRLS });
 
     console.log(`🗑️ Clearing old data...`);
-    await supabase.from(tableName).delete().neq('Tarife', '___IMPOSSIBLE___');
+    const { error: deleteError } = await supabase
+      .from(tableName)
+      .delete()
+      .neq('Tarife', '___IMPOSSIBLE___');
+    
+    if (deleteError) {
+      console.warn('⚠️ Delete warning:', deleteError);
+    } else {
+      console.log('✅ Old data cleared');
+    }
 
     console.log(`🔥 Inserting ${dataToInsert.length} records...`);
+    console.log('Sample data:', dataToInsert.slice(0, 3));
     
-    const { error: insertError } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from(tableName)
       .insert(dataToInsert);
 
     if (insertError) {
       console.error('❌ Insert error:', insertError);
+      console.error('Error details:', JSON.stringify(insertError, null, 2));
       return res.status(500).json({ 
         success: false,
-        error: 'Veri eklenemedi: ' + insertError.message
+        error: 'Veri eklenemedi: ' + insertError.message,
+        details: insertError
       });
     }
 
+    console.log(`✅ Data inserted:`, insertData);
     console.log(`✅ SUCCESS!\n${'='.repeat(60)}\n`);
 
     return res.status(200).json({
