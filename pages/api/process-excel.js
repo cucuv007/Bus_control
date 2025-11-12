@@ -67,8 +67,8 @@ export default async function handler(req, res) {
         error: 'Dosya adı XX_TABLENAME_YYYY_MM_DD.xlsx formatında olmalı'
       });
     }
-    // Postgres'te identifier davranışı ve projede tutarlılık için tablo adını küçük harfe çevir
-    const tableNameLower = tableName.toLowerCase();
+  // Kullanıcı isteğine göre tablo adı büyük/küçük harf duyarlı olarak kullanılacak
+  // (kullanıcının oluşturduğu tablo: public."TCD49A")
 
     const tarifeColumns = [];
     for (let col = 4; col < 30; col++) {
@@ -119,9 +119,12 @@ export default async function handler(req, res) {
         if (!timeValue) continue;
 
         dataToInsert.push({
-          isim: hareketRow.hareket,
-          tarife: tarife.name,
-          tarife_saati: timeValue
+          Hareket: hareketRow.hareket,
+          Tarife: tarife.name,
+          Tarife_Saati: timeValue,
+          Onaylanan: null,
+          Durum: null,
+          Plaka: null
         });
       }
     }
@@ -133,10 +136,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Upsert yaparken id yerine (isim, tarife, tarife_saati) unique constraint kullan
+    // Upsert: tablo tarafında Tarife_Saati primary key olarak tanımlı, ona göre onConflict kullan
     const { data, error } = await supabase
-      .from(tableNameLower)
-      .upsert(dataToInsert, { onConflict: ['isim', 'tarife', 'tarife_saati'] });
+      .from(tableName)
+      .upsert(dataToInsert, { onConflict: 'Tarife_Saati' });
 
     if (error) {
       if (error.message.includes('relation does not exist')) {
@@ -150,7 +153,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      tableName: tableNameLower,
+  tableName,
       sheetName,
       inserted: dataToInsert.length,
       message: `${dataToInsert.length} sefer eklendi`,
