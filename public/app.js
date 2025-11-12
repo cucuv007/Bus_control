@@ -12,6 +12,7 @@ const timerContainer = document.getElementById('timerContainer');
 const timerDisplay = document.getElementById('timerDisplay');
 const timerPlaka = document.getElementById('timerPlaka');
 const timerTarife = document.getElementById('timerTarife');
+const timerHareket = document.getElementById('timerHareket');
 const closeTimerBtn = document.getElementById('closeTimerBtn');
 
 // Modal elements
@@ -39,13 +40,15 @@ const uploadStatus = document.getElementById('uploadStatus');
 const manualFileInput = document.getElementById('manualFileInput');
 const manualStatus = document.getElementById('manualStatus');
 
-// Table selection
+// Table & Movement selection
 const tableSelection = document.getElementById('tableSelection');
 const tableSelect = document.getElementById('tableSelect');
+const hareketSelect = document.getElementById('hareketSelect');
 
 // State variables
 let selectedFiles = [];
 let currentTable = null;
+let currentHareket = null;
 let isLoading = false;
 let allFiles = [];
 let uploadMethod = null;
@@ -66,6 +69,7 @@ methodManualBtn.addEventListener('click', () => selectMethod('manual'));
 listFilesBtn.addEventListener('click', handleListFiles);
 confirmUploadBtn.addEventListener('click', handleUpload);
 tableSelect.addEventListener('change', handleTableSelect);
+hareketSelect.addEventListener('change', handleHareketChange);
 
 manualFileInput.addEventListener('change', handleManualFileSelect);
 
@@ -339,6 +343,7 @@ async function handleRefresh() {
     });
     
     tableSelection.style.display = 'block';
+    hareketSelect.value = '';
     statusEl.textContent = `${tables.length} tablo bulundu. Lütfen bir tablo seçiniz.`;
     theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
     tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
@@ -365,6 +370,20 @@ async function handleTableSelect() {
   }
   
   currentTable = selectedOption.value;
+  loadTableData();
+}
+
+function handleHareketChange() {
+  currentHareket = hareketSelect.value || null;
+  
+  if (currentTable) {
+    loadTableData();
+  }
+}
+
+async function loadTableData() {
+  if (!currentTable) return;
+  
   statusEl.textContent = `${currentTable} tablosu yükleniyor...`;
   
   try {
@@ -372,7 +391,8 @@ async function handleTableSelect() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tableName: currentTable
+        tableName: currentTable,
+        hareket: currentHareket
       })
     });
     
@@ -416,11 +436,12 @@ async function handleTableSelect() {
       tbody.appendChild(tr);
     });
     
-    statusEl.textContent = `Başarılı: ${data.length} kayıt alındı.`;
+    let filterMsg = currentHareket ? ` (${currentHareket})` : '';
+    statusEl.textContent = `Başarılı: ${data.length} kayıt alındı${filterMsg}`;
     meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
     
     // Timer'ı başlat
-    startTimer(currentTable);
+    startTimer(currentTable, currentHareket);
     
   } catch (err) {
     console.error('Get table data error:', err);
@@ -430,7 +451,7 @@ async function handleTableSelect() {
 }
 
 // ==================== TIMER FUNCTIONS ====================
-function startTimer(tableName) {
+function startTimer(tableName, hareket) {
   if (timerInterval) {
     clearInterval(timerInterval);
   }
@@ -438,13 +459,13 @@ function startTimer(tableName) {
   lastBusTime = null;
   
   timerInterval = setInterval(() => {
-    updateTimer(tableName);
+    updateTimer(tableName, hareket);
   }, 1000);
   
-  updateTimer(tableName);
+  updateTimer(tableName, hareket);
 }
 
-async function updateTimer(tableName) {
+async function updateTimer(tableName, hareket) {
   try {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
@@ -457,7 +478,8 @@ async function updateTimer(tableName) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         tableName: tableName,
-        currentTime: currentTime
+        currentTime: currentTime,
+        hareket: hareket
       })
     });
     
@@ -469,12 +491,13 @@ async function updateTimer(tableName) {
     }
     
     if (result.success && result.nextBus) {
-      const { plaka, tarife, tarifeSaati, remainingSeconds } = result.nextBus;
+      const { plaka, tarife, tarifeSaati, hareket, remainingSeconds } = result.nextBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
         timerPlaka.textContent = plaka || '-';
         timerTarife.textContent = tarife || '-';
+        timerHareket.textContent = hareket || '-';
         timerContainer.style.display = 'block';
       }
       
@@ -522,7 +545,8 @@ async function handleApproval() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tableName: currentTable
+        tableName: currentTable,
+        hareket: currentHareket
       })
     });
     
@@ -535,7 +559,7 @@ async function handleApproval() {
     statusEl.innerHTML = `<span style="color: #27ae60;">✅ ${result.message}</span>`;
     
     setTimeout(() => {
-      handleTableSelect();
+      loadTableData();
     }, 1500);
     
   } catch (err) {
