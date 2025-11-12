@@ -198,8 +198,9 @@ export default async function handler(req, res) {
     }
 
     // Upsert: tablo tarafında Tarife_Saati primary key olarak tanımlı, ona göre onConflict kullan
+    // Tablo adını çift tırnak ile gönder (case-sensitive identifier)
     const { data, error } = await supabase
-      .from(tableName)
+      .from(`"${tableName}"`)
       .upsert(dataToInsert, { onConflict: 'Tarife_Saati' });
 
     if (error) {
