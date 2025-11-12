@@ -7,51 +7,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Dosya adından tablo adını çıkar
+// Format: XX_TABLENAME_YYYY_MM_DD.xlsx
+// Örnek: 01_VF01_2025_11_10.xlsx -> VF01
+// Örnek: 49_TCD49A_2025_10_14.xlsx -> TCD49A
 function extractTableName(filename) {
   const cleaned = filename.replace('.xlsx', '').replace('.xls', '');
   const parts = cleaned.split('_');
-  if (parts.length >= 2) {
-    return parts[1];
+  
+  if (parts.length >= 3) {
+    return parts[1]; // İkinci "_" ile üçüncü "_" arasındaki değer
   }
   return null;
 }
 
-function isYellowCell(cell) {
-  if (!cell || !cell.s) return false;
-  
-  const style = cell.s;
-  const yellowPatterns = ['ffff00', 'ffffe', 'ffffc', 'ff0', 'ffffff00'];
-  
-  const checkColor = (colorObj) => {
-    if (!colorObj) return false;
-    if (colorObj.rgb) {
-      const rgb = colorObj.rgb.toLowerCase();
-      return yellowPatterns.some(pattern => rgb.includes(pattern));
-    }
-    if (colorObj.indexed !== undefined) {
-      return colorObj.indexed === 13 || colorObj.indexed === 65535;
-    }
-    if (colorObj.theme !== undefined) {
-      return colorObj.theme === 3 || colorObj.theme === 4;
-    }
-    return false;
-  };
-  
-  if (style.fill) {
-    if (checkColor(style.fill.fgColor)) return true;
-    if (checkColor(style.fill.bgColor)) return true;
-    if (checkColor(style.fill.patternColor)) return true;
-  }
-  
-  if (checkColor(style.fgColor)) return true;
-  if (checkColor(style.bgColor)) return true;
-  if (checkColor(style.patternColor)) return true;
-  
-  return false;
-}
-
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -66,7 +36,6 @@ export default async function handler(req, res) {
 
   try {
     console.log('\n🚀 API Request received');
-    console.log('Body size:', JSON.stringify(req.body).length);
     
     const { fileName, fileData } = req.body;
 
@@ -79,13 +48,12 @@ export default async function handler(req, res) {
     }
 
     console.log(`📄 File: ${fileName}`);
-    console.log(`📦 Data length: ${fileData.length}`);
 
     const tableName = extractTableName(fileName);
     if (!tableName) {
       return res.status(400).json({ 
         success: false,
-        error: `Tablo adı çıkarılamadı. Format: XX_TABLENAME_YYYY.xlsx (Dosya: ${fileName})` 
+        error: `Tablo adı çıkarılamadı. Format: XX_TABLENAME_YYYY_MM_DD.xlsx (Dosya: ${fileName})` 
       });
     }
 
@@ -94,21 +62,18 @@ export default async function handler(req, res) {
     console.log(`📋 Table: ${tableName}`);
     console.log(`${'='.repeat(60)}`);
 
+    // Excel dosyasını oku
     const buffer = Buffer.from(fileData, 'base64');
     const workbook = XLSX.read(buffer, { 
       cellFormula: false, 
-      cellStyles: true,
-      cellDates: true,
-      cellNF: true
+      cellStyles: false,
+      cellDates: true
     });
 
     console.log(`📚 Sheets: ${workbook.SheetNames.join(', ')}`);
 
-    let sheetName = workbook.SheetNames[0];
-    if (workbook.SheetNames.includes('HI-HC')) {
-      sheetName = 'HI-HC';
-    }
-
+    // İlk sheet'i kullan
+    const sheetName = workbook.SheetNames[0];
     console.log(`📋 Using: ${sheetName}`);
 
     const worksheet = workbook.Sheets[sheetName];
@@ -116,8 +81,12 @@ export default async function handler(req, res) {
     
     console.log(`📊 Range: ${worksheet['!ref']}`);
 
+    // B sütunu = 1 (0-indexed)
+    const B_COL = 1;
+    
+    // D sütunundan başlayarak T ile başlayan sütunları bul
     const tarifeColumns = [];
-    for (let col = range.s.c; col <= range.e.c; col++) {
+    for (let col = 3; col <= range.e.c; col++) { // D sütunu = 3
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
       const cell = worksheet[cellAddress];
       
@@ -135,96 +104,108 @@ export default async function handler(req, res) {
 
     if (tarifeColumns.length === 0) {
       console.error('❌ No tarife columns found');
-      console.log('First row values:', (() => {
-        const vals = [];
-        for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
-          const cell = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
-          vals.push(cell ? cell.v : null);
-        }
-        return vals;
-      })());
-      
       return res.status(400).json({ 
         success: false,
-        error: 'T01, T02... sütunları bulunamadı',
-        firstRow: (() => {
-          const vals = [];
-          for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
-            const cell = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
-            vals.push(cell ? cell.v : null);
-          }
-          return vals;
-        })()
+        error: 'T01, T02... sütunları bulunamadı (D sütunundan itibaren)'
       });
     }
 
     console.log(`🚌 Tarifeler: ${tarifeColumns.map(t => `${t.name}(${t.colLetter})`).join(', ')}`);
 
+    // Verileri topla
     const dataToInsert = [];
-    let yellowCount = 0;
 
+    // Her satırı kontrol et
     for (let row = 1; row <= range.e.r; row++) {
+      // B sütunundaki değeri al
+      const bCellAddress = XLSX.utils.encode_cell({ r: row, c: B_COL });
+      const bCell = worksheet[bCellAddress];
+      
+      if (!bCell || !bCell.v) continue;
+      
+      const hareketValue = String(bCell.v).trim();
+      
+      // Sadece "Kalkış" veya "Dönüş" satırlarını işle
+      if (hareketValue !== 'Kalkış' && hareketValue !== 'Dönüş') {
+        continue;
+      }
+
+      console.log(`\n📍 Row ${row + 1}: Hareket = ${hareketValue}`);
+
+      // Her tarife sütunu için değeri al
       for (const tarife of tarifeColumns) {
         const cellAddress = XLSX.utils.encode_cell({ r: row, c: tarife.colIndex });
         const cell = worksheet[cellAddress];
         
-        if (cell && cell.v) {
-          const isYellow = isYellowCell(cell);
-          
-          if (isYellow) {
-            yellowCount++;
-            
-            let timeValue = String(cell.v).trim();
-            
-            if (typeof cell.v === 'number' && cell.v > 0 && cell.v < 1) {
-              const totalSeconds = Math.round(cell.v * 86400);
-              const hours = Math.floor(totalSeconds / 3600);
-              const minutes = Math.floor((totalSeconds % 3600) / 60);
-              timeValue = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-            } else if (timeValue.match(/^\d{1,2}:\d{2}$/)) {
-              timeValue = `${timeValue}:00`;
-            } else if (!timeValue.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
-              console.warn(`⚠️ Invalid: ${cellAddress}: "${timeValue}"`);
-              continue;
-            }
-            
-            dataToInsert.push({
-              Tarife: tarife.name,
-              Tarife_Saati: timeValue,
-              Onaylanan: null,
-              Durum: null,
-              Plaka: null
-            });
-
-            console.log(`✅ ${cellAddress} (${tarife.name}): ${timeValue}`);
+        // Birleştirilmiş hücre kontrolü
+        const merges = worksheet['!merges'] || [];
+        let isMerged = false;
+        
+        for (const merge of merges) {
+          if (row >= merge.s.r && row <= merge.e.r && 
+              tarife.colIndex >= merge.s.c && tarife.colIndex <= merge.e.c) {
+            isMerged = true;
+            break;
           }
+        }
+
+        // Birleştirilmiş hücreleri atla
+        if (isMerged) {
+          console.log(`  ⚠️ ${cellAddress} birleştirilmiş, atlandı`);
+          continue;
+        }
+
+        if (cell && cell.v) {
+          let timeValue = String(cell.v).trim();
+          
+          // Excel time formatını düzelt
+          if (typeof cell.v === 'number' && cell.v > 0 && cell.v < 1) {
+            const totalSeconds = Math.round(cell.v * 86400);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            timeValue = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+          } else if (timeValue.match(/^\d{1,2}:\d{2}$/)) {
+            timeValue = `${timeValue}:00`;
+          } else if (!timeValue.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
+            console.warn(`  ⚠️ Invalid time: ${cellAddress}: "${timeValue}"`);
+            continue;
+          }
+          
+          dataToInsert.push({
+            Tarife: tarife.name,
+            Hareket: hareketValue,
+            Tarife_Saati: timeValue,
+            Onaylanan: null,
+            Durum: null,
+            Plaka: null
+          });
+
+          console.log(`  ✅ ${cellAddress} (${tarife.name}): ${timeValue}`);
         }
       }
     }
 
-    console.log(`\n📊 Yellow cells: ${yellowCount}, Valid: ${dataToInsert.length}`);
+    console.log(`\n📊 Total records: ${dataToInsert.length}`);
 
     if (dataToInsert.length === 0) {
       return res.status(400).json({ 
         success: false,
-        error: 'Sarı hücre bulunamadı. Lütfen hücreleri Fill Color ile sarıya boyayın.',
-        debug: {
-          yellowFound: yellowCount,
-          suggestion: 'Excel → Home → Fill Color → Yellow'
-        }
+        error: 'B sütununda "Kalkış" veya "Dönüş" ve D+ sütunlarında saat verisi bulunamadı.'
       });
     }
 
     console.log(`🔧 Creating table: ${tableName}`);
     
+    // Tabloyu oluştur
     const createSQL = `
       CREATE TABLE IF NOT EXISTS "${tableName}" (
         "Tarife" TEXT NOT NULL,
+        "Hareket" TEXT NOT NULL,
         "Tarife_Saati" TIME NOT NULL,
         "Onaylanan" TIME,
         "Durum" TEXT,
         "Plaka" TEXT,
-        PRIMARY KEY ("Tarife_Saati")
+        PRIMARY KEY ("Tarife_Saati", "Hareket")
       );
     `;
     
@@ -236,17 +217,20 @@ export default async function handler(req, res) {
       console.error('❌ Create error:', createError);
       return res.status(500).json({ 
         success: false,
-        error: 'Tablo oluşturulamadı: ' + createError.message,
-        hint: 'Supabase SQL Editor\'de exec_sql fonksiyonunu oluşturun'
+        error: 'Tablo oluşturulamadı: ' + createError.message
       });
     }
 
-    console.log(`✅ Table OK`);
+    console.log(`✅ Table created`);
+
+    // RLS'yi devre dışı bırak
+    const disableRLS = `ALTER TABLE "${tableName}" DISABLE ROW LEVEL SECURITY;`;
+    await supabase.rpc('exec_sql', { sql: disableRLS });
 
     console.log(`🗑️ Clearing old data...`);
     await supabase.from(tableName).delete().neq('Tarife', '___IMPOSSIBLE___');
 
-    console.log(`📥 Inserting ${dataToInsert.length} records...`);
+    console.log(`🔥 Inserting ${dataToInsert.length} records...`);
     
     const { error: insertError } = await supabase
       .from(tableName)
@@ -282,7 +266,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Vercel serverless function config
 export const config = {
   api: {
     bodyParser: {
