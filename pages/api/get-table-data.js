@@ -1,4 +1,4 @@
-
+// pages/api/get-table-data.js
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -12,16 +12,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { tableName } = req.body;
+    const { tableName, hareket } = req.body;
 
     if (!tableName) {
       return res.status(400).json({ error: 'Table name gerekli' });
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from(tableName)
       .select('*')
       .order('Tarife_Saati', { ascending: true });
+
+    // Hareket filtresi varsa uygula
+    if (hareket) {
+      query = query.eq('Hareket', hareket);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Get table data error:', error);
@@ -31,6 +38,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       tableName: tableName,
+      hareket: hareket || 'Tümü',
       data: data
     });
 
