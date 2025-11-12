@@ -235,22 +235,29 @@ async function handleUpload() {
   
   for (const file of selectedFiles) {
     try {
+      console.log(`\n📤 UPLOADING: ${file.name}`);
       uploadStatus.innerHTML = `⏳ ${file.name} yükleniyor...`;
       
       let fileData;
       
       if (file.isManual) {
+        console.log('📂 Reading manual file...');
         // Manuel dosya - FileReader ile base64'e dönüştür
         fileData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => {
             const base64 = reader.result.split(',')[1];
+            console.log(`✅ File read, size: ${base64.length} chars`);
             resolve(base64);
           };
-          reader.onerror = () => reject(new Error('Dosya okunamadı'));
+          reader.onerror = (err) => {
+            console.error('❌ FileReader error:', err);
+            reject(new Error('Dosya okunamadı'));
+          };
           reader.readAsDataURL(file.file);
         });
       } else {
+        console.log('☁️ Downloading from Drive...');
         // Drive dosyası - indir
         const downloadRes = await fetch('/api/download-from-drive', {
           method: 'POST',
@@ -259,6 +266,7 @@ async function handleUpload() {
         });
         
         const downloadResult = await downloadRes.json();
+        console.log('Download response:', downloadResult);
         
         if (!downloadRes.ok) {
           throw new Error(downloadResult.error);
@@ -266,6 +274,10 @@ async function handleUpload() {
         
         fileData = downloadResult.data;
       }
+      
+      console.log('📨 Sending to process-excel API...');
+      console.log('File name:', file.name);
+      console.log('Data length:', fileData.length);
       
       // Excel'i işle
       const processRes = await fetch('/api/process-excel', {
@@ -277,34 +289,45 @@ async function handleUpload() {
         })
       });
       
+      console.log('Process response status:', processRes.status);
+      
       const processResult = await processRes.json();
+      console.log('Process result:', processResult);
       
       if (!processRes.ok) {
-        throw new Error(processResult.error);
+        console.error('❌ Process failed:', processResult);
+        throw new Error(processResult.error || 'İşleme hatası');
       }
       
       console.log(`✅ ${file.name} başarıyla yüklendi`);
+      uploadStatus.innerHTML = `✅ ${file.name} başarıyla yüklendi!`;
       successCount++;
       
     } catch (err) {
       console.error(`❌ ${file.name} yüklenemedi:`, err);
+      console.error('Error details:', err.message, err.stack);
       errors.push(`${file.name}: ${err.message}`);
       errorCount++;
+      uploadStatus.innerHTML = `❌ ${file.name}: ${err.message}`;
     }
   }
   
   let message = `✅ ${successCount} dosya yüklendi`;
   if (errorCount > 0) {
-    message += `<br>❌ ${errorCount} dosya hata`;
+    message += `<br>❌ ${errorCount} dosya hata:<br>`;
+    message += errors.map(e => `• ${e}`).join('<br>');
   }
   
   uploadStatus.innerHTML = message;
+  confirmUploadBtn.disabled = false;
   
-  // Modal'ı kapat ve tabloları yenile
-  setTimeout(() => {
-    closeUploadModal();
-    handleRefresh();
-  }, 2000);
+  // Başarılı yüklemeler varsa tabloları yenile
+  if (successCount > 0) {
+    setTimeout(() => {
+      closeUploadModal();
+      handleRefresh();
+    }, 3000);
+  }
 }
 
 // ==================== TABLE FUNCTIONS ====================
