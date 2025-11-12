@@ -20,7 +20,7 @@
     </div>
   </header>
 
-  
+  <!-- Timer -->
   <div id="timerContainer" class="timer-container" style="display: none;">
     <div class="timer-card">
       <div class="timer-header">
@@ -37,6 +37,10 @@
             <span class="label">Tarife:</span>
             <span id="timerTarife" class="value">-</span>
           </div>
+          <div class="info-row">
+            <span class="label">Hareket:</span>
+            <span id="timerHareket" class="value">-</span>
+          </div>
         </div>
         <div class="countdown">
           <div id="timerDisplay" class="timer-display">00:00</div>
@@ -46,7 +50,7 @@
     </div>
   </div>
 
-  
+  <!-- Upload Modal -->
   <div id="uploadModal" class="modal" style="display: none;">
     <div class="modal-content">
     <div class="modal-header">
@@ -55,19 +59,19 @@
     </div>
     <div class="modal-body">
     
-  
+    <!-- Step 1: Method -->
     <div id="step1" class="step">
     <div class="form-group">
     <label>Yükleme Yöntemi Seçin:</label>
     <div style="display: flex; gap: 10px; margin-top: 12px;">
     <button id="methodAutoBtn" class="btn" style="flex: 1;">🔄 Otomatik Listele</button>
-    <button id="methodManualBtn" class="btn" style="flex: 1;">📝 Manuel Dosya</button>
+    <button id="methodManualBtn" class="btn" style="flex: 1;">📁 Manuel Dosya</button>
     </div>
     </div>
     <div id="methodStatus" class="info" style="display: none;"></div>
     </div>
 
-   
+    <!-- Step 2 Auto -->
     <div id="step2Auto" class="step" style="display: none;">
     <div class="form-group">
     <label>Paylaşılan Klasördeki Dosyalar</label>
@@ -79,7 +83,7 @@
     <div id="listStatus" class="info" style="display: none;"></div>
     </div>
 
-  
+    <!-- Step 2 Manual -->
     <div id="step2Manual" class="step" style="display: none;">
     <div class="form-group">
     <label>Excel Dosyası Seçin:</label>
@@ -88,7 +92,7 @@
     <div id="manualStatus" class="info" style="display: none;"></div>
     </div>
 
-   
+    <!-- Step 3: File List -->
     <div id="step3" class="step" style="display: none;">
     <div class="form-group">
     <label>Dosyaları Seçin:</label>
@@ -108,12 +112,24 @@
 
   <div id="mainCard" class="card">
     
+    <!-- Table & Movement Selection -->
     <div id="tableSelection" style="display: none; margin-bottom: 20px;">
-    <div class="form-group">
-    <label for="tableSelect">Tablo Seçin:</label>
-    <select id="tableSelect" class="input-field">
-    <option value="">-- Tablo Seçin --</option>
-    </select>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+      <div class="form-group">
+      <label for="tableSelect">Tablo Seçin:</label>
+      <select id="tableSelect" class="input-field">
+      <option value="">-- Tablo Seçin --</option>
+      </select>
+      </div>
+      
+      <div class="form-group">
+      <label for="hareketSelect">Hareket Filtresi:</label>
+      <select id="hareketSelect" class="input-field">
+      <option value="">Tümü</option>
+      <option value="Kalkış">Kalkış</option>
+      <option value="Dönüş">Dönüş</option>
+      </select>
+      </div>
     </div>
     </div>
 
@@ -131,7 +147,6 @@
     <div id="meta" class="info" style="margin-top:12px"></div>
   </div>
 </div>
-
 
 <script src="/app.js"></script>
 </body>
