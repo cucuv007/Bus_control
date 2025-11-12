@@ -33,6 +33,60 @@ function formatTime(value) {
   return valueStr;
 }
 
+async function createTableIfNotExists(tableName) {
+  // Tablo var mı kontrol et
+  const { data: tableExists, error: checkError } = await supabase
+    .from('information_schema.tables')
+    .select('table_name')
+    .eq('table_schema', 'public')
+    .eq('table_name', tableName)
+    .single();
+  
+  // Eğer tablo zaten varsa hiçbir şey yapma
+  if (tableExists && tableExists.table_name === tableName) {
+    return { success: true, created: false, message: `Tablo "${tableName}" zaten var` };
+  }
+  
+  // Tablo yoksa oluştur - Supabase ile doğrudan SQL çalıştırmak için admin API kullanmalıyız
+  // Client-side Supabase RPC veya SQL query doğrudan çalıştırmak için server-side helper gerekli
+  // Şimdilik: Supabase Admin API ile fetch kullanarak SQL çalıştırıyoruz
+  try {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS public."${tableName}" (
+        "Tarife" text NOT NULL,
+        "Tarife_Saati" time without time zone NOT NULL,
+        "Onaylanan" time without time zone NULL,
+        "Durum" text NULL,
+        "Plaka" text NULL,
+        "Hareket" text NULL,
+        CONSTRAINT "${tableName}_pkey" PRIMARY KEY ("Tarife_Saati")
+      );
+    `;
+    
+    // Supabase'de SQL doğrudan çalıştırmak için fetch ile REST API endpoint kullanıyoruz
+    // /rest/v1/rpc endpoint ile custom function veya alt alternatif: Supabase Admin kullan
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY
+      },
+      body: JSON.stringify({ sql: createTableSQL })
+    });
+    
+    if (!response.ok) {
+      // exec_sql RPC yoksa, alternatif: kullanıcıya tablo oluştur mesajı ver
+      return { success: false, created: false, message: `Tablo oluşturulamadı. Supabase'de manuel oluşturun: CREATE TABLE public."${tableName}" (...)` };
+    }
+    
+    return { success: true, created: true, message: `Tablo "${tableName}" başarıyla oluşturuldu` };
+  } catch (err) {
+    console.error('Table creation error:', err);
+    return { success: false, created: false, message: `Tablo oluşturma başarısız: ${err.message}` };
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -136,6 +190,13 @@ export default async function handler(req, res) {
       });
     }
 
+    // Tablo oluştur (yoksa)
+    const tableCreation = await createTableIfNotExists(tableName);
+    if (!tableCreation.success && tableCreation.message.includes('Supabase\'de manuel')) {
+      // exec_sql RPC yoksa, hata döndür fakat INSERT'i dene (tablo zaten varsa çalışacak)
+      console.warn(tableCreation.message);
+    }
+
     // Upsert: tablo tarafında Tarife_Saati primary key olarak tanımlı, ona göre onConflict kullan
     const { data, error } = await supabase
       .from(tableName)
@@ -145,7 +206,8 @@ export default async function handler(req, res) {
       if (error.message.includes('relation does not exist')) {
         return res.status(500).json({
           success: false,
-          error: `Tablo "${tableName}" yok. Supabase Dashboard SQL Editor'de oluştur.`
+          error: `Tablo "${tableName}" yok. Supabase Dashboard SQL Editor'de oluştur veya dosyayı yeniden yükle.`,
+          tableCreationHint: tableCreation.message
         });
       }
       return res.status(500).json({ success: false, error: error.message });
@@ -153,11 +215,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-  tableName,
+      tableName,
       sheetName,
       inserted: dataToInsert.length,
       message: `${dataToInsert.length} sefer eklendi`,
-      tarifeColumns: tarifeColumns.map(t => t.name)
+      tarifeColumns: tarifeColumns.map(t => t.name),
+      tableCreation: tableCreation
     });
 
   } catch (err) {
