@@ -217,14 +217,26 @@ export default async function handler(req, res) {
     }
 
     const tarifeColumns = [];
-    // ExcelJS: satır 5 (row index 5), D sütunundan (col 4) başla
-    const headerRow = worksheet.getRow(5);
-    for (let col = 4; col <= 30; col++) {
-      const cell = headerRow.getCell(col);
-      if (!cell || !cell.value) break;
-      const headerValue = String(cell.value).trim();
-      if (headerValue.match(/^T\d{2}$/)) {
-        tarifeColumns.push({ col, name: headerValue });
+    // ExcelJS: İlk 20 satırda T01, T02... başlıklarını ara
+    let foundHeaderRow = null;
+    for (let rowNum = 1; rowNum <= 20; rowNum++) {
+      const headerRow = worksheet.getRow(rowNum);
+      const tempCols = [];
+      
+      for (let col = 4; col <= 30; col++) {
+        const cell = headerRow.getCell(col);
+        if (!cell || !cell.value) continue;
+        const headerValue = String(cell.value).trim();
+        if (headerValue.match(/^T\d{2}$/)) {
+          tempCols.push({ col, name: headerValue });
+        }
+      }
+      
+      // En az 1 tarife başlığı bulduysa bu satırı kullan
+      if (tempCols.length > 0) {
+        tarifeColumns.push(...tempCols);
+        foundHeaderRow = rowNum;
+        break;
       }
     }
 
