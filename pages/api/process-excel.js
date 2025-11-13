@@ -3,7 +3,10 @@ import { Pool } from 'pg';
 
 // PostgreSQL bağlantı havuzu
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 function extractTableName(filename) {
