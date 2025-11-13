@@ -39,16 +39,56 @@ function formatTime(value) {
 function isCellHidden(cell, workbook) {
   if (!cell || !cell.s) return false;
   
-  const style = workbook.Styles?.[cell.s];
-  if (!style) return false;
-  
-  // Hücre fill rengi ve font rengi karşılaştır
-  const fillColor = style.fill?.fgColor?.rgb || style.fill?.bgColor?.rgb;
-  const fontColor = style.font?.color?.rgb;
-  
-  // Eğer her iki renk de varsa ve aynıysa, gizli sayılır
-  if (fillColor && fontColor && fillColor === fontColor) {
-    return true;
+  try {
+    const style = workbook.Styles?.[cell.s] || {};
+    
+    // Fill (background) rengini bul
+    let fillColor = null;
+    if (style.fill?.fgColor?.rgb) {
+      fillColor = style.fill.fgColor.rgb.toUpperCase();
+    } else if (style.fill?.bgColor?.rgb) {
+      fillColor = style.fill.bgColor.rgb.toUpperCase();
+    } else if (style.fill?.patternType === 'solid' && style.fill?.fgColor) {
+      fillColor = style.fill.fgColor.rgb?.toUpperCase();
+    }
+    
+    // Font rengini bul
+    let fontColor = null;
+    if (style.font?.color?.rgb) {
+      fontColor = style.font.color.rgb.toUpperCase();
+    }
+    
+    // Her iki renk de varsa karşılaştır
+    if (fillColor && fontColor) {
+      // Son 6 karakter (RGB hex) karşılaştır (bazen ARGB formatında olabilir)
+      const fillRGB = fillColor.slice(-6);
+      const fontRGB = fontColor.slice(-6);
+      
+      if (fillRGB === fontRGB) {
+        return true;
+      }
+    }
+    
+    // Beyaz yazı + beyaz arka plan kontrolü (yaygın durum)
+    const whiteColors = ['FFFFFF', 'FFFFFFFF', 'WHITE'];
+    const isWhiteFill = fillColor && whiteColors.some(w => fillColor.includes(w));
+    const isWhiteFont = fontColor && whiteColors.some(w => fontColor.includes(w));
+    
+    if (isWhiteFill && isWhiteFont) {
+      return true;
+    }
+    
+    // Siyah yazı + siyah arka plan kontrolü
+    const blackColors = ['000000', 'FF000000', 'BLACK'];
+    const isBlackFill = fillColor && blackColors.some(b => fillColor.includes(b));
+    const isBlackFont = fontColor && blackColors.some(b => fontColor.includes(b));
+    
+    if (isBlackFill && isBlackFont) {
+      return true;
+    }
+    
+  } catch (err) {
+    console.error('Style check error:', err);
   }
   
   return false;
