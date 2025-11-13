@@ -50,10 +50,36 @@ async function createTableIfNotExists(client, tableName) {
   
   try {
     await client.query(createTableSQL);
-    return { success: true, created: true, message: `Tablo "${tableName}" başarıyla oluşturuldu` };
+
+    // Realtime için publication ekleme/oluşturma
+    try {
+      // Önce publication oluşturmaya çalış
+      await client.query(`CREATE PUBLICATION supabase_realtime FOR TABLE public."${tableName}";`);
+    } catch (pubErr) {
+      // Eğer publication zaten varsa, tabloyu eklemeyi dene
+      try {
+        await client.query(`ALTER PUBLICATION supabase_realtime ADD TABLE public."${tableName}";`);
+      } catch (alterErr) {
+        // Eğer tablo zaten ekliyse veya başka bir hata varsa logla ama devam et
+        if (!/already|duplicate|exists/i.test(String(alterErr.message))) {
+          console.error('Publication alter error:', alterErr);
+        }
+      }
+    }
+
+    return { success: true, created: true, message: `Tablo "${tableName}" başarıyla oluşturuldu ve realtime etkinleştirildi` };
   } catch (err) {
     if (err.message.includes('already exists')) {
-      return { success: true, created: false, message: `Tablo "${tableName}" zaten var` };
+      // Publication tarafında ayrıca tabloyu publication'a ekmeyi dene, çünkü tablo zaten varsa oluşturma atladı
+      try {
+        await client.query(`ALTER PUBLICATION supabase_realtime ADD TABLE public."${tableName}";`);
+        return { success: true, created: false, message: `Tablo "${tableName}" zaten var. Realtime etkinleştirildi (varsa).` };
+      } catch (alterErr) {
+        if (!/already|duplicate|exists/i.test(String(alterErr.message))) {
+          console.error('Publication alter error on existing table:', alterErr);
+        }
+        return { success: true, created: false, message: `Tablo "${tableName}" zaten var` };
+      }
     }
     console.error('Table creation error:', err);
     return { success: false, created: false, message: `Tablo oluşturma başarısız: ${err.message}` };
