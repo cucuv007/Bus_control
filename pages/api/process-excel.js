@@ -162,7 +162,7 @@ export default async function handler(req, res) {
     }
 
     const tarifeColumns = [];
-    for (let col = 4; col < 30; col++) {
+    for (let col = 3; col < 30; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 4, c: col });
       const cell = sheet[cellAddress];
       if (!cell || !cell.v) break;
