@@ -1,4 +1,4 @@
-import XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Pool } from 'pg';
 
 // PostgreSQL bağlantı havuzu
@@ -18,6 +18,15 @@ function extractTableName(filename) {
 
 function formatTime(value) {
   if (!value && value !== 0) return null;
+  
+  // ExcelJS Date object ise
+  if (value instanceof Date) {
+    const hours = value.getHours();
+    const minutes = value.getMinutes();
+    const seconds = value.getSeconds();
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+  
   const valueStr = String(value).trim();
   
   if (valueStr.startsWith('=')) return null;
@@ -36,59 +45,43 @@ function formatTime(value) {
   return valueStr;
 }
 
-function isCellHidden(cell, workbook) {
-  if (!cell || !cell.s) return false;
+function isCellHidden(cell) {
+  if (!cell || !cell.value) return false;
   
   try {
-    const style = workbook.Styles?.[cell.s] || {};
+    const fill = cell.fill;
+    const font = cell.font;
     
-    // Fill (background) rengini bul
+    if (!fill || !font) return false;
+    
+    // Fill rengini al
     let fillColor = null;
-    if (style.fill?.fgColor?.rgb) {
-      fillColor = style.fill.fgColor.rgb.toUpperCase();
-    } else if (style.fill?.bgColor?.rgb) {
-      fillColor = style.fill.bgColor.rgb.toUpperCase();
-    } else if (style.fill?.patternType === 'solid' && style.fill?.fgColor) {
-      fillColor = style.fill.fgColor.rgb?.toUpperCase();
+    if (fill.type === 'pattern' && fill.fgColor) {
+      fillColor = fill.fgColor.argb;
+    } else if (fill.bgColor) {
+      fillColor = fill.bgColor.argb;
     }
     
-    // Font rengini bul
+    // Font rengini al
     let fontColor = null;
-    if (style.font?.color?.rgb) {
-      fontColor = style.font.color.rgb.toUpperCase();
+    if (font.color && font.color.argb) {
+      fontColor = font.color.argb;
     }
     
     // Her iki renk de varsa karşılaştır
     if (fillColor && fontColor) {
-      // Son 6 karakter (RGB hex) karşılaştır (bazen ARGB formatında olabilir)
-      const fillRGB = fillColor.slice(-6);
-      const fontRGB = fontColor.slice(-6);
+      // ARGB formatı: FF000000 (8 karakter)
+      // Son 6 karakteri karşılaştır (RGB)
+      const fillRGB = fillColor.slice(-6).toUpperCase();
+      const fontRGB = fontColor.slice(-6).toUpperCase();
       
       if (fillRGB === fontRGB) {
         return true;
       }
     }
     
-    // Beyaz yazı + beyaz arka plan kontrolü (yaygın durum)
-    const whiteColors = ['FFFFFF', 'FFFFFFFF', 'WHITE'];
-    const isWhiteFill = fillColor && whiteColors.some(w => fillColor.includes(w));
-    const isWhiteFont = fontColor && whiteColors.some(w => fontColor.includes(w));
-    
-    if (isWhiteFill && isWhiteFont) {
-      return true;
-    }
-    
-    // Siyah yazı + siyah arka plan kontrolü
-    const blackColors = ['000000', 'FF000000', 'BLACK'];
-    const isBlackFill = fillColor && blackColors.some(b => fillColor.includes(b));
-    const isBlackFont = fontColor && blackColors.some(b => fontColor.includes(b));
-    
-    if (isBlackFill && isBlackFont) {
-      return true;
-    }
-    
   } catch (err) {
-    console.error('Style check error:', err);
+    console.error('Cell hidden check error:', err);
   }
   
   return false;
@@ -207,9 +200,13 @@ export default async function handler(req, res) {
     client = await pool.connect();
 
     const buffer = Buffer.from(fileData, 'base64');
-    const workbook = XLSX.read(buffer, { type: 'buffer', cellFormula: false, cellStyles: true });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    
+    // ExcelJS ile workbook oku
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    
+    const worksheet = workbook.worksheets[0];
+    const sheetName = worksheet.name;
 
     const tableName = extractTableName(fileName);
     if (!tableName) {
@@ -220,11 +217,12 @@ export default async function handler(req, res) {
     }
 
     const tarifeColumns = [];
-    for (let col = 3; col < 30; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 4, c: col });
-      const cell = sheet[cellAddress];
-      if (!cell || !cell.v) break;
-      const headerValue = String(cell.v).trim();
+    // ExcelJS: satır 5 (row index 5), D sütunundan (col 4) başla
+    const headerRow = worksheet.getRow(5);
+    for (let col = 4; col <= 30; col++) {
+      const cell = headerRow.getCell(col);
+      if (!cell || !cell.value) break;
+      const headerValue = String(cell.value).trim();
       if (headerValue.match(/^T\d{2}$/)) {
         tarifeColumns.push({ col, name: headerValue });
       }
@@ -238,14 +236,15 @@ export default async function handler(req, res) {
     }
 
     const hareketRows = [];
-    for (let row = 6; row < 50; row++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: row, c: 1 });
-      const cell = sheet[cellAddress];
-      if (!cell || !cell.v) continue;
+    // ExcelJS: B sütunu (col 2), satır 7'den başla
+    for (let rowNum = 7; rowNum <= 50; rowNum++) {
+      const row = worksheet.getRow(rowNum);
+      const cell = row.getCell(2); // B sütunu
+      if (!cell || !cell.value) continue;
       
-      const hareketValue = String(cell.v).trim();
+      const hareketValue = String(cell.value).trim();
       if (hareketValue === 'Kalkış' || hareketValue === 'Dönüş') {
-        hareketRows.push({ row, hareket: hareketValue });
+        hareketRows.push({ rowNum, hareket: hareketValue });
       }
     }
 
@@ -259,15 +258,22 @@ export default async function handler(req, res) {
     const dataToInsert = [];
     for (const hareketRow of hareketRows) {
       for (const tarife of tarifeColumns) {
-        const cellAddress = XLSX.utils.encode_cell({ r: hareketRow.row, c: tarife.col });
-        const cell = sheet[cellAddress];
+        const row = worksheet.getRow(hareketRow.rowNum);
+        const cell = row.getCell(tarife.col);
         
-        if (!cell || !cell.v) continue;
+        if (!cell || !cell.value) continue;
+        
+        // Hücre değeri sadece whitespace ise atla
+        const cellValueStr = String(cell.value).trim();
+        if (!cellValueStr) continue;
+        
+        // Formül içeren hücreleri atla
+        if (cell.formula) continue;
         
         // Hücre rengi ve yazı rengi aynıysa atla (gizli veri)
-        if (isCellHidden(cell, workbook)) continue;
+        if (isCellHidden(cell)) continue;
         
-        const timeValue = formatTime(cell.v);
+        const timeValue = formatTime(cell.value);
         if (!timeValue) continue;
 
         dataToInsert.push({
