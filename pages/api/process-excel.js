@@ -36,6 +36,24 @@ function formatTime(value) {
   return valueStr;
 }
 
+function isCellHidden(cell, workbook) {
+  if (!cell || !cell.s) return false;
+  
+  const style = workbook.Styles?.[cell.s];
+  if (!style) return false;
+  
+  // Hücre fill rengi ve font rengi karşılaştır
+  const fillColor = style.fill?.fgColor?.rgb || style.fill?.bgColor?.rgb;
+  const fontColor = style.font?.color?.rgb;
+  
+  // Eğer her iki renk de varsa ve aynıysa, gizli sayılır
+  if (fillColor && fontColor && fillColor === fontColor) {
+    return true;
+  }
+  
+  return false;
+}
+
 async function createTableIfNotExists(client, tableName) {
   const createTableSQL = `
     CREATE TABLE IF NOT EXISTS public."${tableName}" (
@@ -149,7 +167,7 @@ export default async function handler(req, res) {
     client = await pool.connect();
 
     const buffer = Buffer.from(fileData, 'base64');
-    const workbook = XLSX.read(buffer, { type: 'buffer', cellFormula: false, cellStyles: false });
+    const workbook = XLSX.read(buffer, { type: 'buffer', cellFormula: false, cellStyles: true });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
 
@@ -205,6 +223,9 @@ export default async function handler(req, res) {
         const cell = sheet[cellAddress];
         
         if (!cell || !cell.v) continue;
+        
+        // Hücre rengi ve yazı rengi aynıysa atla (gizli veri)
+        if (isCellHidden(cell, workbook)) continue;
         
         const timeValue = formatTime(cell.v);
         if (!timeValue) continue;
