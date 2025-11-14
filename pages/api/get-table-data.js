@@ -31,6 +31,36 @@ function getAllowedCalismaZamanlari() {
   return allowedCodes;
 }
 
+// Bugünün gün adını döndür (PAZARTESİ, SALI, ...)
+function getTodayTableName() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  
+  const gunler = ['PAZAR', 'PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ'];
+  return gunler[dayOfWeek];
+}
+
+// Bugünün gün tablosundan plaka bilgisini al
+async function getPlakaForTarife(hatAdi, tarife, todayTable) {
+  try {
+    const { data, error } = await supabase
+      .from(todayTable)
+      .select('Plaka')
+      .eq('Hat_Adi', hatAdi)
+      .eq('Tarife', tarife)
+      .single();
+    
+    if (error || !data) {
+      return null;
+    }
+    
+    return data.Plaka;
+  } catch (err) {
+    console.error(`Plaka bulunamadı (${todayTable}, ${hatAdi}, ${tarife}):`, err);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -72,12 +102,31 @@ export default async function handler(req, res) {
 
     console.log(`✅ ${data.length} kayıt döndürüldü (Çalışma_Zamanı filtresi uygulandı)`);
 
+    // Bugünün gün tablosundan plaka bilgilerini al
+    const todayTable = getTodayTableName();
+    console.log(`📅 Bugünün gün tablosu: ${todayTable}`);
+    
+    // Her kayıt için plaka bilgisini ekle
+    const dataWithPlaka = await Promise.all(data.map(async (row) => {
+      if (row.Tarife) {
+        const plaka = await getPlakaForTarife(tableName, row.Tarife, todayTable);
+        return {
+          ...row,
+          Plaka: plaka || row.Plaka // Bulunan plaka veya mevcut plaka
+        };
+      }
+      return row;
+    }));
+
+    console.log(`🚗 Plaka bilgileri eklendi`);
+
     return res.status(200).json({
       success: true,
       tableName: tableName,
       hareket: hareket || 'Tümü',
       calismaZamanlari: allowedCalismaZamanlari,
-      data: data
+      todayTable: todayTable,
+      data: dataWithPlaka
     });
 
   } catch (err) {

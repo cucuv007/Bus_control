@@ -31,6 +31,36 @@ function getAllowedCalismaZamanlari() {
   return allowedCodes;
 }
 
+// Bugünün gün adını döndür (PAZARTESİ, SALI, ...)
+function getTodayTableName() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  
+  const gunler = ['PAZAR', 'PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ'];
+  return gunler[dayOfWeek];
+}
+
+// Bugünün gün tablosundan plaka bilgisini al
+async function getPlakaForTarife(hatAdi, tarife, todayTable) {
+  try {
+    const { data, error } = await supabase
+      .from(todayTable)
+      .select('Plaka')
+      .eq('Hat_Adi', hatAdi)
+      .eq('Tarife', tarife)
+      .single();
+    
+    if (error || !data) {
+      return null;
+    }
+    
+    return data.Plaka;
+  } catch (err) {
+    console.error(`Plaka bulunamadı (${todayTable}, ${hatAdi}, ${tarife}):`, err);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -89,6 +119,8 @@ export default async function handler(req, res) {
     let minDifference = Infinity;
 
     // Tüm satırları kontrol et ve en yakın saati bul
+    const todayTable = getTodayTableName();
+    
     for (const row of data) {
       const tarifeSaati = row.Tarife_Saati; // Format: "HH:MM" veya "HH:MM:SS"
 
@@ -110,9 +142,19 @@ export default async function handler(req, res) {
       // En yakın gelecek saati bul (0'dan büyük olmalı)
       if (remainingSeconds > 0 && remainingSeconds < minDifference) {
         minDifference = remainingSeconds;
+        
+        // Plaka bilgisini bugünün gün tablosundan al
+        let plaka = row.Plaka;
+        if (row.Tarife) {
+          const plakaFromToday = await getPlakaForTarife(tableName, row.Tarife, todayTable);
+          if (plakaFromToday) {
+            plaka = plakaFromToday;
+          }
+        }
+        
         nextBus = {
           hatAdi: row.Hat_Adi || '-',
-          plaka: row.Plaka || '-',
+          plaka: plaka || '-',
           tarife: row.Tarife || '-',
           hareket: row.Hareket || '-',
           tarifeSaati: tarifeSaati,
