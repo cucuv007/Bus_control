@@ -13,10 +13,12 @@ async function clearAndInsertPlakaData(tableName, dataToInsert) {
   try {
     // 1. Önce tablodaki tüm verileri sil
     console.log(`🗑️ "${tableName}" tablosundaki eski veriler siliniyor...`);
+    
+    // Plaka null olmayan tüm satırları sil (yani hepsi)
     const { error: deleteError } = await supabase
       .from(tableName)
       .delete()
-      .gte('id', 0); // Tüm satırları sil (id >= 0 her satır için true)
+      .not('Plaka', 'is', null);
     
     if (deleteError) {
       console.error('Delete error:', deleteError);
