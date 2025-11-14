@@ -53,7 +53,13 @@ function isCellHidden(cell) {
     const font = cell.font;
     
     // Font yoksa gizli değil
-    if (!font) return false;
+    if (!font) {
+      console.log('    ⚠️  Font bilgisi yok - normal kabul edildi');
+      return false;
+    }
+    
+    // DEBUG: Font object'i logla
+    console.log(`    🔍 Font debug: color=${JSON.stringify(font.color)}`);
     
     // Fill rengini al
     let fillColor = null;
@@ -71,21 +77,27 @@ function isCellHidden(cell) {
       // ExcelJS'de font.color.argb veya font.color.theme olabilir
       if (font.color.argb) {
         fontColor = font.color.argb;
+        console.log(`    📝 Font ARGB: ${fontColor}`);
       } else if (font.color.theme !== undefined) {
+        console.log(`    🎨 Font THEME: ${font.color.theme}`);
         // Theme-based color - beyaz olup olmadığını bilemeyiz, skip etme
         // Ancak theme 1 genelde beyaz demektir
-        if (font.color.theme === 1) {
-          console.log('    Font theme=1 (beyaz) - hücre atlanıyor');
+        if (font.color.theme === 1 || font.color.theme === 0) {
+          console.log('    ⚪ Font theme=1/0 (beyaz) - hücre atlanıyor');
           return true;
         }
+      } else {
+        console.log(`    ⚠️  Font.color var ama argb/theme yok: ${JSON.stringify(font.color)}`);
       }
+    } else {
+      console.log('    ⚠️  Font.color undefined - beyaz değil');
     }
     
     // Beyaz yazı kontrolü (FFFFFF veya FFFFFFFF)
     if (fontColor) {
       const fontRGB = fontColor.slice(-6).toUpperCase();
       if (fontRGB === 'FFFFFF') {
-        console.log(`    Beyaz font tespit edildi (${fontColor}) - hücre atlanıyor`);
+        console.log(`    ⚪ Beyaz font tespit edildi (${fontColor}) - hücre atlanıyor`);
         return true; // Beyaz yazı - gizli kabul et
       }
     }
