@@ -285,23 +285,24 @@ export default async function handler(req, res) {
         
         if (!cell || !cell.value) continue;
         
-        // Hücre değeri sadece whitespace ise atla
-        const cellValueStr = String(cell.value).trim();
-        if (!cellValueStr) continue;
-        
-        // Formül içeren hücreleri atla
-        if (cell.formula) {
-          console.log(`  ${tarife.name}: Formül atlandı`);
-          continue;
-        }
-        
         // Hücre rengi ve yazı rengi aynıysa atla (gizli veri)
         if (isCellHidden(cell)) {
           console.log(`  ${tarife.name}: Gizli hücre atlandı`);
           continue;
         }
         
-        const timeValue = formatTime(cell.value);
+        // Formül hücrelerinde hesaplanmış değeri kullan
+        let cellValue = cell.value;
+        if (cell.formula) {
+          // ExcelJS'de formül hücresinin değeri şu formatta olabilir:
+          // { formula: '=D8+$C$7', result: 0.275 } veya direkt sonuç
+          if (typeof cell.value === 'object' && cell.value.result !== undefined) {
+            cellValue = cell.value.result;
+          }
+          console.log(`  ${tarife.name}: Formül (hesaplanan değer: ${cellValue})`);
+        }
+        
+        const timeValue = formatTime(cellValue);
         if (!timeValue) continue;
 
         dataToInsert.push({
