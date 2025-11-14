@@ -221,12 +221,11 @@ export default async function handler(req, res) {
     const tarifeColumns = [];
     // ExcelJS: İlk 20 satırda T01, T02... başlıklarını ara
     let foundHeaderRow = null;
-    let minTarifeCol = 30;
-    let maxTarifeCol = 4;
     
     for (let rowNum = 1; rowNum <= 20; rowNum++) {
       const headerRow = worksheet.getRow(rowNum);
       const tempCols = [];
+      let maxTCol = 0;
       
       // Önce T01, T02... başlıklarını bul
       for (let col = 4; col <= 30; col++) {
@@ -235,27 +234,28 @@ export default async function handler(req, res) {
         const headerValue = String(cell.value).trim();
         if (headerValue.match(/^T\d{2}$/)) {
           tempCols.push({ col, name: headerValue });
-          minTarifeCol = Math.min(minTarifeCol, col);
-          maxTarifeCol = Math.max(maxTarifeCol, col);
+          maxTCol = Math.max(maxTCol, col); // En sağdaki T sütununu bul
         }
       }
       
-      // En az 1 tarife başlığı bulduysa bu satırı kullan
+      // En az 1 tarife başlığı bulduysa
       if (tempCols.length > 0) {
         foundHeaderRow = rowNum;
         
-        // Şimdi T ile başlayan sütunlar arasında/yanında başka başlıkları da ekle
-        // (minTarifeCol - 1) ile (maxTarifeCol + 1) arasındaki tüm dolu hücreleri tarife olarak kabul et
-        for (let col = minTarifeCol; col <= maxTarifeCol; col++) {
+        // Şimdi en sağdaki T sütunundan sonraki sütunları kontrol et (max 5 sütun daha)
+        for (let col = maxTCol + 1; col <= maxTCol + 5; col++) {
           const cell = headerRow.getCell(col);
-          if (!cell || !cell.value) continue;
+          if (!cell || !cell.value) continue; // Boş hücre varsa atla
           
           const headerValue = String(cell.value).trim();
           
-          // Boş veya sadece whitespace değilse ve henüz eklenmemişse
-          if (headerValue && !tempCols.find(c => c.col === col)) {
+          // Boş değilse ve beyaz font değilse ekle
+          if (headerValue && !isCellHidden(cell)) {
             tempCols.push({ col, name: headerValue });
-            console.log(`  ✓ Ek tarife sütunu bulundu: "${headerValue}" (Sütun ${col})`);
+            console.log(`  ✓ Ek tarife sütunu bulundu: "${headerValue}" (Sütun ${String.fromCharCode(64 + col)})`);
+          } else {
+            // Boş veya beyaz hücre bulundu, daha sağa gitme
+            break;
           }
         }
         
