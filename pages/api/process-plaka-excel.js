@@ -1,62 +1,41 @@
 // pages/api/process-plaka-excel.js
 import ExcelJS from 'exceljs';
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '6543'),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const GUNLER = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ', 'PAZAR'];
 
-async function createPlakaTableIfNotExists(client, tableName) {
-  const createTableSQL = `
-    CREATE TABLE IF NOT EXISTS public."${tableName}" (
-      "id" SERIAL PRIMARY KEY,
-      "Plaka" text NOT NULL,
-      "Hat_Adi" text NULL,
-      "Tarife" text NULL,
-      CONSTRAINT "${tableName}_unique_plaka_hat_tarife" UNIQUE ("Plaka", "Hat_Adi", "Tarife")
-    );
-    
-    ALTER TABLE public."${tableName}" DISABLE ROW LEVEL SECURITY;
-  `;
-  
-  try {
-    await client.query(createTableSQL);
-    return { success: true };
-  } catch (err) {
-    console.error('Table creation error:', err);
-    return { success: false, message: err.message };
-  }
-}
-
-async function upsertPlakaData(client, tableName, dataToInsert) {
-  const query = `
-    INSERT INTO public."${tableName}" ("Plaka", "Hat_Adi", "Tarife")
-    VALUES ($1, $2, $3)
-    ON CONFLICT ("Plaka", "Hat_Adi", "Tarife") 
-    DO UPDATE SET
-      "Plaka" = EXCLUDED."Plaka",
-      "Hat_Adi" = EXCLUDED."Hat_Adi",
-      "Tarife" = EXCLUDED."Tarife";
-  `;
-  
+async function upsertPlakaData(tableName, dataToInsert) {
   let insertedCount = 0;
+  
   for (const row of dataToInsert) {
     try {
-      await client.query(query, [
-        row.Plaka || null,
-        row.Hat_Adi || null,
-        row.Tarife || null
-      ]);
-      insertedCount++;
+      // Supabase upsert - duplicate varsa update, yoksa insert
+      const { error } = await supabase
+        .from(tableName)
+        .upsert(
+          {
+            Plaka: row.Plaka || null,
+            Hat_Adi: row.Hat_Adi || null,
+            Tarife: row.Tarife || null
+          },
+          { 
+            onConflict: 'Plaka,Hat_Adi,Tarife'
+          }
+        );
+      
+      if (error) {
+        console.error('Row insert error:', error.message, row);
+        // İlk hata tablo yoksa olabilir, devam et
+      } else {
+        insertedCount++;
+      }
     } catch (err) {
-      console.error('Row insert error:', err, row);
+      console.error('Row insert exception:', err.message, row);
     }
   }
   
@@ -64,8 +43,6 @@ async function upsertPlakaData(client, tableName, dataToInsert) {
 }
 
 export default async function handler(req, res) {
-  let client = null;
-
   try {
     const { fileName, fileData } = req.body;
 
@@ -75,8 +52,6 @@ export default async function handler(req, res) {
         error: 'fileName ve fileData gerekli'
       });
     }
-
-    client = await pool.connect();
 
     const buffer = Buffer.from(fileData, 'base64');
     const workbook = new ExcelJS.Workbook();
@@ -135,15 +110,10 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // Tablo oluştur
-      const tableCreation = await createPlakaTableIfNotExists(client, sheetName);
-      if (!tableCreation.success) {
-        console.error(`❌ "${sheetName}" tablosu oluşturulamadı: ${tableCreation.message}`);
-        continue;
-      }
+      console.log(`📝 "${sheetName}" için ${dataToInsert.length} kayıt bulundu, ekleniyor...`);
 
-      // Veri ekle
-      const insertedCount = await upsertPlakaData(client, sheetName, dataToInsert);
+      // Veri ekle (tablo yoksa Supabase'de manuel oluşturulmalı)
+      const insertedCount = await upsertPlakaData(sheetName, dataToInsert);
       console.log(`✅ "${sheetName}" tablosuna ${insertedCount} kayıt eklendi`);
 
       processedTables.push({
@@ -168,10 +138,6 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('Error:', err);
     return res.status(500).json({ success: false, error: err.message });
-  } finally {
-    if (client) {
-      client.release();
-    }
   }
 }
 
