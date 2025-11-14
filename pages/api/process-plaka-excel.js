@@ -16,7 +16,7 @@ async function clearAndInsertPlakaData(tableName, dataToInsert) {
     const { error: deleteError } = await supabase
       .from(tableName)
       .delete()
-      .neq('id', 0); // Tüm satırları sil (id != 0 her zaman true)
+      .gte('id', 0); // Tüm satırları sil (id >= 0 her satır için true)
     
     if (deleteError) {
       console.error('Delete error:', deleteError);
