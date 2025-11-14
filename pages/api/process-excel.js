@@ -258,15 +258,17 @@ export default async function handler(req, res) {
     const hareketRows = [];
     // ExcelJS: B sütunu (col 2), foundHeaderRow+2'den başla (foundHeaderRow+1 genelde boş)
     const startRowForHareket = foundHeaderRow + 2;
-    console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}'den itibaren, merged cell bulunana kadar) ===`);
+    console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}'den itibaren) ===`);
+    
+    let foundFirstHareket = false; // İlk Kalkış/Dönüş bulundu mu?
     
     for (let rowNum = startRowForHareket; rowNum <= worksheet.rowCount; rowNum++) {
       const row = worksheet.getRow(rowNum);
       const cell = row.getCell(2); // B sütunu
       
-      // Merged cell kontrolü - B sütununda merged cell varsa dur
-      if (cell.isMerged) {
-        console.log(`Satır ${rowNum}: Merged cell bulundu - tarama durduruluyor`);
+      // Merged cell kontrolü - SADECE en az 1 hareket bulduktan SONRA
+      if (foundFirstHareket && cell.isMerged) {
+        console.log(`Satır ${rowNum}: Merged cell bulundu (${hareketRows.length} hareket bulunduktan sonra) - tarama durduruluyor`);
         break;
       }
       
@@ -279,6 +281,7 @@ export default async function handler(req, res) {
       if (hareketValue === 'Kalkış' || hareketValue === 'Dönüş') {
         console.log(`  ✓ BULUNDU: ${hareketValue}`);
         hareketRows.push({ rowNum, hareket: hareketValue });
+        foundFirstHareket = true; // İlk hareket bulundu, artık merged cell kontrolü aktif
       }
     }
     console.log(`=== Toplam ${hareketRows.length} hareket satırı bulundu ===`);
