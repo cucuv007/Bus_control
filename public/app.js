@@ -36,6 +36,8 @@ const listStatus = document.getElementById('listStatus');
 const filesList = document.getElementById('filesList');
 const selectStatus = document.getElementById('selectStatus');
 const uploadStatus = document.getElementById('uploadStatus');
+const fileSearchInput = document.getElementById('fileSearchInput');
+const selectAllCheckbox = document.getElementById('selectAllCheckbox');
 
 const manualFileInput = document.getElementById('manualFileInput');
 const manualStatus = document.getElementById('manualStatus');
@@ -72,6 +74,10 @@ tableSelect.addEventListener('change', handleTableSelect);
 hareketSelect.addEventListener('change', handleHareketChange);
 
 manualFileInput.addEventListener('change', handleManualFileSelect);
+
+// Search and Select All
+fileSearchInput.addEventListener('input', handleFileSearch);
+selectAllCheckbox.addEventListener('change', handleSelectAll);
 
 // Close modal when clicking outside
 uploadModal.addEventListener('click', (e) => {
@@ -143,42 +149,7 @@ async function handleListFiles() {
     allFiles = result.files;
     
     // Dosyaları listele
-    filesList.innerHTML = '';
-    selectedFiles = [];
-    
-    allFiles.forEach(file => {
-      const label = document.createElement('label');
-      label.className = 'file-checkbox';
-      
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = file.id;
-      checkbox.dataset.name = file.name;
-      
-      checkbox.addEventListener('change', (e) => {
-        if (e.target.checked) {
-          selectedFiles.push({
-            id: file.id,
-            name: file.name
-          });
-        } else {
-          selectedFiles = selectedFiles.filter(f => f.id !== file.id);
-        }
-        
-        if (selectedFiles.length > 0) {
-          selectStatus.innerHTML = `✅ ${selectedFiles.length} dosya seçildi`;
-          selectStatus.style.display = 'block';
-          confirmUploadBtn.style.display = 'block';
-        } else {
-          selectStatus.style.display = 'none';
-          confirmUploadBtn.style.display = 'none';
-        }
-      });
-      
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(file.name));
-      filesList.appendChild(label);
-    });
+    renderFilesList();
     
     listStatus.innerHTML = `✅ ${allFiles.length} dosya bulundu`;
     step3.style.display = 'block';
@@ -216,6 +187,103 @@ function handleManualFileSelect(e) {
   manualStatus.innerHTML = `✅ ${file.name} seçildi`;
   manualStatus.style.display = 'block';
   confirmUploadBtn.style.display = 'block';
+}
+
+// ==================== FILE LIST RENDER & FILTER ====================
+function renderFilesList(filterText = '') {
+  filesList.innerHTML = '';
+  selectedFiles = [];
+  selectAllCheckbox.checked = false;
+  
+  const filteredFiles = filterText 
+    ? allFiles.filter(f => f.name.toLowerCase().includes(filterText.toLowerCase()))
+    : allFiles;
+  
+  filteredFiles.forEach(file => {
+    const label = document.createElement('label');
+    label.className = 'file-checkbox';
+    label.dataset.fileId = file.id;
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = file.id;
+    checkbox.dataset.name = file.name;
+    checkbox.className = 'file-item-checkbox';
+    
+    checkbox.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        selectedFiles.push({
+          id: file.id,
+          name: file.name
+        });
+      } else {
+        selectedFiles = selectedFiles.filter(f => f.id !== file.id);
+      }
+      
+      updateSelectionStatus();
+      updateSelectAllCheckbox();
+    });
+    
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(file.name));
+    filesList.appendChild(label);
+  });
+  
+  updateSelectionStatus();
+}
+
+function handleFileSearch(e) {
+  const searchText = e.target.value;
+  renderFilesList(searchText);
+}
+
+function handleSelectAll(e) {
+  const checkboxes = document.querySelectorAll('.file-item-checkbox');
+  const isChecked = e.target.checked;
+  
+  selectedFiles = [];
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = isChecked;
+    if (isChecked) {
+      selectedFiles.push({
+        id: checkbox.value,
+        name: checkbox.dataset.name
+      });
+    }
+  });
+  
+  updateSelectionStatus();
+}
+
+function updateSelectAllCheckbox() {
+  const checkboxes = document.querySelectorAll('.file-item-checkbox');
+  const checkedCount = document.querySelectorAll('.file-item-checkbox:checked').length;
+  
+  if (checkboxes.length === 0) {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+  } else if (checkedCount === 0) {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+  } else if (checkedCount === checkboxes.length) {
+    selectAllCheckbox.checked = true;
+    selectAllCheckbox.indeterminate = false;
+  } else {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = true;
+  }
+}
+
+function updateSelectionStatus() {
+  if (selectedFiles.length > 0) {
+    selectStatus.innerHTML = `✅ ${selectedFiles.length} dosya seçildi`;
+    selectStatus.style.display = 'block';
+    confirmUploadBtn.style.display = 'block';
+  } else {
+    selectStatus.style.display = 'none';
+    confirmUploadBtn.style.display = 'none';
+  }
 }
 
 async function handleUpload() {
