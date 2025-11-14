@@ -52,26 +52,40 @@ function isCellHidden(cell) {
     const fill = cell.fill;
     const font = cell.font;
     
-    if (!fill || !font) return false;
+    // Font yoksa gizli değil
+    if (!font) return false;
     
     // Fill rengini al
     let fillColor = null;
-    if (fill.type === 'pattern' && fill.fgColor) {
-      fillColor = fill.fgColor.argb;
-    } else if (fill.bgColor) {
-      fillColor = fill.bgColor.argb;
+    if (fill) {
+      if (fill.type === 'pattern' && fill.fgColor) {
+        fillColor = fill.fgColor.argb;
+      } else if (fill.bgColor) {
+        fillColor = fill.bgColor.argb;
+      }
     }
     
     // Font rengini al
     let fontColor = null;
-    if (font.color && font.color.argb) {
-      fontColor = font.color.argb;
+    if (font.color) {
+      // ExcelJS'de font.color.argb veya font.color.theme olabilir
+      if (font.color.argb) {
+        fontColor = font.color.argb;
+      } else if (font.color.theme !== undefined) {
+        // Theme-based color - beyaz olup olmadığını bilemeyiz, skip etme
+        // Ancak theme 1 genelde beyaz demektir
+        if (font.color.theme === 1) {
+          console.log('    Font theme=1 (beyaz) - hücre atlanıyor');
+          return true;
+        }
+      }
     }
     
-    // Beyaz yazı kontrolü (FFFFFF)
+    // Beyaz yazı kontrolü (FFFFFF veya FFFFFFFF)
     if (fontColor) {
       const fontRGB = fontColor.slice(-6).toUpperCase();
       if (fontRGB === 'FFFFFF') {
+        console.log(`    Beyaz font tespit edildi (${fontColor}) - hücre atlanıyor`);
         return true; // Beyaz yazı - gizli kabul et
       }
     }
