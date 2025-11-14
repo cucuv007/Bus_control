@@ -32,64 +32,77 @@ export default async function handler(req, res) {
 
     console.log(`🔑 Using API Key: ${apiKey.substring(0, 10)}...`);
 
-    // Google Drive API'ye istek yap
+    // Google Drive API'ye istek yap - TÜM dosyaları almak için pagination kullan
     const query = `'${SHARED_FOLDER_ID}' in parents and (mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType='application/vnd.ms-excel') and trashed=false`;
     
-    const url = new URL('https://www.googleapis.com/drive/v3/files');
-    url.searchParams.append('q', query);
-    url.searchParams.append('spaces', 'drive');
-    url.searchParams.append('fields', 'files(id,name,modifiedTime,webContentLink,mimeType)');
-    url.searchParams.append('pageSize', '100');
-    url.searchParams.append('orderBy', 'modifiedTime desc');
-    url.searchParams.append('key', apiKey);
-
-    console.log('📡 Calling Google Drive API...');
-    console.log('URL:', url.toString().replace(apiKey, 'API_KEY_HIDDEN'));
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
+    let allFiles = [];
+    let pageToken = null;
+    
+    do {
+      const url = new URL('https://www.googleapis.com/drive/v3/files');
+      url.searchParams.append('q', query);
+      url.searchParams.append('spaces', 'drive');
+      url.searchParams.append('fields', 'nextPageToken,files(id,name,modifiedTime,webContentLink,mimeType)');
+      url.searchParams.append('pageSize', '1000');
+      if (pageToken) {
+        url.searchParams.append('pageToken', pageToken);
       }
-    });
+      url.searchParams.append('key', apiKey);
 
-    console.log('📊 API Response Status:', response.status);
+      console.log('📡 Calling Google Drive API...');
+      console.log('URL:', url.toString().replace(apiKey, 'API_KEY_HIDDEN'));
 
-    const data = await response.json();
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
 
-    console.log('📋 API Response:', JSON.stringify(data).substring(0, 200));
+      console.log('📊 API Response Status:', response.status);
 
-    if (!response.ok) {
-      console.error('❌ API Error:', data);
+      const data = await response.json();
+
+      console.log('📋 API Response:', JSON.stringify(data).substring(0, 200));
+
+      if (!response.ok) {
+        console.error('❌ API Error:', data);
+        
+        if (data.error?.code === 403) {
+          return res.status(200).json({
+            success: false,
+            files: [],
+            method: 'api_error',
+            message: 'Google API Key geçersiz veya izin yok. Lütfen kontrol et.',
+            error: data.error.message
+          });
+        }
+
+        if (data.error?.code === 401) {
+          return res.status(200).json({
+            success: false,
+            files: [],
+            method: 'api_error',
+            message: 'Google API Key geçersiz. Lütfen yeni bir key oluştur.',
+            error: data.error.message
+          });
+        }
+
+        throw new Error(data.error?.message || 'API Error');
+      }
+
+      allFiles = allFiles.concat(data.files || []);
+      pageToken = data.nextPageToken;
       
-      if (data.error?.code === 403) {
-        return res.status(200).json({
-          success: false,
-          files: [],
-          method: 'api_error',
-          message: 'Google API Key geçersiz veya izin yok. Lütfen kontrol et.',
-          error: data.error.message
-        });
-      }
+      console.log(`📄 Page: ${allFiles.length} files so far, nextPageToken: ${pageToken ? 'yes' : 'no'}`);
+      
+    } while (pageToken);
 
-      if (data.error?.code === 401) {
-        return res.status(200).json({
-          success: false,
-          files: [],
-          method: 'api_error',
-          message: 'Google API Key geçersiz. Lütfen yeni bir key oluştur.',
-          error: data.error.message
-        });
-      }
+    console.log(`✅ Total files found: ${allFiles.length}`);
 
-      throw new Error(data.error?.message || 'API Error');
-    }
+    console.log(`✅ Total files found: ${allFiles.length}`);
 
-    const files = data.files || [];
-
-    console.log(`✅ Found ${files.length} files`);
-
-    if (files.length === 0) {
+    if (allFiles.length === 0) {
       return res.status(200).json({
         success: true,
         files: [],
@@ -99,7 +112,7 @@ export default async function handler(req, res) {
     }
 
     // Dosyaları işle
-    const filesWithLinks = files.map(f => ({
+    const filesWithLinks = allFiles.map(f => ({
       id: f.id,
       name: f.name,
       modifiedTime: f.modifiedTime,
@@ -107,6 +120,23 @@ export default async function handler(req, res) {
       webContentLink: f.webContentLink,
       mimeType: f.mimeType
     }));
+    
+    // Alfabetik sıralama: Önce rakamlar, sonra harfler
+    filesWithLinks.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      
+      // İlk karakterin rakam olup olmadığını kontrol et
+      const aStartsWithNumber = /^\d/.test(aName);
+      const bStartsWithNumber = /^\d/.test(bName);
+      
+      // Rakamla başlayanlar önce
+      if (aStartsWithNumber && !bStartsWithNumber) return -1;
+      if (!aStartsWithNumber && bStartsWithNumber) return 1;
+      
+      // Her ikisi de rakam veya her ikisi de harf ise alfabetik sırala
+      return aName.localeCompare(bName, 'tr', { numeric: true, sensitivity: 'base' });
+    });
 
     console.log('📤 Returning files:', filesWithLinks.map(f => f.name));
 
