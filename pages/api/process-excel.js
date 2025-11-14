@@ -90,6 +90,7 @@ async function createTableIfNotExists(client, tableName) {
   const createTableSQL = `
     CREATE TABLE IF NOT EXISTS public."${tableName}" (
       "id" SERIAL PRIMARY KEY,
+      "Hat_Adi" text NULL,
       "Tarife" text NOT NULL,
       "Tarife_Saati" time without time zone NOT NULL,
       "Onaylanan" time without time zone NULL,
@@ -142,10 +143,11 @@ async function createTableIfNotExists(client, tableName) {
 
 async function upsertData(client, tableName, dataToInsert) {
   const query = `
-    INSERT INTO public."${tableName}" ("Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO public."${tableName}" ("Hat_Adi", "Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     ON CONFLICT ("Tarife_Saati", "Hareket") 
     DO UPDATE SET
+      "Hat_Adi" = EXCLUDED."Hat_Adi",
       "Tarife" = EXCLUDED."Tarife",
       "Onaylanan" = EXCLUDED."Onaylanan",
       "Durum" = EXCLUDED."Durum",
@@ -156,6 +158,7 @@ async function upsertData(client, tableName, dataToInsert) {
   for (const row of dataToInsert) {
     try {
       await client.query(query, [
+        row.Hat_Adi || null,
         row.Tarife,
         row.Tarife_Saati,
         row.Onaylanan || null,
@@ -330,6 +333,7 @@ export default async function handler(req, res) {
         }
 
         dataToInsert.push({
+          Hat_Adi: tableName,
           Hareket: hareketRow.hareket,
           Tarife: tarife.name,
           Tarife_Saati: timeValue,
