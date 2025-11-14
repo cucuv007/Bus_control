@@ -42,6 +42,11 @@ const selectAllCheckbox = document.getElementById('selectAllCheckbox');
 
 const manualFileInput = document.getElementById('manualFileInput');
 const manualStatus = document.getElementById('manualStatus');
+const uploadTypeHatBtn = document.getElementById('uploadTypeHatBtn');
+const uploadTypePlakaBtn = document.getElementById('uploadTypePlakaBtn');
+const manualFileInputGroup = document.getElementById('manualFileInputGroup');
+const manualFileLabel = document.getElementById('manualFileLabel');
+const manualFileHint = document.getElementById('manualFileHint');
 
 // Table & Movement selection
 const tableSelection = document.getElementById('tableSelection');
@@ -55,6 +60,7 @@ let currentHareket = null;
 let isLoading = false;
 let allFiles = [];
 let uploadMethod = null;
+let uploadType = null; // 'hat' or 'plaka'
 let timerInterval = null;
 let lastBusTime = null;
 
@@ -68,6 +74,9 @@ closeTimerBtn.addEventListener('click', closeTimer);
 
 methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
 methodManualBtn.addEventListener('click', () => selectMethod('manual'));
+
+uploadTypeHatBtn.addEventListener('click', () => selectUploadType('hat'));
+uploadTypePlakaBtn.addEventListener('click', () => selectUploadType('plaka'));
 
 listFilesBtn.addEventListener('click', handleListFiles);
 confirmUploadBtn.addEventListener('click', handleUpload);
@@ -101,12 +110,14 @@ function closeUploadModal() {
 function resetModal() {
   selectedFiles = [];
   uploadMethod = null;
+  uploadType = null;
   
   step1.style.display = 'block';
   step2Auto.style.display = 'none';
   step2Manual.style.display = 'none';
   step3.style.display = 'none';
   confirmUploadBtn.style.display = 'none';
+  manualFileInputGroup.style.display = 'none';
   
   methodStatus.style.display = 'none';
   listStatus.style.display = 'none';
@@ -120,13 +131,33 @@ function resetModal() {
 
 function selectMethod(method) {
   uploadMethod = method;
+  uploadType = null; // Reset upload type
   step1.style.display = 'none';
   
   if (method === 'auto') {
     step2Auto.style.display = 'block';
   } else {
     step2Manual.style.display = 'block';
+    manualFileInputGroup.style.display = 'none'; // Önce gizle, tip seçilince göster
   }
+}
+
+function selectUploadType(type) {
+  uploadType = type;
+  manualFileInputGroup.style.display = 'block';
+  
+  if (type === 'hat') {
+    manualFileLabel.textContent = '📋 Hat Excel Dosyası Seçin:';
+    manualFileHint.textContent = 'Format: XX_TABLENAME_YYYY_MM_DD.xlsx (örn: 05_AC05_2025_11_08.xlsx)';
+  } else {
+    manualFileLabel.textContent = '🚗 Plaka Excel Dosyası Seçin:';
+    manualFileHint.textContent = 'PAZARTESİ, SALI, ÇARŞAMBA... sayfaları içermeli (ROTASYON hariç)';
+  }
+  
+  // Reset file input
+  manualFileInput.value = '';
+  manualStatus.style.display = 'none';
+  confirmUploadBtn.style.display = 'none';
 }
 
 // ==================== FILE OPERATIONS ====================
@@ -344,12 +375,16 @@ async function handleUpload() {
         fileData = downloadResult.data;
       }
       
-      console.log('📨 Sending to process-excel API...');
+      console.log('📨 Sending to process API...');
       console.log('File name:', file.name);
       console.log('Data length:', fileData.length);
+      console.log('Upload type:', uploadType);
       
-      // Excel'i işle
-      const processRes = await fetch('/api/process-excel', {
+      // Excel'i işle - uploadType'a göre farklı endpoint
+      const apiEndpoint = uploadType === 'plaka' ? '/api/process-plaka-excel' : '/api/process-excel';
+      console.log('API Endpoint:', apiEndpoint);
+      
+      const processRes = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
