@@ -144,7 +144,7 @@ export default async function handler(req, res) {
         minDifference = remainingSeconds;
         
         // Plaka bilgisini bugünün gün tablosundan al
-        let plaka = row.Plaka;
+        let plaka = 'Belediye Aracı';
         if (row.Tarife) {
           const plakaFromToday = await getPlakaForTarife(tableName, row.Tarife, todayTable);
           if (plakaFromToday) {
@@ -154,7 +154,7 @@ export default async function handler(req, res) {
         
         nextBus = {
           hatAdi: row.Hat_Adi || '-',
-          plaka: plaka || '-',
+          plaka: plaka,
           tarife: row.Tarife || '-',
           hareket: row.Hareket || '-',
           tarifeSaati: tarifeSaati,

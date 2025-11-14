@@ -112,10 +112,13 @@ export default async function handler(req, res) {
         const plaka = await getPlakaForTarife(tableName, row.Tarife, todayTable);
         return {
           ...row,
-          Plaka: plaka || row.Plaka // Bulunan plaka veya mevcut plaka
+          Plaka: plaka || 'Belediye Aracı' // Bulunan plaka veya "Belediye Aracı"
         };
       }
-      return row;
+      return {
+        ...row,
+        Plaka: row.Plaka || 'Belediye Aracı'
+      };
     }));
 
     console.log(`🚗 Plaka bilgileri eklendi`);
