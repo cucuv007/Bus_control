@@ -10,6 +10,7 @@ const meta = document.getElementById('meta');
 // Timer elements
 const timerContainer = document.getElementById('timerContainer');
 const timerDisplay = document.getElementById('timerDisplay');
+const timerHatAdi = document.getElementById('timerHatAdi');
 const timerPlaka = document.getElementById('timerPlaka');
 const timerTarife = document.getElementById('timerTarife');
 const timerHareket = document.getElementById('timerHareket');
@@ -586,6 +587,7 @@ async function updateTimer(tableName, hareket) {
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
+        timerHatAdi.textContent = currentTable || '-';
         timerPlaka.textContent = plaka || '-';
         timerTarife.textContent = tarife || '-';
         timerHareket.textContent = hareket || '-';
