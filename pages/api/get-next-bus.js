@@ -6,6 +6,31 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Bugünün gününe göre uygun Çalışma_Zamanı kodlarını döndür
+function getAllowedCalismaZamanlari() {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
+  
+  const allowedCodes = [];
+  
+  // Pazartesi-Cuma (1-5): Hafta içi
+  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    allowedCodes.push('HI', 'HI-HC', 'HI-HS');
+  }
+  
+  // Cumartesi (6)
+  if (dayOfWeek === 6) {
+    allowedCodes.push('HI-HC', 'HI-HS', 'HS', 'HC');
+  }
+  
+  // Pazar (0)
+  if (dayOfWeek === 0) {
+    allowedCodes.push('HI-HS', 'HS', 'HP');
+  }
+  
+  return allowedCodes;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -22,6 +47,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'currentTime gerekli' });
     }
 
+    // Bugüne uygun çalışma zamanlarını al
+    const allowedCalismaZamanlari = getAllowedCalismaZamanlari();
+
     // Tablodan tüm verileri al (Hareket filtresine göre)
     let query = supabase
       .from(tableName)
@@ -32,6 +60,12 @@ export default async function handler(req, res) {
     if (hareket) {
       query = query.eq('Hareket', hareket);
     }
+
+    // Çalışma_Zamanı filtresi - bugüne uygun olanlar veya null olanlar
+    query = query.or(
+      allowedCalismaZamanlari.map(code => `Çalışma_Zamanı.eq.${code}`).join(',') + 
+      ',Çalışma_Zamanı.is.null'
+    );
 
     const { data, error } = await query;
 
