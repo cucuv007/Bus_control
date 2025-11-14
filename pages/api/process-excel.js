@@ -64,16 +64,18 @@ function isCellHidden(cell) {
     }
     
     // Theme-based beyaz kontrolü
-    // Theme 1 + tint >= 0 genelde beyaz/açık demektir
-    // Theme 0 + tint >= 0.5 veya theme 1 + tint >= 0.4 beyaz kabul edelim
     if (font.color.theme !== undefined) {
       const theme = font.color.theme;
       const tint = font.color.tint || 0;
       
-      // Theme 1 genelde "background1" (beyaz arka planlar için)
-      // Tint pozitif = daha açık, negatif = daha koyu
-      if ((theme === 1 && tint >= 0) || (theme === 0 && tint >= 0.5)) {
-        return true; // Beyaz/açık tema - atla
+      // DEBUG: Gerçek tema değerlerini görelim (comment out after testing)
+      // console.log(`DEBUG Font - Theme: ${theme}, Tint: ${tint.toFixed(2)}, Cell: ${cell.address}`);
+      
+      // Tema 0 genellikle BEYAZ (light1/background)
+      // Tema 1 genellikle SİYAH/KOYU (dark1/text)
+      // Tint: pozitif = daha açık, negatif = daha koyu
+      if (theme === 0 && tint >= 0) {
+        return true; // Beyaz tema - atla
       }
     }
     
