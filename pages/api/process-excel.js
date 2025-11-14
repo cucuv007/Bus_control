@@ -69,7 +69,7 @@ function isCellHidden(cell) {
       const tint = font.color.tint || 0;
       
       // DEBUG: Gerçek tema değerlerini görelim (comment out after testing)
-      console.log(`DEBUG Font - Theme: ${theme}, Tint: ${tint.toFixed(2)}, Cell: ${cell.address}`);
+      // console.log(`DEBUG Font - Theme: ${theme}, Tint: ${tint.toFixed(2)}, Cell: ${cell.address}`);
       
       // Tema 0 genellikle BEYAZ (light1/background)
       // Tema 1 genellikle SİYAH/KOYU (dark1/text)
@@ -289,6 +289,48 @@ export default async function handler(req, res) {
       let addedCount = 0;
       let skippedCount = 0;
       
+      // DÖNÜŞ için özel kontrol: En büyük saati bul ve altındaki hücreyi kontrol et
+      let maxTimeCol = null;
+      let maxTimeValue = null;
+      
+      if (hareketRow.hareket === 'Dönüş') {
+        for (const tarife of tarifeColumns) {
+          const row = worksheet.getRow(hareketRow.rowNum);
+          const cell = row.getCell(tarife.col);
+          
+          if (!cell || !cell.value) continue;
+          if (isCellHidden(cell)) continue;
+          
+          let cellValue = cell.value;
+          if (cell.formula && typeof cell.value === 'object' && cell.value.result !== undefined) {
+            cellValue = cell.value.result;
+          }
+          
+          const timeValue = formatTime(cellValue);
+          if (!timeValue) continue;
+          
+          // En büyük saati bul (HH:MM formatında string karşılaştırma)
+          if (!maxTimeValue || timeValue > maxTimeValue) {
+            maxTimeValue = timeValue;
+            maxTimeCol = tarife.col;
+          }
+        }
+        
+        // En büyük saatin altındaki hücreyi kontrol et
+        if (maxTimeCol) {
+          const nextRow = worksheet.getRow(hareketRow.rowNum + 1);
+          const cellBelow = nextRow.getCell(maxTimeCol);
+          
+          const isBelowEmpty = !cellBelow || !cellBelow.value;
+          const isBelowWhite = cellBelow && isCellHidden(cellBelow);
+          
+          if (isBelowEmpty || isBelowWhite) {
+            console.log(`  ⚠️ UYARI: En geç saat ${maxTimeValue} (${String.fromCharCode(64 + maxTimeCol)}${hareketRow.rowNum}) - altındaki hücre ${isBelowEmpty ? 'BOŞ' : 'BEYAZ'} - bu saat EKLENMEYECEK`);
+            maxTimeCol = -1; // Bu sütunu işaretleme için -1 yap
+          }
+        }
+      }
+      
       for (const tarife of tarifeColumns) {
         const row = worksheet.getRow(hareketRow.rowNum);
         const cell = row.getCell(tarife.col);
@@ -313,6 +355,12 @@ export default async function handler(req, res) {
         
         const timeValue = formatTime(cellValue);
         if (!timeValue) continue;
+        
+        // DÖNÜŞ için: En büyük saati atla (eğer altı boş/beyazsa)
+        if (hareketRow.hareket === 'Dönüş' && tarife.col === maxTimeCol && maxTimeCol === -1) {
+          skippedCount++;
+          continue;
+        }
 
         dataToInsert.push({
           Hareket: hareketRow.hareket,
