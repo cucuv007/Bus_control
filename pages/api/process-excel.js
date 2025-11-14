@@ -52,26 +52,18 @@ function isCellHidden(cell) {
     const font = cell.font;
     
     // Font yoksa normal kabul et
-    if (!font) return false;
+    if (!font || !font.color) return false;
     
-    // Font rengini kontrol et
-    if (font.color) {
-      // ExcelJS'de font.color.argb veya font.color.theme olabilir
-      if (font.color.argb) {
-        const fontColor = font.color.argb;
-        const fontRGB = fontColor.slice(-6).toUpperCase();
-        // Beyaz yazı kontrolü (FFFFFF)
-        if (fontRGB === 'FFFFFF') {
-          return true; // Beyaz yazı - atla
-        }
-      } else if (font.color.theme !== undefined) {
-        // Theme-based color - beyaz theme'leri atla
-        // Theme 1 = beyaz (genelde)
-        if (font.color.theme === 1 || font.color.theme === 0) {
-          return true; // Beyaz theme - atla
-        }
+    // Font rengini kontrol et - SADECE ARGB
+    if (font.color.argb) {
+      const fontColor = font.color.argb;
+      const fontRGB = fontColor.slice(-6).toUpperCase();
+      // Beyaz yazı kontrolü (FFFFFF)
+      if (fontRGB === 'FFFFFF') {
+        return true; // Beyaz yazı - atla
       }
     }
+    // Theme-based renkleri NORMAL kabul et (theme her zaman beyaz olmayabilir)
     
   } catch (err) {
     console.error('Cell hidden check error:', err);
