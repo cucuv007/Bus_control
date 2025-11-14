@@ -9,37 +9,42 @@ const supabase = createClient(
 
 const GUNLER = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ', 'PAZAR'];
 
-async function upsertPlakaData(tableName, dataToInsert) {
-  let insertedCount = 0;
-  
-  for (const row of dataToInsert) {
-    try {
-      // Supabase upsert - duplicate varsa update, yoksa insert
-      const { error } = await supabase
-        .from(tableName)
-        .upsert(
-          {
-            Plaka: row.Plaka || null,
-            Hat_Adi: row.Hat_Adi || null,
-            Tarife: row.Tarife || null
-          },
-          { 
-            onConflict: 'Plaka,Hat_Adi,Tarife'
-          }
-        );
-      
-      if (error) {
-        console.error('Row insert error:', error.message, row);
-        // İlk hata tablo yoksa olabilir, devam et
-      } else {
-        insertedCount++;
-      }
-    } catch (err) {
-      console.error('Row insert exception:', err.message, row);
+async function clearAndInsertPlakaData(tableName, dataToInsert) {
+  try {
+    // 1. Önce tablodaki tüm verileri sil
+    console.log(`🗑️ "${tableName}" tablosundaki eski veriler siliniyor...`);
+    const { error: deleteError } = await supabase
+      .from(tableName)
+      .delete()
+      .neq('id', 0); // Tüm satırları sil (id != 0 her zaman true)
+    
+    if (deleteError) {
+      console.error('Delete error:', deleteError);
+      throw new Error(`Eski veriler silinemedi: ${deleteError.message}`);
     }
+    
+    console.log(`✅ Eski veriler silindi`);
+    
+    // 2. Yeni verileri ekle
+    console.log(`📝 ${dataToInsert.length} yeni kayıt ekleniyor...`);
+    
+    // Toplu insert (batch) - daha hızlı
+    const { data, error: insertError } = await supabase
+      .from(tableName)
+      .insert(dataToInsert);
+    
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw new Error(`Yeni veriler eklenemedi: ${insertError.message}`);
+    }
+    
+    console.log(`✅ ${dataToInsert.length} kayıt eklendi`);
+    return dataToInsert.length;
+    
+  } catch (err) {
+    console.error('clearAndInsertPlakaData error:', err);
+    throw err;
   }
-  
-  return insertedCount;
 }
 
 export default async function handler(req, res) {
@@ -81,15 +86,16 @@ export default async function handler(req, res) {
 
       const dataToInsert = [];
 
-      // İlk satırdan başlayarak verileri oku
+      // Satır 2'den başlayarak verileri oku (1. satır header olabilir)
       for (let rowNum = 2; rowNum <= worksheet.rowCount; rowNum++) {
         const row = worksheet.getRow(rowNum);
         
-        // Plaka (A sütunu), Hat_Adi (B sütunu), Tarife (C sütunu)
-        const plakaCell = row.getCell(1);
-        const hatAdiCell = row.getCell(2);
-        const tarifeCell = row.getCell(3);
+        // A sütunu = Plaka, B sütunu = Hat_Adi, C sütunu = Tarife
+        const plakaCell = row.getCell(1); // A
+        const hatAdiCell = row.getCell(2); // B
+        const tarifeCell = row.getCell(3); // C
 
+        // Plaka boşsa satırı atla
         if (!plakaCell || !plakaCell.value) continue;
 
         const plaka = String(plakaCell.value).trim();
@@ -110,11 +116,10 @@ export default async function handler(req, res) {
         continue;
       }
 
-      console.log(`📝 "${sheetName}" için ${dataToInsert.length} kayıt bulundu, ekleniyor...`);
+      console.log(`📝 "${sheetName}" için ${dataToInsert.length} kayıt bulundu`);
 
-      // Veri ekle (tablo yoksa Supabase'de manuel oluşturulmalı)
-      const insertedCount = await upsertPlakaData(sheetName, dataToInsert);
-      console.log(`✅ "${sheetName}" tablosuna ${insertedCount} kayıt eklendi`);
+      // Eski verileri sil ve yeni verileri ekle
+      const insertedCount = await clearAndInsertPlakaData(sheetName, dataToInsert);
 
       processedTables.push({
         tableName: sheetName,
@@ -129,10 +134,12 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log(`\n✅ Toplam ${processedTables.length} tablo güncellendi\n`);
+
     return res.status(200).json({
       success: true,
       processedTables: processedTables,
-      message: `${processedTables.length} gün tablosu oluşturuldu`
+      message: `${processedTables.length} gün tablosu güncellendi (eski veriler silindi, yeni veriler eklendi)`
     });
 
   } catch (err) {
