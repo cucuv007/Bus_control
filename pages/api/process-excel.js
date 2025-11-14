@@ -91,6 +91,7 @@ async function createTableIfNotExists(client, tableName) {
     CREATE TABLE IF NOT EXISTS public."${tableName}" (
       "id" SERIAL PRIMARY KEY,
       "Hat_Adi" text NULL,
+      "Çalışma_Zamanı" text NULL,
       "Tarife" text NOT NULL,
       "Tarife_Saati" time without time zone NOT NULL,
       "Onaylanan" time without time zone NULL,
@@ -143,11 +144,12 @@ async function createTableIfNotExists(client, tableName) {
 
 async function upsertData(client, tableName, dataToInsert) {
   const query = `
-    INSERT INTO public."${tableName}" ("Hat_Adi", "Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO public."${tableName}" ("Hat_Adi", "Çalışma_Zamanı", "Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     ON CONFLICT ("Tarife_Saati", "Hareket") 
     DO UPDATE SET
       "Hat_Adi" = EXCLUDED."Hat_Adi",
+      "Çalışma_Zamanı" = EXCLUDED."Çalışma_Zamanı",
       "Tarife" = EXCLUDED."Tarife",
       "Onaylanan" = EXCLUDED."Onaylanan",
       "Durum" = EXCLUDED."Durum",
@@ -159,6 +161,7 @@ async function upsertData(client, tableName, dataToInsert) {
     try {
       await client.query(query, [
         row.Hat_Adi || null,
+        row.Calisma_Zamani || null,
         row.Tarife,
         row.Tarife_Saati,
         row.Onaylanan || null,
@@ -206,9 +209,6 @@ export default async function handler(req, res) {
     // ExcelJS ile workbook oku
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
-    
-    const worksheet = workbook.worksheets[0];
-    const sheetName = worksheet.name;
 
     const tableName = extractTableName(fileName);
     if (!tableName) {
@@ -218,7 +218,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const tarifeColumns = [];
+    console.log(`\n=== 📊 Excel Dosyası: ${fileName} ===`);
+    console.log(`=== 📋 Toplam ${workbook.worksheets.length} sayfa bulundu ===\n`);
+
+    const allDataToInsert = [];
+
+    // TÜM worksheets'leri işle
+    for (const worksheet of workbook.worksheets) {
+      const sheetName = worksheet.name;
+      console.log(`\n🔍 Sayfa işleniyor: "${sheetName}"`);
+
+      const tarifeColumns = [];
     // ExcelJS: İlk 20 satırda T01, T02... başlıklarını ara
     let foundHeaderRow = null;
     
@@ -360,6 +370,7 @@ export default async function handler(req, res) {
 
         dataToInsert.push({
           Hat_Adi: tableName,
+          Calisma_Zamani: sheetName,
           Hareket: hareketRow.hareket,
           Tarife: tarife.name,
           Tarife_Saati: timeValue,
@@ -372,12 +383,19 @@ export default async function handler(req, res) {
       console.log(`  ✅ ${addedCount} kayıt eklendi${skippedCount > 0 ? ` | ${skippedCount} beyaz/gizli hücre atlandı` : ''}`);
     }
 
-    if (dataToInsert.length === 0) {
+    // Bu sayfanın verilerini ana listeye ekle
+    allDataToInsert.push(...dataToInsert);
+    console.log(`✅ "${sheetName}" sayfasından ${dataToInsert.length} kayıt toplandı\n`);
+  } // worksheet loop sonu
+
+    if (allDataToInsert.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Veri parse edilemedi'
       });
     }
+
+    console.log(`\n=== 📦 Toplam ${allDataToInsert.length} kayıt tüm sayfalardan toplandı ===\n`);
 
     // Tablo oluştur (yoksa)
     const tableCreation = await createTableIfNotExists(client, tableName);
@@ -389,15 +407,14 @@ export default async function handler(req, res) {
     }
 
     // Veri ekle (upsert)
-    const insertedCount = await upsertData(client, tableName, dataToInsert);
+    const insertedCount = await upsertData(client, tableName, allDataToInsert);
 
     return res.status(200).json({
       success: true,
       tableName,
-      sheetName,
+      sheetsProcessed: workbook.worksheets.length,
       inserted: insertedCount,
-      message: `${insertedCount} sefer eklendi`,
-      tarifeColumns: tarifeColumns.map(t => t.name)
+      message: `${workbook.worksheets.length} sayfadan ${insertedCount} sefer eklendi`
     });
 
   } catch (err) {
