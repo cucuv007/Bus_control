@@ -54,16 +54,28 @@ function isCellHidden(cell) {
     // Font yoksa normal kabul et
     if (!font || !font.color) return false;
     
-    // Font rengini kontrol et - SADECE ARGB
+    // ARGB beyaz kontrolü
     if (font.color.argb) {
       const fontColor = font.color.argb;
       const fontRGB = fontColor.slice(-6).toUpperCase();
-      // Beyaz yazı kontrolü (FFFFFF)
       if (fontRGB === 'FFFFFF') {
         return true; // Beyaz yazı - atla
       }
     }
-    // Theme-based renkleri NORMAL kabul et (theme her zaman beyaz olmayabilir)
+    
+    // Theme-based beyaz kontrolü
+    // Theme 1 + tint >= 0 genelde beyaz/açık demektir
+    // Theme 0 + tint >= 0.5 veya theme 1 + tint >= 0.4 beyaz kabul edelim
+    if (font.color.theme !== undefined) {
+      const theme = font.color.theme;
+      const tint = font.color.tint || 0;
+      
+      // Theme 1 genelde "background1" (beyaz arka planlar için)
+      // Tint pozitif = daha açık, negatif = daha koyu
+      if ((theme === 1 && tint >= 0) || (theme === 0 && tint >= 0.5)) {
+        return true; // Beyaz/açık tema - atla
+      }
+    }
     
   } catch (err) {
     console.error('Cell hidden check error:', err);
