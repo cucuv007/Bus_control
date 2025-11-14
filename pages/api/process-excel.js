@@ -221,23 +221,47 @@ export default async function handler(req, res) {
     const tarifeColumns = [];
     // ExcelJS: İlk 20 satırda T01, T02... başlıklarını ara
     let foundHeaderRow = null;
+    let minTarifeCol = 30;
+    let maxTarifeCol = 4;
+    
     for (let rowNum = 1; rowNum <= 20; rowNum++) {
       const headerRow = worksheet.getRow(rowNum);
       const tempCols = [];
       
+      // Önce T01, T02... başlıklarını bul
       for (let col = 4; col <= 30; col++) {
         const cell = headerRow.getCell(col);
         if (!cell || !cell.value) continue;
         const headerValue = String(cell.value).trim();
         if (headerValue.match(/^T\d{2}$/)) {
           tempCols.push({ col, name: headerValue });
+          minTarifeCol = Math.min(minTarifeCol, col);
+          maxTarifeCol = Math.max(maxTarifeCol, col);
         }
       }
       
       // En az 1 tarife başlığı bulduysa bu satırı kullan
       if (tempCols.length > 0) {
-        tarifeColumns.push(...tempCols);
         foundHeaderRow = rowNum;
+        
+        // Şimdi T ile başlayan sütunlar arasında/yanında başka başlıkları da ekle
+        // (minTarifeCol - 1) ile (maxTarifeCol + 1) arasındaki tüm dolu hücreleri tarife olarak kabul et
+        for (let col = minTarifeCol; col <= maxTarifeCol; col++) {
+          const cell = headerRow.getCell(col);
+          if (!cell || !cell.value) continue;
+          
+          const headerValue = String(cell.value).trim();
+          
+          // Boş veya sadece whitespace değilse ve henüz eklenmemişse
+          if (headerValue && !tempCols.find(c => c.col === col)) {
+            tempCols.push({ col, name: headerValue });
+            console.log(`  ✓ Ek tarife sütunu bulundu: "${headerValue}" (Sütun ${col})`);
+          }
+        }
+        
+        // Sütun numarasına göre sırala
+        tempCols.sort((a, b) => a.col - b.col);
+        tarifeColumns.push(...tempCols);
         break;
       }
     }
@@ -248,6 +272,8 @@ export default async function handler(req, res) {
         error: 'T01, T02... sütunları bulunamadı'
       });
     }
+    
+    console.log(`=== ${tarifeColumns.length} tarife sütunu tespit edildi: ${tarifeColumns.map(t => t.name).join(', ')} ===`);
 
     const hareketRows = [];
     // ExcelJS: B sütunu (col 2), foundHeaderRow+2'den başla (foundHeaderRow+1 genelde boş)
