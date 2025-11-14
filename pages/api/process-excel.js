@@ -68,7 +68,15 @@ function isCellHidden(cell) {
       fontColor = font.color.argb;
     }
     
-    // Her iki renk de varsa karşılaştır
+    // Beyaz yazı kontrolü (FFFFFF)
+    if (fontColor) {
+      const fontRGB = fontColor.slice(-6).toUpperCase();
+      if (fontRGB === 'FFFFFF') {
+        return true; // Beyaz yazı - gizli kabul et
+      }
+    }
+    
+    // Her iki renk de varsa karşılaştır (background = font)
     if (fillColor && fontColor) {
       // ARGB formatı: FF000000 (8 karakter)
       // Son 6 karakteri karşılaştır (RGB)
@@ -250,10 +258,18 @@ export default async function handler(req, res) {
     const hareketRows = [];
     // ExcelJS: B sütunu (col 2), foundHeaderRow+2'den başla (foundHeaderRow+1 genelde boş)
     const startRowForHareket = foundHeaderRow + 2;
-    console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}-50) ===`);
-    for (let rowNum = startRowForHareket; rowNum <= 50; rowNum++) {
+    console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}'den itibaren, merged cell bulunana kadar) ===`);
+    
+    for (let rowNum = startRowForHareket; rowNum <= worksheet.rowCount; rowNum++) {
       const row = worksheet.getRow(rowNum);
       const cell = row.getCell(2); // B sütunu
+      
+      // Merged cell kontrolü - B sütununda merged cell varsa dur
+      if (cell.isMerged) {
+        console.log(`Satır ${rowNum}: Merged cell bulundu - tarama durduruluyor`);
+        break;
+      }
+      
       if (!cell || !cell.value) continue;
       
       const hareketValue = String(cell.value).trim();
@@ -285,9 +301,9 @@ export default async function handler(req, res) {
         
         if (!cell || !cell.value) continue;
         
-        // Hücre rengi ve yazı rengi aynıysa atla (gizli veri)
+        // Hücre rengi ve yazı rengi aynıysa atla (gizli veri veya beyaz yazı)
         if (isCellHidden(cell)) {
-          console.log(`  ${tarife.name}: Gizli hücre atlandı`);
+          console.log(`  ${tarife.name}: Gizli/beyaz hücre atlandı`);
           continue;
         }
         
