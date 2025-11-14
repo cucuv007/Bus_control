@@ -53,13 +53,7 @@ function isCellHidden(cell) {
     const font = cell.font;
     
     // Font yoksa gizli değil
-    if (!font) {
-      console.log('    ⚠️  Font bilgisi yok - normal kabul edildi');
-      return false;
-    }
-    
-    // DEBUG: Font object'i logla
-    console.log(`    🔍 Font debug: color=${JSON.stringify(font.color)}`);
+    if (!font) return false;
     
     // Fill rengini al
     let fillColor = null;
@@ -77,27 +71,18 @@ function isCellHidden(cell) {
       // ExcelJS'de font.color.argb veya font.color.theme olabilir
       if (font.color.argb) {
         fontColor = font.color.argb;
-        console.log(`    📝 Font ARGB: ${fontColor}`);
       } else if (font.color.theme !== undefined) {
-        console.log(`    🎨 Font THEME: ${font.color.theme}`);
-        // Theme-based color - beyaz olup olmadığını bilemeyiz, skip etme
-        // Ancak theme 1 genelde beyaz demektir
+        // Theme-based color - beyaz theme'leri atla
         if (font.color.theme === 1 || font.color.theme === 0) {
-          console.log('    ⚪ Font theme=1/0 (beyaz) - hücre atlanıyor');
-          return true;
+          return true; // Beyaz theme - gizli kabul et
         }
-      } else {
-        console.log(`    ⚠️  Font.color var ama argb/theme yok: ${JSON.stringify(font.color)}`);
       }
-    } else {
-      console.log('    ⚠️  Font.color undefined - beyaz değil');
     }
     
     // Beyaz yazı kontrolü (FFFFFF veya FFFFFFFF)
     if (fontColor) {
       const fontRGB = fontColor.slice(-6).toUpperCase();
       if (fontRGB === 'FFFFFF') {
-        console.log(`    ⚪ Beyaz font tespit edildi (${fontColor}) - hücre atlanıyor`);
         return true; // Beyaz yazı - gizli kabul et
       }
     }
@@ -284,7 +269,7 @@ export default async function handler(req, res) {
     const hareketRows = [];
     // ExcelJS: B sütunu (col 2), foundHeaderRow+2'den başla (foundHeaderRow+1 genelde boş)
     const startRowForHareket = foundHeaderRow + 2;
-    console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}'den itibaren) ===`);
+    console.log(`=== Hareket Satırları Taranıyor (Satır ${startRowForHareket}+) ===`);
     
     let foundFirstHareket = false; // İlk Kalkış/Dönüş bulundu mu?
     
@@ -294,23 +279,21 @@ export default async function handler(req, res) {
       
       // Merged cell kontrolü - SADECE en az 1 hareket bulduktan SONRA
       if (foundFirstHareket && cell.isMerged) {
-        console.log(`Satır ${rowNum}: Merged cell bulundu (${hareketRows.length} hareket bulunduktan sonra) - tarama durduruluyor`);
+        console.log(`Merged cell tespit edildi - tarama tamamlandı (${hareketRows.length} hareket bulundu)`);
         break;
       }
       
       if (!cell || !cell.value) continue;
       
       const hareketValue = String(cell.value).trim();
-      // Debug: tüm değerleri logla
-      console.log(`Satır ${rowNum}: "${hareketValue}" (uzunluk: ${hareketValue.length}, charCodes: ${Array.from(hareketValue).map(c => c.charCodeAt(0)).join(',')})`);
       
       if (hareketValue === 'Kalkış' || hareketValue === 'Dönüş') {
-        console.log(`  ✓ BULUNDU: ${hareketValue}`);
+        console.log(`  ✓ ${hareketValue} bulundu (Satır ${rowNum})`);
         hareketRows.push({ rowNum, hareket: hareketValue });
         foundFirstHareket = true; // İlk hareket bulundu, artık merged cell kontrolü aktif
       }
     }
-    console.log(`=== Toplam ${hareketRows.length} hareket satırı bulundu ===`);
+    console.log(`=== Toplam ${hareketRows.length} hareket satırı tespit edildi ===`);
 
     if (hareketRows.length === 0) {
       return res.status(400).json({
@@ -322,8 +305,10 @@ export default async function handler(req, res) {
     const dataToInsert = [];
     console.log(`=== Veri Parse Başladı (${hareketRows.length} hareket satırı x ${tarifeColumns.length} tarife sütunu) ===`);
     for (const hareketRow of hareketRows) {
-      console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) için tarife hücreleri taranıyor ---`);
+      console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) ---`);
       let addedCount = 0;
+      let skippedCount = 0;
+      
       for (const tarife of tarifeColumns) {
         const row = worksheet.getRow(hareketRow.rowNum);
         const cell = row.getCell(tarife.col);
@@ -332,7 +317,7 @@ export default async function handler(req, res) {
         
         // Hücre rengi ve yazı rengi aynıysa atla (gizli veri veya beyaz yazı)
         if (isCellHidden(cell)) {
-          console.log(`  ${tarife.name}: Gizli/beyaz hücre atlandı`);
+          skippedCount++;
           continue;
         }
         
@@ -344,7 +329,6 @@ export default async function handler(req, res) {
           if (typeof cell.value === 'object' && cell.value.result !== undefined) {
             cellValue = cell.value.result;
           }
-          console.log(`  ${tarife.name}: Formül (hesaplanan değer: ${cellValue})`);
         }
         
         const timeValue = formatTime(cellValue);
@@ -360,7 +344,7 @@ export default async function handler(req, res) {
         });
         addedCount++;
       }
-      console.log(`  → ${addedCount} kayıt eklendi`);
+      console.log(`  ✅ ${addedCount} kayıt eklendi${skippedCount > 0 ? ` | ${skippedCount} beyaz/gizli hücre atlandı` : ''}`);
     }
 
     if (dataToInsert.length === 0) {
