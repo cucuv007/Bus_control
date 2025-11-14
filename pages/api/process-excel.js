@@ -49,53 +49,27 @@ function isCellHidden(cell) {
   if (!cell || !cell.value) return false;
   
   try {
-    const fill = cell.fill;
     const font = cell.font;
     
-    // Font yoksa gizli değil
+    // Font yoksa normal kabul et
     if (!font) return false;
     
-    // Fill rengini al
-    let fillColor = null;
-    if (fill) {
-      if (fill.type === 'pattern' && fill.fgColor) {
-        fillColor = fill.fgColor.argb;
-      } else if (fill.bgColor) {
-        fillColor = fill.bgColor.argb;
-      }
-    }
-    
-    // Font rengini al
-    let fontColor = null;
+    // Font rengini kontrol et
     if (font.color) {
       // ExcelJS'de font.color.argb veya font.color.theme olabilir
       if (font.color.argb) {
-        fontColor = font.color.argb;
+        const fontColor = font.color.argb;
+        const fontRGB = fontColor.slice(-6).toUpperCase();
+        // Beyaz yazı kontrolü (FFFFFF)
+        if (fontRGB === 'FFFFFF') {
+          return true; // Beyaz yazı - atla
+        }
       } else if (font.color.theme !== undefined) {
         // Theme-based color - beyaz theme'leri atla
+        // Theme 1 = beyaz (genelde)
         if (font.color.theme === 1 || font.color.theme === 0) {
-          return true; // Beyaz theme - gizli kabul et
+          return true; // Beyaz theme - atla
         }
-      }
-    }
-    
-    // Beyaz yazı kontrolü (FFFFFF veya FFFFFFFF)
-    if (fontColor) {
-      const fontRGB = fontColor.slice(-6).toUpperCase();
-      if (fontRGB === 'FFFFFF') {
-        return true; // Beyaz yazı - gizli kabul et
-      }
-    }
-    
-    // Her iki renk de varsa karşılaştır (background = font)
-    if (fillColor && fontColor) {
-      // ARGB formatı: FF000000 (8 karakter)
-      // Son 6 karakteri karşılaştır (RGB)
-      const fillRGB = fillColor.slice(-6).toUpperCase();
-      const fontRGB = fontColor.slice(-6).toUpperCase();
-      
-      if (fillRGB === fontRGB) {
-        return true;
       }
     }
     
