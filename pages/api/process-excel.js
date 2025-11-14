@@ -69,7 +69,7 @@ function isCellHidden(cell) {
       const tint = font.color.tint || 0;
       
       // DEBUG: Gerçek tema değerlerini görelim (comment out after testing)
-      // console.log(`DEBUG Font - Theme: ${theme}, Tint: ${tint.toFixed(2)}, Cell: ${cell.address}`);
+      console.log(`DEBUG Font - Theme: ${theme}, Tint: ${tint.toFixed(2)}, Cell: ${cell.address}`);
       
       // Tema 0 genellikle BEYAZ (light1/background)
       // Tema 1 genellikle SİYAH/KOYU (dark1/text)
