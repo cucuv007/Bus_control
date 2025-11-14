@@ -248,9 +248,10 @@ export default async function handler(req, res) {
     }
 
     const hareketRows = [];
-    // ExcelJS: B sütunu (col 2), satır 7'den başla
-    console.log('=== Hareket Tarama Başladı ===');
-    for (let rowNum = 7; rowNum <= 50; rowNum++) {
+    // ExcelJS: B sütunu (col 2), headerRow+2'den başla (headerRow+1 genelde boş)
+    const startRowForHareket = headerRow + 2;
+    console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}-50) ===`);
+    for (let rowNum = startRowForHareket; rowNum <= 50; rowNum++) {
       const row = worksheet.getRow(rowNum);
       const cell = row.getCell(2); // B sütunu
       if (!cell || !cell.value) continue;
