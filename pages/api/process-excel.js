@@ -90,13 +90,14 @@ function isCellHidden(cell) {
 async function createTableIfNotExists(client, tableName) {
   const createTableSQL = `
     CREATE TABLE IF NOT EXISTS public."${tableName}" (
+      "id" SERIAL PRIMARY KEY,
       "Tarife" text NOT NULL,
       "Tarife_Saati" time without time zone NOT NULL,
       "Onaylanan" time without time zone NULL,
       "Durum" text NULL,
       "Plaka" text NULL,
       "Hareket" text NULL,
-      CONSTRAINT "${tableName}_pkey" PRIMARY KEY ("Tarife_Saati")
+      CONSTRAINT "${tableName}_unique_time_hareket" UNIQUE ("Tarife_Saati", "Hareket")
     );
     
     ALTER TABLE public."${tableName}" DISABLE ROW LEVEL SECURITY;
@@ -144,13 +145,12 @@ async function upsertData(client, tableName, dataToInsert) {
   const query = `
     INSERT INTO public."${tableName}" ("Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
     VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT ("Tarife_Saati") 
+    ON CONFLICT ("Tarife_Saati", "Hareket") 
     DO UPDATE SET
       "Tarife" = EXCLUDED."Tarife",
       "Onaylanan" = EXCLUDED."Onaylanan",
       "Durum" = EXCLUDED."Durum",
-      "Plaka" = EXCLUDED."Plaka",
-      "Hareket" = EXCLUDED."Hareket";
+      "Plaka" = EXCLUDED."Plaka";
   `;
   
   let insertedCount = 0;
