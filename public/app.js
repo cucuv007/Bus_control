@@ -583,11 +583,11 @@ async function updateTimer(tableName, hareket) {
     }
     
     if (result.success && result.nextBus) {
-      const { plaka, tarife, tarifeSaati, hareket, remainingSeconds } = result.nextBus;
+      const { hatAdi, plaka, tarife, tarifeSaati, hareket, remainingSeconds } = result.nextBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
-        timerHatAdi.textContent = currentTable || '-';
+        timerHatAdi.textContent = hatAdi || '-';
         timerPlaka.textContent = plaka || '-';
         timerTarife.textContent = tarife || '-';
         timerHareket.textContent = hareket || '-';

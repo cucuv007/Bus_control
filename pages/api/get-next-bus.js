@@ -77,6 +77,7 @@ export default async function handler(req, res) {
       if (remainingSeconds > 0 && remainingSeconds < minDifference) {
         minDifference = remainingSeconds;
         nextBus = {
+          hatAdi: row.Hat_Adi || '-',
           plaka: row.Plaka || '-',
           tarife: row.Tarife || '-',
           hareket: row.Hareket || '-',
