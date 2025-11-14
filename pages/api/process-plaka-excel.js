@@ -86,8 +86,8 @@ export default async function handler(req, res) {
 
       const dataToInsert = [];
 
-      // Satır 2'den başlayarak verileri oku (1. satır header olabilir)
-      for (let rowNum = 2; rowNum <= worksheet.rowCount; rowNum++) {
+      // Satır 1'den başlayarak TÜM satırları oku (header yok, her satır veri)
+      for (let rowNum = 1; rowNum <= worksheet.rowCount; rowNum++) {
         const row = worksheet.getRow(rowNum);
         
         // A sütunu = Plaka, B sütunu = Hat_Adi, C sütunu = Tarife
