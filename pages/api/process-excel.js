@@ -249,16 +249,22 @@ export default async function handler(req, res) {
 
     const hareketRows = [];
     // ExcelJS: B sütunu (col 2), satır 7'den başla
+    console.log('=== Hareket Tarama Başladı ===');
     for (let rowNum = 7; rowNum <= 50; rowNum++) {
       const row = worksheet.getRow(rowNum);
       const cell = row.getCell(2); // B sütunu
       if (!cell || !cell.value) continue;
       
       const hareketValue = String(cell.value).trim();
+      // Debug: tüm değerleri logla
+      console.log(`Satır ${rowNum}: "${hareketValue}" (uzunluk: ${hareketValue.length}, charCodes: ${Array.from(hareketValue).map(c => c.charCodeAt(0)).join(',')})`);
+      
       if (hareketValue === 'Kalkış' || hareketValue === 'Dönüş') {
+        console.log(`  ✓ BULUNDU: ${hareketValue}`);
         hareketRows.push({ rowNum, hareket: hareketValue });
       }
     }
+    console.log(`=== Toplam ${hareketRows.length} hareket satırı bulundu ===`);
 
     if (hareketRows.length === 0) {
       return res.status(400).json({
@@ -268,7 +274,10 @@ export default async function handler(req, res) {
     }
 
     const dataToInsert = [];
+    console.log(`=== Veri Parse Başladı (${hareketRows.length} hareket satırı x ${tarifeColumns.length} tarife sütunu) ===`);
     for (const hareketRow of hareketRows) {
+      console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) için tarife hücreleri taranıyor ---`);
+      let addedCount = 0;
       for (const tarife of tarifeColumns) {
         const row = worksheet.getRow(hareketRow.rowNum);
         const cell = row.getCell(tarife.col);
@@ -280,10 +289,16 @@ export default async function handler(req, res) {
         if (!cellValueStr) continue;
         
         // Formül içeren hücreleri atla
-        if (cell.formula) continue;
+        if (cell.formula) {
+          console.log(`  ${tarife.name}: Formül atlandı`);
+          continue;
+        }
         
         // Hücre rengi ve yazı rengi aynıysa atla (gizli veri)
-        if (isCellHidden(cell)) continue;
+        if (isCellHidden(cell)) {
+          console.log(`  ${tarife.name}: Gizli hücre atlandı`);
+          continue;
+        }
         
         const timeValue = formatTime(cell.value);
         if (!timeValue) continue;
@@ -296,7 +311,9 @@ export default async function handler(req, res) {
           Durum: null,
           Plaka: null
         });
+        addedCount++;
       }
+      console.log(`  → ${addedCount} kayıt eklendi`);
     }
 
     if (dataToInsert.length === 0) {
