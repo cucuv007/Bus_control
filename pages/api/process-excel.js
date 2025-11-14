@@ -248,8 +248,8 @@ export default async function handler(req, res) {
     }
 
     const hareketRows = [];
-    // ExcelJS: B sütunu (col 2), headerRow+2'den başla (headerRow+1 genelde boş)
-    const startRowForHareket = headerRow + 2;
+    // ExcelJS: B sütunu (col 2), foundHeaderRow+2'den başla (foundHeaderRow+1 genelde boş)
+    const startRowForHareket = foundHeaderRow + 2;
     console.log(`=== Hareket Tarama Başladı (Satır ${startRowForHareket}-50) ===`);
     for (let rowNum = startRowForHareket; rowNum <= 50; rowNum++) {
       const row = worksheet.getRow(rowNum);
