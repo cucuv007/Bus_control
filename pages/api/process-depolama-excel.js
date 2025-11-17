@@ -18,20 +18,28 @@ const DEPOLAMA_TABLES = [
 
 async function clearAndInsertDepolama(tableName, dataToInsert) {
   try {
-    console.log(`🗑️ "${tableName}" tablosundaki eski veriler siliniyor...`);
+    console.log(`🗑️ "${tableName}" tablosu temizleniyor (ID resetlenecek)...`);
     
-    // Tüm verileri sil
-    const { error: deleteError } = await supabase
-      .from(tableName)
-      .delete()
-      .not('id', 'is', null);
+    // TRUNCATE: Hem verileri siler, hem de SERIAL sequence'i 1'e resetler
+    const { error: truncateError } = await supabase.rpc('truncate_table', {
+      table_name: tableName
+    });
     
-    if (deleteError) {
-      console.error('Delete error:', deleteError);
-      throw new Error(`Eski veriler silinemedi: ${deleteError.message}`);
+    if (truncateError) {
+      console.error('Truncate error:', truncateError);
+      // Eğer TRUNCATE RPC yoksa, DELETE kullan (eski yöntem)
+      console.log('⚠️ TRUNCATE başarısız, DELETE kullanılıyor...');
+      const { error: deleteError } = await supabase
+        .from(tableName)
+        .delete()
+        .not('id', 'is', null);
+      
+      if (deleteError) {
+        throw new Error(`Eski veriler silinemedi: ${deleteError.message}`);
+      }
     }
     
-    console.log(`✅ Eski veriler silindi`);
+    console.log(`✅ Tablo temizlendi (ID sequence resetlendi)`);
     
     // Yeni verileri ekle
     console.log(`📝 ${dataToInsert.length} yeni kayıt ekleniyor...`);

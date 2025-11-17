@@ -149,38 +149,57 @@ async function createTableIfNotExists(client, tableName) {
   }
 }
 
-async function upsertData(client, tableName, dataToInsert) {
-  const query = `
-    INSERT INTO public."${tableName}" ("Hat_Adi", "Çalışma_Zamanı", "Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    ON CONFLICT ("Tarife", "Tarife_Saati", "Hareket", "Çalışma_Zamanı") 
-    DO UPDATE SET
-      "Hat_Adi" = EXCLUDED."Hat_Adi",
-      "Onaylanan" = EXCLUDED."Onaylanan",
-      "Durum" = EXCLUDED."Durum",
-      "Plaka" = EXCLUDED."Plaka";
-  `;
-  
-  let insertedCount = 0;
-  for (const row of dataToInsert) {
+async function clearAndInsertData(client, tableName, dataToInsert) {
+  try {
+    // 1. Tüm verileri sil
+    console.log(`🗑️ "${tableName}" tablosundaki eski veriler siliniyor...`);
+    await client.query(`DELETE FROM public."${tableName}";`);
+    console.log(`✅ Eski veriler silindi`);
+    
+    // 2. ID sequence'ini resetle (id 1'den başlasın)
+    console.log(`🔄 "${tableName}" ID sequence resetleniyor...`);
     try {
-      await client.query(query, [
-        row.Hat_Adi || null,
-        row.Calisma_Zamani || null,
-        row.Tarife,
-        row.Tarife_Saati,
-        row.Onaylanan || null,
-        row.Durum || null,
-        row.Plaka || null,
-        row.Hareket
-      ]);
-      insertedCount++;
-    } catch (err) {
-      console.error('Row insert error:', err, row);
+      await client.query(`ALTER SEQUENCE "${tableName}_id_seq" RESTART WITH 1;`);
+      console.log(`✅ ID sequence resetlendi`);
+    } catch (seqErr) {
+      console.warn(`⚠️ Sequence reset uyarısı:`, seqErr.message);
+      // Hata olsa bile devam et (bazı tablolarda sequence farklı isimde olabilir)
     }
+    
+    // 3. Yeni verileri ekle (batch insert)
+    console.log(`📝 ${dataToInsert.length} yeni kayıt ekleniyor...`);
+    
+    const insertQuery = `
+      INSERT INTO public."${tableName}" ("Hat_Adi", "Çalışma_Zamanı", "Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+    `;
+    
+    let insertedCount = 0;
+    for (const row of dataToInsert) {
+      try {
+        await client.query(insertQuery, [
+          row.Hat_Adi || null,
+          row.Calisma_Zamani || null,
+          row.Tarife,
+          row.Tarife_Saati,
+          row.Onaylanan || null,
+          row.Durum || null,
+          row.Plaka || null,
+          row.Hareket
+        ]);
+        insertedCount++;
+      } catch (err) {
+        console.error('Row insert error:', err, row);
+      }
+    }
+    
+    console.log(`✅ ${insertedCount} kayıt eklendi`);
+    return insertedCount;
+    
+  } catch (err) {
+    console.error('clearAndInsertData error:', err);
+    throw err;
   }
-  
-  return insertedCount;
 }
 
 export default async function handler(req, res) {
@@ -501,8 +520,8 @@ export default async function handler(req, res) {
         });
       }
 
-      // Veri ekle (upsert)
-      const insertedCount = await upsertData(client, tableName, allDataToInsert[tableName]);
+      // Veri ekle (clear + insert)
+      const insertedCount = await clearAndInsertData(client, tableName, allDataToInsert[tableName]);
       results[tableName] = insertedCount;
       console.log(`✅ ${tableName}: ${insertedCount} kayıt eklendi`);
     }
