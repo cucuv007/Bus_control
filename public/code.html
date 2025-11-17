@@ -137,6 +137,20 @@
     
     <!-- Table & Movement Selection -->
     <div id="tableSelection" style="display: none; margin-bottom: 20px;">
+    
+    <!-- Depolama Filtreleme -->
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label>📦 Depolama Filtresi:</label>
+      <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #f9f9f9;">
+        <label style="display: block; margin-bottom: 8px; font-weight: bold;">
+          <input type="checkbox" id="selectAllDepolama" style="margin-right: 8px;">
+          Tümünü Seç
+        </label>
+        <div id="depolamaCheckboxList"></div>
+      </div>
+      <button id="applyDepolamaFilter" class="btn" style="margin-top: 10px; width: 100%;">🔍 Filtre Uygula</button>
+    </div>
+    
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
       <div class="form-group">
       <label for="tableSelect">Tablo Seçin:</label>

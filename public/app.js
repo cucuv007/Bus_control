@@ -54,6 +54,11 @@ const tableSelection = document.getElementById('tableSelection');
 const tableSelect = document.getElementById('tableSelect');
 const hareketSelect = document.getElementById('hareketSelect');
 
+// Depolama filter elements
+const depolamaCheckboxList = document.getElementById('depolamaCheckboxList');
+const selectAllDepolama = document.getElementById('selectAllDepolama');
+const applyDepolamaFilter = document.getElementById('applyDepolamaFilter');
+
 // State variables
 let selectedFiles = [];
 let currentTable = null;
@@ -64,6 +69,8 @@ let uploadMethod = null;
 let uploadType = null; // 'hat' or 'plaka'
 let timerInterval = null;
 let lastBusTime = null;
+let selectedDepolamaTables = []; // Seçilen depolama tabloları
+let filteredHats = []; // Depolama'dan gelen hat listesi
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -84,6 +91,9 @@ listFilesBtn.addEventListener('click', handleListFiles);
 confirmUploadBtn.addEventListener('click', handleUpload);
 tableSelect.addEventListener('change', handleTableSelect);
 hareketSelect.addEventListener('change', handleHareketChange);
+
+selectAllDepolama.addEventListener('change', handleSelectAllDepolama);
+applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
 
 manualFileInput.addEventListener('change', handleManualFileSelect);
 
@@ -481,6 +491,10 @@ async function handleRefresh() {
     
     tableSelection.style.display = 'block';
     hareketSelect.value = '';
+    
+    // Depolama checkbox listesini oluştur
+    renderDepolamaCheckboxes();
+    
     statusEl.textContent = `${tables.length} tablo bulundu. Lütfen bir tablo seçiniz.`;
     theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
     tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
@@ -661,6 +675,164 @@ function closeTimer() {
   }
   timerContainer.style.display = 'none';
   lastBusTime = null;
+}
+
+// ==================== DEPOLAMA FILTER FUNCTIONS ====================
+function renderDepolamaCheckboxes() {
+  const depolamaTables = [
+    'AKSU', 'MEYDAN', 'VARSAK ALTIAYAK', 'OTOGAR', 'VARSAK AKTARMA', 
+    'ÜNSAL', 'SARISU', 'GÜRSU', 'ORGANİZE SANAYİ', 'TRT KAMPI', 
+    'VARSAK', 'GÜZELOBA', 'KURŞUNLU ŞELALESİ', 'TERMİNAL', 
+    'AKDENİZ ÜNİVERSİTESİ', 'KEPEZ KAYMAKAMLIĞI', 'VARSAK BELEDİYE', 
+    'DEEPO AVM', 'ŞEHİR HASTANESİ', 'ANTOBÜS'
+  ];
+  
+  depolamaCheckboxList.innerHTML = '';
+  
+  depolamaTables.forEach(tableName => {
+    const label = document.createElement('label');
+    label.style.display = 'block';
+    label.style.marginBottom = '5px';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = tableName;
+    checkbox.className = 'depolama-checkbox';
+    checkbox.style.marginRight = '8px';
+    
+    checkbox.addEventListener('change', updateSelectAllDepolama);
+    
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(tableName));
+    depolamaCheckboxList.appendChild(label);
+  });
+}
+
+function handleSelectAllDepolama(e) {
+  const checkboxes = document.querySelectorAll('.depolama-checkbox');
+  const isChecked = e.target.checked;
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = isChecked;
+  });
+}
+
+function updateSelectAllDepolama() {
+  const checkboxes = document.querySelectorAll('.depolama-checkbox');
+  const checkedCount = document.querySelectorAll('.depolama-checkbox:checked').length;
+  
+  if (checkboxes.length === 0) {
+    selectAllDepolama.checked = false;
+    selectAllDepolama.indeterminate = false;
+  } else if (checkedCount === 0) {
+    selectAllDepolama.checked = false;
+    selectAllDepolama.indeterminate = false;
+  } else if (checkedCount === checkboxes.length) {
+    selectAllDepolama.checked = true;
+    selectAllDepolama.indeterminate = false;
+  } else {
+    selectAllDepolama.checked = false;
+    selectAllDepolama.indeterminate = true;
+  }
+}
+
+async function handleApplyDepolamaFilter() {
+  const checkboxes = document.querySelectorAll('.depolama-checkbox:checked');
+  selectedDepolamaTables = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (selectedDepolamaTables.length === 0) {
+    // Depolama filtresi yok, tüm tabloları göster
+    filteredHats = [];
+    statusEl.textContent = 'Depolama filtresi kaldırıldı. Tüm tablolar gösteriliyor.';
+    await loadFilteredTables();
+    return;
+  }
+  
+  console.log('📦 Seçilen depolama tabloları:', selectedDepolamaTables);
+  
+  statusEl.textContent = `${selectedDepolamaTables.join(', ')} depolama(lar)ından hatlar yükleniyor...`;
+  applyDepolamaFilter.disabled = true;
+  
+  try {
+    const res = await fetch('/api/get-depolama-hats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        depolamaTables: selectedDepolamaTables
+      })
+    });
+    
+    const result = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(result.error || 'Hatlar alınamadı');
+    }
+    
+    filteredHats = result.hats || [];
+    
+    console.log('✅ Bulunan hatlar:', filteredHats);
+    
+    if (filteredHats.length === 0) {
+      statusEl.innerHTML = '<span class="small">⚠️ Seçilen depolama tablolarında hat bulunamadı.</span>';
+      tableSelect.innerHTML = '<option value="">-- Hat Bulunamadı --</option>';
+      return;
+    }
+    
+    statusEl.textContent = `✅ ${filteredHats.length} hat bulundu: ${filteredHats.join(', ')}`;
+    
+    // Filtrelenmiş tabloları yükle
+    await loadFilteredTables();
+    
+  } catch (err) {
+    console.error('Depolama filter error:', err);
+    statusEl.innerHTML = `<span class="error">❌ Hata: ${err.message}</span>`;
+  } finally {
+    applyDepolamaFilter.disabled = false;
+  }
+}
+
+async function loadFilteredTables() {
+  try {
+    const res = await fetch('/api/list-tables');
+    
+    if (!res.ok) {
+      throw new Error('Tablolar alınamadı');
+    }
+    
+    const result = await res.json();
+    let tables = result.tables || [];
+    
+    // Depolama filtresi varsa, sadece filtredeki hatları göster
+    if (filteredHats.length > 0) {
+      tables = tables.filter(table => filteredHats.includes(table));
+    }
+    
+    if (tables.length === 0) {
+      statusEl.innerHTML = '<span class="small">Filtreye uygun tablo bulunamadı.</span>';
+      tableSelect.innerHTML = '<option value="">-- Tablo Bulunamadı --</option>';
+      theadRow.innerHTML = "<th>Boş</th>";
+      tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+      closeTimer();
+      return;
+    }
+    
+    // Tabloları dropdown'a ekle
+    tableSelect.innerHTML = '<option value="">-- Tablo Seçin --</option>';
+    tables.forEach(table => {
+      const option = document.createElement('option');
+      option.value = table;
+      option.textContent = table;
+      tableSelect.appendChild(option);
+    });
+    
+    statusEl.textContent = `${tables.length} tablo listeleniyor (${filteredHats.length > 0 ? 'Filtrelenmiş' : 'Tümü'}).`;
+    theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
+    tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
+    
+  } catch (err) {
+    console.error('Load filtered tables error:', err);
+    statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
+  }
 }
 
 // ==================== APPROVAL FUNCTION ====================
