@@ -15,6 +15,7 @@ const timerPlaka = document.getElementById('timerPlaka');
 const timerTarife = document.getElementById('timerTarife');
 const timerHareket = document.getElementById('timerHareket');
 const closeTimerBtn = document.getElementById('closeTimerBtn');
+const dynamicTrackingCheckbox = document.getElementById('dynamicTrackingCheckbox');
 
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
@@ -79,6 +80,7 @@ let selectedDepolamaTables = []; // Seçilen depolama tabloları
 let filteredHats = []; // Depolama'dan gelen hat listesi
 let availableHats = []; // Mevcut tüm hatlar (dropdown'daki)
 let selectedHats = []; // Timer takibi için seçilen hatlar
+let currentTimerRow = null; // Timer'da gösterilen satır verisi
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -665,11 +667,15 @@ async function updateTimer(tableName, hareket) {
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
+        currentTimerRow = result.nextBus; // Timer'daki satırı kaydet
         timerHatAdi.textContent = hatAdi || '-';
         timerPlaka.textContent = plaka || '-';
         timerTarife.textContent = tarife || '-';
         timerHareket.textContent = hareket || '-';
         timerContainer.style.display = 'block';
+        
+        // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
+        scrollToTimerRow(result.nextBus);
       }
       
       const mins = Math.floor(remainingSeconds / 60);
@@ -678,6 +684,7 @@ async function updateTimer(tableName, hareket) {
       
       if (remainingSeconds <= 0) {
         lastBusTime = null;
+        currentTimerRow = null;
       }
     } else {
       closeTimer();
@@ -694,6 +701,11 @@ function closeTimer() {
   }
   timerContainer.style.display = 'none';
   lastBusTime = null;
+  currentTimerRow = null;
+  
+  // Tablo vurgusunu kaldır
+  const rows = tbody.querySelectorAll('tr');
+  rows.forEach(r => r.style.backgroundColor = '');
 }
 
 // ==================== DEPOLAMA FILTER FUNCTIONS ====================
@@ -1052,7 +1064,7 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         body: JSON.stringify({ 
           tableName: tableName,
           currentTime: currentTime,
-          hareket: hareket
+          hareket: hareket // Hareket filtresini gönder (null ise tümü)
         })
       });
       
@@ -1072,11 +1084,15 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
+        currentTimerRow = closestBus; // Timer'daki satırı kaydet
         timerHatAdi.textContent = hatAdi || '-';
         timerPlaka.textContent = plaka || '-';
         timerTarife.textContent = tarife || '-';
         timerHareket.textContent = busHareket || '-';
         timerContainer.style.display = 'block';
+        
+        // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
+        scrollToTimerRow(closestBus);
       }
       
       const mins = Math.floor(remainingSeconds / 60);
@@ -1085,12 +1101,64 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       
       if (remainingSeconds <= 0) {
         lastBusTime = null;
+        currentTimerRow = null;
       }
     } else {
       closeTimer();
     }
   } catch (err) {
     console.error('Multiple hats timer update error:', err);
+  }
+}
+
+function scrollToTimerRow(busData) {
+  // Dinamik takip checkbox'ı seçili değilse çık
+  if (!dynamicTrackingCheckbox.checked) {
+    return;
+  }
+  
+  try {
+    const rows = tbody.querySelectorAll('tr');
+    
+    // Timer'daki otobüsü tabloda bul
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const cells = row.querySelectorAll('td');
+      
+      // Tarife_Saati ve Hareket sütunlarını kontrol et
+      let matchesTarife = false;
+      let matchesHareket = false;
+      
+      cells.forEach(cell => {
+        const text = cell.textContent.trim();
+        if (text === busData.tarifeSaati) {
+          matchesTarife = true;
+        }
+        if (text === busData.hareket) {
+          matchesHareket = true;
+        }
+      });
+      
+      // Eşleşen satır bulundu
+      if (matchesTarife && matchesHareket) {
+        // Eski vurgulamayı kaldır
+        rows.forEach(r => r.style.backgroundColor = '');
+        
+        // Yeni satırı vurgula
+        row.style.backgroundColor = '#fff3cd'; // Sarı vurgu
+        
+        // Satırı görünür alana kaydır (yukarıda olacak şekilde)
+        row.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+        
+        break;
+      }
+    }
+  } catch (err) {
+    console.error('Scroll to timer row error:', err);
   }
 }
 
