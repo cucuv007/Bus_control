@@ -25,10 +25,13 @@ export default async function handler(req, res) {
       });
     }
 
+    // Gün tablolarını filtrele
+    const dayTables = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ', 'PAZAR'];
+    
     // Sonuçları işle
     const tables = (data || [])
       .map(row => row.tablename)
-      .filter(name => name && !name.startsWith('pg_') && !name.startsWith('_'))
+      .filter(name => name && !name.startsWith('pg_') && !name.startsWith('_') && !dayTables.includes(name))
       .sort();
 
     console.log(`✅ Found ${tables.length} tables:`, tables);
