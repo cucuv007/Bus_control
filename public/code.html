@@ -168,6 +168,19 @@
       </select>
       </div>
     </div>
+    
+    <!-- Çoklu Hat Seçimi -->
+    <div id="hatSelectionContainer" class="form-group" style="display: none; margin-top: 15px;">
+      <label>🚌 Hat Seçimi (Timer Takibi):</label>
+      <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #f9f9f9;">
+        <label style="display: block; margin-bottom: 8px; font-weight: bold;">
+          <input type="checkbox" id="selectAllHats" style="margin-right: 8px;">
+          Tümünü Seç
+        </label>
+        <div id="hatCheckboxList"></div>
+      </div>
+      <button id="applyHatSelection" class="btn" style="margin-top: 10px; width: 100%;">⏱️ Seçili Hatları Takip Et</button>
+    </div>
     </div>
 
     <div id="status" class="info">Veriler hazırlanıyor...</div>

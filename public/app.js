@@ -59,6 +59,12 @@ const depolamaCheckboxList = document.getElementById('depolamaCheckboxList');
 const selectAllDepolama = document.getElementById('selectAllDepolama');
 const applyDepolamaFilter = document.getElementById('applyDepolamaFilter');
 
+// Hat selection elements
+const hatSelectionContainer = document.getElementById('hatSelectionContainer');
+const hatCheckboxList = document.getElementById('hatCheckboxList');
+const selectAllHats = document.getElementById('selectAllHats');
+const applyHatSelection = document.getElementById('applyHatSelection');
+
 // State variables
 let selectedFiles = [];
 let currentTable = null;
@@ -71,6 +77,8 @@ let timerInterval = null;
 let lastBusTime = null;
 let selectedDepolamaTables = []; // Seçilen depolama tabloları
 let filteredHats = []; // Depolama'dan gelen hat listesi
+let availableHats = []; // Mevcut tüm hatlar (dropdown'daki)
+let selectedHats = []; // Timer takibi için seçilen hatlar
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -94,6 +102,9 @@ hareketSelect.addEventListener('change', handleHareketChange);
 
 selectAllDepolama.addEventListener('change', handleSelectAllDepolama);
 applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
+
+selectAllHats.addEventListener('change', handleSelectAllHats);
+applyHatSelection.addEventListener('click', handleApplyHatSelection);
 
 manualFileInput.addEventListener('change', handleManualFileSelect);
 
@@ -489,6 +500,10 @@ async function handleRefresh() {
       tableSelect.appendChild(option);
     });
     
+    // Mevcut hatları kaydet ve checkbox listesini oluştur
+    availableHats = tables;
+    renderHatCheckboxes();
+    
     tableSelection.style.display = 'block';
     hareketSelect.value = '';
     
@@ -829,9 +844,163 @@ async function loadFilteredTables() {
     theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
     tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
     
+    // Mevcut hatları kaydet ve checkbox listesini oluştur
+    availableHats = tables;
+    renderHatCheckboxes();
+    
   } catch (err) {
     console.error('Load filtered tables error:', err);
     statusEl.innerHTML = `<span class="error">Hata: ${err.message}</span>`;
+  }
+}
+
+// ==================== HAT SELECTION FUNCTIONS ====================
+function renderHatCheckboxes() {
+  if (availableHats.length === 0) {
+    hatSelectionContainer.style.display = 'none';
+    return;
+  }
+  
+  hatSelectionContainer.style.display = 'block';
+  hatCheckboxList.innerHTML = '';
+  
+  availableHats.forEach(hatName => {
+    const label = document.createElement('label');
+    label.style.display = 'block';
+    label.style.marginBottom = '5px';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = hatName;
+    checkbox.className = 'hat-checkbox';
+    checkbox.style.marginRight = '8px';
+    
+    checkbox.addEventListener('change', updateSelectAllHats);
+    
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(hatName));
+    hatCheckboxList.appendChild(label);
+  });
+}
+
+function handleSelectAllHats(e) {
+  const checkboxes = document.querySelectorAll('.hat-checkbox');
+  const isChecked = e.target.checked;
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = isChecked;
+  });
+}
+
+function updateSelectAllHats() {
+  const checkboxes = document.querySelectorAll('.hat-checkbox');
+  const checkedCount = document.querySelectorAll('.hat-checkbox:checked').length;
+  
+  if (checkboxes.length === 0) {
+    selectAllHats.checked = false;
+    selectAllHats.indeterminate = false;
+  } else if (checkedCount === 0) {
+    selectAllHats.checked = false;
+    selectAllHats.indeterminate = false;
+  } else if (checkedCount === checkboxes.length) {
+    selectAllHats.checked = true;
+    selectAllHats.indeterminate = false;
+  } else {
+    selectAllHats.checked = false;
+    selectAllHats.indeterminate = true;
+  }
+}
+
+async function handleApplyHatSelection() {
+  const checkboxes = document.querySelectorAll('.hat-checkbox:checked');
+  selectedHats = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (selectedHats.length === 0) {
+    statusEl.innerHTML = '<span class="small">⚠️ Lütfen en az 1 hat seçin.</span>';
+    return;
+  }
+  
+  console.log('🚌 Seçilen hatlar:', selectedHats);
+  
+  statusEl.textContent = `${selectedHats.length} hat seçildi: ${selectedHats.join(', ')}`;
+  
+  // Çoklu hat timer'ı başlat
+  await startMultipleHatsTimer(selectedHats, currentHareket);
+}
+
+// ==================== TIMER FUNCTIONS ====================
+async function startMultipleHatsTimer(hatList, hareket) {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+  }
+  
+  lastBusTime = null;
+  
+  timerInterval = setInterval(() => {
+    updateMultipleHatsTimer(hatList, hareket);
+  }, 1000);
+  
+  updateMultipleHatsTimer(hatList, hareket);
+}
+
+async function updateMultipleHatsTimer(hatList, hareket) {
+  try {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const currentTime = `${hours}:${minutes}:${seconds}`;
+    
+    let closestBus = null;
+    let minRemaining = Infinity;
+    
+    // Tüm seçili hatlardan en yakın otobüsü bul
+    for (const tableName of hatList) {
+      const res = await fetch('/api/get-next-bus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          tableName: tableName,
+          currentTime: currentTime,
+          hareket: hareket
+        })
+      });
+      
+      const result = await res.json();
+      
+      if (result.success && result.nextBus) {
+        const { remainingSeconds } = result.nextBus;
+        if (remainingSeconds < minRemaining) {
+          minRemaining = remainingSeconds;
+          closestBus = result.nextBus;
+        }
+      }
+    }
+    
+    if (closestBus) {
+      const { hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, remainingSeconds } = closestBus;
+      
+      if (lastBusTime !== tarifeSaati) {
+        lastBusTime = tarifeSaati;
+        timerHatAdi.textContent = hatAdi || '-';
+        timerPlaka.textContent = plaka || '-';
+        timerTarife.textContent = tarife || '-';
+        timerHareket.textContent = busHareket || '-';
+        timerContainer.style.display = 'block';
+      }
+      
+      const mins = Math.floor(remainingSeconds / 60);
+      const secs = remainingSeconds % 60;
+      timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      
+      if (remainingSeconds <= 0) {
+        lastBusTime = null;
+      }
+    } else {
+      closeTimer();
+    }
+  } catch (err) {
+    console.error('Multiple hats timer update error:', err);
   }
 }
 
