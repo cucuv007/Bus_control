@@ -1,0 +1,62 @@
+import openpyxl
+
+wb = openpyxl.load_workbook(r'C:\Users\utkuesin.kurucu\Downloads\15_DC15_2025_09_13.xlsx')
+ws = wb.active
+
+kalkis_count = 0
+donus_count = 0
+kalkis_skip = 0
+donus_skip = 0
+
+hareket_rows = [(8,'Kalkış'),(12,'Dönüş'),(17,'Kalkış'),(21,'Dönüş'),(26,'Kalkış'),(30,'Dönüş'),(35,'Kalkış'),(39,'Dönüş'),(44,'Kalkış'),(48,'Dönüş')]
+
+for row_num, hareket in hareket_rows:
+    row_added = 0
+    row_skipped = 0
+    
+    for col in range(4, 19):  # D to R (T01 to T15)
+        cell = ws.cell(row_num, col)
+        
+        # Boş hücre
+        if not cell.value:
+            row_skipped += 1
+            continue
+        
+        # Beyaz font kontrolü
+        is_white = False
+        if cell.font and cell.font.color and hasattr(cell.font.color, 'theme'):
+            if cell.font.color.theme == 0 and (cell.font.color.tint or 0) >= 0:
+                is_white = True
+                row_skipped += 1
+                continue
+        
+        # Dönüş için altındaki hücreyi kontrol et
+        if hareket == 'Dönüş':
+            cell_below = ws.cell(row_num + 1, col)
+            
+            # Altı boş
+            if not cell_below.value:
+                row_skipped += 1
+                continue
+            
+            # Altı beyaz
+            if cell_below.font and cell_below.font.color and hasattr(cell_below.font.color, 'theme'):
+                if cell_below.font.color.theme == 0 and (cell_below.font.color.tint or 0) >= 0:
+                    row_skipped += 1
+                    continue
+        
+        row_added += 1
+    
+    print(f"{hareket} Row {row_num}: {row_added} added, {row_skipped} skipped")
+    
+    if hareket == 'Kalkış':
+        kalkis_count += row_added
+        kalkis_skip += row_skipped
+    else:
+        donus_count += row_added
+        donus_skip += row_skipped
+
+print(f"\n=== TOTAL ===")
+print(f"Kalkış: {kalkis_count} added, {kalkis_skip} skipped")
+print(f"Dönüş: {donus_count} added, {donus_skip} skipped")
+print(f"GRAND TOTAL: {kalkis_count + donus_count}")

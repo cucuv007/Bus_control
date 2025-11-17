@@ -75,9 +75,6 @@ function isCellHidden(cell) {
       const theme = font.color.theme;
       const tint = font.color.tint || 0;
       
-      // DEBUG: Gerçek tema değerlerini görelim (comment out after testing)
-      // console.log(`DEBUG Font - Theme: ${theme}, Tint: ${tint.toFixed(2)}, Cell: ${cell.address}`);
-      
       // Tema 0 genellikle BEYAZ (light1/background)
       // Tema 1 genellikle SİYAH/KOYU (dark1/text)
       // Tint: pozitif = daha açık, negatif = daha koyu
@@ -322,13 +319,14 @@ export default async function handler(req, res) {
       const row = worksheet.getRow(rowNum);
       const cell = row.getCell(2); // B sütunu
       
-      // Merged cell kontrolü - SADECE en az 1 hareket bulduktan SONRA
-      if (foundFirstHareket && cell.isMerged) {
-        console.log(`Merged cell tespit edildi - tarama tamamlandı (${hareketRows.length} hareket bulundu)`);
-        break;
+      if (!cell || !cell.value) {
+        // Boş hücre - ama merged cell kontrolü yap
+        if (foundFirstHareket && cell.isMerged) {
+          console.log(`Merged cell tespit edildi - tarama tamamlandı (${hareketRows.length} hareket bulundu)`);
+          break;
+        }
+        continue;
       }
-      
-      if (!cell || !cell.value) continue;
       
       const hareketValue = String(cell.value).trim();
       
