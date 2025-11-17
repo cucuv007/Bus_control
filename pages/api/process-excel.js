@@ -350,8 +350,18 @@ export default async function handler(req, res) {
       dataToInsert[tableName] = [];
     });
     
+    // Son Dönüş satırını bul
+    const lastDonusRow = hareketRows.filter(h => h.hareket === 'Dönüş').pop();
+    const isLastDonus = lastDonusRow ? lastDonusRow.rowNum : null;
+    
     console.log(`=== Veri Parse Başladı (${hareketRows.length} hareket satırı x ${tarifeColumns.length} tarife sütunu) ===`);
     for (const hareketRow of hareketRows) {
+      // SON DÖNÜŞ SATIRINI TAMAMEN ATLA
+      if (hareketRow.hareket === 'Dönüş' && hareketRow.rowNum === isLastDonus) {
+        console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) - SON DÖNÜŞ ATLANDI ---`);
+        continue;
+      }
+      
       console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) ---`);
       let addedCount = {};
       let skippedCount = 0;
@@ -392,9 +402,10 @@ export default async function handler(req, res) {
           
           const isBelowEmpty = !cellBelow || !cellBelow.value;
           const isBelowWhite = cellBelow && isCellHidden(cellBelow);
+          const isBelowMerged = cellBelow && cellBelow.isMerged;
           
-          if (isBelowEmpty || isBelowWhite) {
-            console.log(`  ⚠️ Atlandı: ${timeValue} (${String.fromCharCode(64 + tarife.col)}${hareketRow.rowNum}) - altı ${isBelowEmpty ? 'boş' : 'beyaz'}`);
+          if (isBelowEmpty || isBelowWhite || isBelowMerged) {
+            console.log(`  ⚠️ Atlandı: ${timeValue} (${String.fromCharCode(64 + tarife.col)}${hareketRow.rowNum}) - altı ${isBelowEmpty ? 'boş' : isBelowWhite ? 'beyaz' : 'birleştirilmiş'}`);
             skippedCount++;
             continue;
           }
