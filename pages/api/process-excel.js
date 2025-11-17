@@ -6,7 +6,10 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  connectionTimeoutMillis: 30000, // 30 saniye
+  idleTimeoutMillis: 30000,
+  max: 20 // Maksimum bağlantı sayısı
 });
 
 function extractTableName(filename) {
@@ -354,11 +357,30 @@ export default async function handler(req, res) {
     const lastDonusRow = hareketRows.filter(h => h.hareket === 'Dönüş').pop();
     const isLastDonus = lastDonusRow ? lastDonusRow.rowNum : null;
     
+    // Son Dönüş'ün altındaki satırı kontrol et - eğer tamamen boş veya merged ise atla
+    let skipLastDonus = false;
+    if (isLastDonus) {
+      const nextRow = worksheet.getRow(isLastDonus + 1);
+      let hasAnyData = false;
+      
+      // Tarife sütunlarında herhangi bir veri var mı kontrol et
+      for (const tarife of tarifeColumns) {
+        const cellBelow = nextRow.getCell(tarife.col);
+        if (cellBelow && cellBelow.value && !cellBelow.isMerged) {
+          hasAnyData = true;
+          break;
+        }
+      }
+      
+      skipLastDonus = !hasAnyData; // Veri yoksa atla
+      console.log(`Son Dönüş (Row ${isLastDonus}): Altında veri ${hasAnyData ? 'VAR - İŞLENECEK' : 'YOK - ATLANACAK'}`);
+    }
+    
     console.log(`=== Veri Parse Başladı (${hareketRows.length} hareket satırı x ${tarifeColumns.length} tarife sütunu) ===`);
     for (const hareketRow of hareketRows) {
-      // SON DÖNÜŞ SATIRINI TAMAMEN ATLA
-      if (hareketRow.hareket === 'Dönüş' && hareketRow.rowNum === isLastDonus) {
-        console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) - SON DÖNÜŞ ATLANDI ---`);
+      // SON DÖNÜŞ SATIRINI ATLA (sadece altında veri yoksa)
+      if (skipLastDonus && hareketRow.hareket === 'Dönüş' && hareketRow.rowNum === isLastDonus) {
+        console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) - SON DÖNÜŞ ATLANDI (altı boş) ---`);
         continue;
       }
       
@@ -444,9 +466,12 @@ export default async function handler(req, res) {
 
     // Bu sayfanın verilerini ana listeye ekle
     tableNames.forEach(tableName => {
+      const sheetDataCount = dataToInsert[tableName].length;
       allDataToInsert[tableName].push(...dataToInsert[tableName]);
-      console.log(`✅ "${sheetName}" sayfasından ${tableName} tablosuna ${dataToInsert[tableName].length} kayıt toplandı`);
+      const totalSoFar = allDataToInsert[tableName].length;
+      console.log(`✅ "${sheetName}" sayfasından ${tableName} tablosuna ${sheetDataCount} kayıt toplandı (Toplam şu ana kadar: ${totalSoFar})`);
     });
+    console.log(`\n`);
   } // worksheet loop sonu
 
     // Toplam veri kontrolü
@@ -489,7 +514,8 @@ export default async function handler(req, res) {
       tables: tableNames,
       sheetsProcessed: workbook.worksheets.length,
       results: results,
-      message: `${tableNames.length} tablo güncellendi (${workbook.worksheets.length} sayfa işlendi)`
+      totalRecords: totalRecords,
+      message: `${tableNames.length} tablo güncellendi (${workbook.worksheets.length} sayfa işlendi, ${totalRecords} kayıt toplandı)`
     });
 
   } catch (err) {
