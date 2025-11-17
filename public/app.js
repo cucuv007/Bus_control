@@ -44,6 +44,7 @@ const manualFileInput = document.getElementById('manualFileInput');
 const manualStatus = document.getElementById('manualStatus');
 const uploadTypeHatBtn = document.getElementById('uploadTypeHatBtn');
 const uploadTypePlakaBtn = document.getElementById('uploadTypePlakaBtn');
+const uploadTypeDepolamaBtn = document.getElementById('uploadTypeDepolamaBtn');
 const manualFileInputGroup = document.getElementById('manualFileInputGroup');
 const manualFileLabel = document.getElementById('manualFileLabel');
 const manualFileHint = document.getElementById('manualFileHint');
@@ -77,6 +78,7 @@ methodManualBtn.addEventListener('click', () => selectMethod('manual'));
 
 uploadTypeHatBtn.addEventListener('click', () => selectUploadType('hat'));
 uploadTypePlakaBtn.addEventListener('click', () => selectUploadType('plaka'));
+uploadTypeDepolamaBtn.addEventListener('click', () => selectUploadType('depolama'));
 
 listFilesBtn.addEventListener('click', handleListFiles);
 confirmUploadBtn.addEventListener('click', handleUpload);
@@ -149,9 +151,12 @@ function selectUploadType(type) {
   if (type === 'hat') {
     manualFileLabel.textContent = '📋 Hat Excel Dosyası Seçin:';
     manualFileHint.textContent = 'Format: XX_TABLENAME_YYYY_MM_DD.xlsx (örn: 05_AC05_2025_11_08.xlsx)';
-  } else {
+  } else if (type === 'plaka') {
     manualFileLabel.textContent = '🚗 Plaka Excel Dosyası Seçin:';
     manualFileHint.textContent = 'PAZARTESİ, SALI, ÇARŞAMBA... sayfaları içermeli (ROTASYON hariç)';
+  } else if (type === 'depolama') {
+    manualFileLabel.textContent = '📦 Depolama Excel Dosyası Seçin:';
+    manualFileHint.textContent = 'A sütunu: Hat_Adi (örn: TK36), D sütunu: Depolama (örn: OTOGAR)';
   }
   
   // Reset file input
@@ -381,7 +386,12 @@ async function handleUpload() {
       console.log('Upload type:', uploadType);
       
       // Excel'i işle - uploadType'a göre farklı endpoint
-      const apiEndpoint = uploadType === 'plaka' ? '/api/process-plaka-excel' : '/api/process-excel';
+      let apiEndpoint = '/api/process-excel'; // default: hat
+      if (uploadType === 'plaka') {
+        apiEndpoint = '/api/process-plaka-excel';
+      } else if (uploadType === 'depolama') {
+        apiEndpoint = '/api/process-depolama-excel';
+      }
       console.log('API Endpoint:', apiEndpoint);
       
       const processRes = await fetch(apiEndpoint, {
