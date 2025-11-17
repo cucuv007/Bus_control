@@ -12,7 +12,14 @@ const pool = new Pool({
 function extractTableName(filename) {
   const cleaned = filename.replace(/\.(xlsx|xls)$/i, '');
   const parts = cleaned.split('_');
-  if (parts.length >= 2) return parts[1];
+  if (parts.length >= 2) {
+    const tableNamePart = parts[1];
+    // Eğer "-" varsa, birden fazla tablo var demektir
+    if (tableNamePart.includes('-')) {
+      return tableNamePart.split('-'); // ["MC12", "MC12A"]
+    }
+    return [tableNamePart]; // ["AC05"]
+  }
   return null;
 }
 
@@ -210,8 +217,8 @@ export default async function handler(req, res) {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
 
-    const tableName = extractTableName(fileName);
-    if (!tableName) {
+    const tableNames = extractTableName(fileName);
+    if (!tableNames || tableNames.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Dosya adı XX_TABLENAME_YYYY_MM_DD.xlsx formatında olmalı'
@@ -219,9 +226,14 @@ export default async function handler(req, res) {
     }
 
     console.log(`\n=== 📊 Excel Dosyası: ${fileName} ===`);
+    console.log(`=== 📋 ${tableNames.length} tablo oluşturulacak: ${tableNames.join(', ')} ===`);
     console.log(`=== 📋 Toplam ${workbook.worksheets.length} sayfa bulundu ===\n`);
 
-    const allDataToInsert = [];
+    const allDataToInsert = {};
+    // Her tablo için ayrı veri dizisi oluştur
+    tableNames.forEach(tableName => {
+      allDataToInsert[tableName] = [];
+    });
 
     // TÜM worksheets'leri işle
     for (const worksheet of workbook.worksheets) {
@@ -242,9 +254,15 @@ export default async function handler(req, res) {
         const cell = headerRow.getCell(col);
         if (!cell || !cell.value) continue;
         const headerValue = String(cell.value).trim();
-        if (headerValue.match(/^T\d{2}$/)) {
-          tempCols.push({ col, name: headerValue });
-          maxTCol = Math.max(maxTCol, col); // En sağdaki T sütununu bul
+        
+        // T01 veya T02 (A) gibi formatları destekle
+        const match = headerValue.match(/^(T\d{2})(\s*\(A\))?$/);
+        if (match) {
+          const tarifeName = match[1]; // "T01"
+          const hasA = !!match[2]; // "(A)" var mı?
+          
+          tempCols.push({ col, name: tarifeName, hasA });
+          maxTCol = Math.max(maxTCol, col);
         }
       }
       
@@ -259,12 +277,20 @@ export default async function handler(req, res) {
           
           const headerValue = String(cell.value).trim();
           
-          // Boş değilse ve beyaz font değilse ekle
-          if (headerValue && !isCellHidden(cell)) {
-            tempCols.push({ col, name: headerValue });
-            console.log(`  ✓ Ek tarife sütunu bulundu: "${headerValue}" (Sütun ${String.fromCharCode(64 + col)})`);
+          // (A) olup olmadığını kontrol et
+          const match = headerValue.match(/^(.+?)(\s*\(A\))?$/);
+          if (match) {
+            const baseName = match[1].trim();
+            const hasA = !!match[2];
+            
+            // Boş değilse ve beyaz font değilse ekle
+            if (baseName && !isCellHidden(cell)) {
+              tempCols.push({ col, name: baseName, hasA });
+              console.log(`  ✓ Ek tarife sütunu bulundu: "${headerValue}" (Sütun ${String.fromCharCode(64 + col)})${hasA ? ' → A tablosu' : ''}`);
+            } else {
+              break;
+            }
           } else {
-            // Boş veya beyaz hücre bulundu, daha sağa gitme
             break;
           }
         }
@@ -321,12 +347,20 @@ export default async function handler(req, res) {
       });
     }
 
-    const dataToInsert = [];
+    const dataToInsert = {};
+    tableNames.forEach(tableName => {
+      dataToInsert[tableName] = [];
+    });
+    
     console.log(`=== Veri Parse Başladı (${hareketRows.length} hareket satırı x ${tarifeColumns.length} tarife sütunu) ===`);
     for (const hareketRow of hareketRows) {
       console.log(`\n--- ${hareketRow.hareket} (Satır ${hareketRow.rowNum}) ---`);
-      let addedCount = 0;
+      let addedCount = {};
       let skippedCount = 0;
+      
+      tableNames.forEach(tableName => {
+        addedCount[tableName] = 0;
+      });
       
       for (const tarife of tarifeColumns) {
         const row = worksheet.getRow(hareketRow.rowNum);
@@ -368,8 +402,22 @@ export default async function handler(req, res) {
           }
         }
 
-        dataToInsert.push({
-          Hat_Adi: tableName,
+        // Hangi tabloya ekleneceğini belirle
+        let targetTable;
+        if (tableNames.length === 1) {
+          // Tek tablo varsa, hepsini oraya ekle
+          targetTable = tableNames[0];
+        } else {
+          // Birden fazla tablo varsa, (A) olanlar ikinci tabloya
+          if (tarife.hasA) {
+            targetTable = tableNames[1]; // MC12A gibi
+          } else {
+            targetTable = tableNames[0]; // MC12 gibi
+          }
+        }
+
+        dataToInsert[targetTable].push({
+          Hat_Adi: targetTable,
           Calisma_Zamani: sheetName,
           Hareket: hareketRow.hareket,
           Tarife: tarife.name,
@@ -378,43 +426,61 @@ export default async function handler(req, res) {
           Durum: null,
           Plaka: null
         });
-        addedCount++;
+        addedCount[targetTable]++;
       }
-      console.log(`  ✅ ${addedCount} kayıt eklendi${skippedCount > 0 ? ` | ${skippedCount} beyaz/gizli hücre atlandı` : ''}`);
+      
+      const addedSummary = tableNames.map(tbl => `${tbl}: ${addedCount[tbl]}`).join(' | ');
+      console.log(`  ✅ ${addedSummary}${skippedCount > 0 ? ` | ${skippedCount} beyaz/gizli hücre atlandı` : ''}`);
     }
 
     // Bu sayfanın verilerini ana listeye ekle
-    allDataToInsert.push(...dataToInsert);
-    console.log(`✅ "${sheetName}" sayfasından ${dataToInsert.length} kayıt toplandı\n`);
+    tableNames.forEach(tableName => {
+      allDataToInsert[tableName].push(...dataToInsert[tableName]);
+      console.log(`✅ "${sheetName}" sayfasından ${tableName} tablosuna ${dataToInsert[tableName].length} kayıt toplandı`);
+    });
   } // worksheet loop sonu
 
-    if (allDataToInsert.length === 0) {
+    // Toplam veri kontrolü
+    let totalRecords = 0;
+    tableNames.forEach(tableName => {
+      totalRecords += allDataToInsert[tableName].length;
+    });
+
+    if (totalRecords === 0) {
       return res.status(400).json({
         success: false,
         error: 'Veri parse edilemedi'
       });
     }
 
-    console.log(`\n=== 📦 Toplam ${allDataToInsert.length} kayıt tüm sayfalardan toplandı ===\n`);
+    console.log(`\n=== 📦 Toplam ${totalRecords} kayıt tüm sayfalardan toplandı ===\n`);
 
-    // Tablo oluştur (yoksa)
-    const tableCreation = await createTableIfNotExists(client, tableName);
-    if (!tableCreation.success) {
-      return res.status(500).json({
-        success: false,
-        error: tableCreation.message
-      });
+    // Her tablo için işlemleri yap
+    const results = {};
+    for (const tableName of tableNames) {
+      console.log(`\n=== ${tableName} tablosu işleniyor ===`);
+      
+      // Tablo oluştur (yoksa)
+      const tableCreation = await createTableIfNotExists(client, tableName);
+      if (!tableCreation.success) {
+        return res.status(500).json({
+          success: false,
+          error: `${tableName}: ${tableCreation.message}`
+        });
+      }
+
+      // Veri ekle (upsert)
+      const insertedCount = await upsertData(client, tableName, allDataToInsert[tableName]);
+      results[tableName] = insertedCount;
+      console.log(`✅ ${tableName}: ${insertedCount} kayıt eklendi`);
     }
-
-    // Veri ekle (upsert)
-    const insertedCount = await upsertData(client, tableName, allDataToInsert);
 
     return res.status(200).json({
       success: true,
-      tableName,
+      tables: tableNames,
       sheetsProcessed: workbook.worksheets.length,
-      inserted: insertedCount,
-      message: `${workbook.worksheets.length} sayfadan ${insertedCount} sefer eklendi`
+      results: results,
+      message: `${tableNames.length} tablo güncellendi (${workbook.worksheets.length} sayfa işlendi)`
     });
 
   } catch (err) {
