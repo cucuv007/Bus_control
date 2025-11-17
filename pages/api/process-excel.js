@@ -105,7 +105,7 @@ async function createTableIfNotExists(client, tableName) {
       "Durum" text NULL,
       "Plaka" text NULL,
       "Hareket" text NULL,
-      CONSTRAINT "${tableName}_unique_time_hareket" UNIQUE ("Tarife_Saati", "Hareket")
+      CONSTRAINT "${tableName}_unique" UNIQUE ("Tarife", "Tarife_Saati", "Hareket", "Çalışma_Zamanı")
     );
     
     ALTER TABLE public."${tableName}" DISABLE ROW LEVEL SECURITY;
@@ -153,11 +153,9 @@ async function upsertData(client, tableName, dataToInsert) {
   const query = `
     INSERT INTO public."${tableName}" ("Hat_Adi", "Çalışma_Zamanı", "Tarife", "Tarife_Saati", "Onaylanan", "Durum", "Plaka", "Hareket")
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    ON CONFLICT ("Tarife_Saati", "Hareket") 
+    ON CONFLICT ("Tarife", "Tarife_Saati", "Hareket", "Çalışma_Zamanı") 
     DO UPDATE SET
       "Hat_Adi" = EXCLUDED."Hat_Adi",
-      "Çalışma_Zamanı" = EXCLUDED."Çalışma_Zamanı",
-      "Tarife" = EXCLUDED."Tarife",
       "Onaylanan" = EXCLUDED."Onaylanan",
       "Durum" = EXCLUDED."Durum",
       "Plaka" = EXCLUDED."Plaka";
