@@ -542,7 +542,11 @@ async function handleTableSelect() {
 function handleHareketChange() {
   currentHareket = hareketSelect.value || null;
   
-  if (currentTable) {
+  // Eğer çoklu hat seçimi aktifse, yeniden yükle
+  if (selectedHats.length > 0) {
+    handleApplyHatSelection();
+  } else if (currentTable) {
+    // Tek hat seçiliyse normal yükle
     loadTableData();
   }
 }
@@ -922,10 +926,96 @@ async function handleApplyHatSelection() {
   
   console.log('🚌 Seçilen hatlar:', selectedHats);
   
-  statusEl.textContent = `${selectedHats.length} hat seçildi: ${selectedHats.join(', ')}`;
+  statusEl.textContent = `${selectedHats.length} hat yükleniyor...`;
+  applyHatSelection.disabled = true;
   
-  // Çoklu hat timer'ı başlat
-  await startMultipleHatsTimer(selectedHats, currentHareket);
+  try {
+    // Tüm seçili hatlardan verileri çek
+    const allData = [];
+    
+    for (const tableName of selectedHats) {
+      const res = await fetch('/api/get-table-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableName: tableName,
+          hareket: currentHareket
+        })
+      });
+      
+      const result = await res.json();
+      
+      if (result.success && result.data) {
+        // Her satıra kaynak hat bilgisini ekle
+        result.data.forEach(row => {
+          allData.push({
+            ...row,
+            _Hat: tableName // Hangi hattan geldiğini göster
+          });
+        });
+      }
+    }
+    
+    if (allData.length === 0) {
+      statusEl.innerHTML = '<span class="small">⚠️ Seçilen hatlarda veri bulunamadı.</span>';
+      theadRow.innerHTML = "<th>Boş</th>";
+      tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+      return;
+    }
+    
+    // Tarife_Saati'ne göre sırala (küçükten büyüğe)
+    allData.sort((a, b) => {
+      const timeA = a.Tarife_Saati || '';
+      const timeB = b.Tarife_Saati || '';
+      return timeA.localeCompare(timeB);
+    });
+    
+    console.log(`✅ Toplam ${allData.length} kayıt birleştirildi ve sıralandı`);
+    
+    // Tablo başlıklarını oluştur (_Hat sütununu ilk sıraya koy)
+    const firstRow = allData[0];
+    const allKeys = Object.keys(firstRow);
+    
+    // _Hat'ı başa al
+    const hatIndex = allKeys.indexOf('_Hat');
+    if (hatIndex > -1) {
+      allKeys.splice(hatIndex, 1);
+      allKeys.unshift('_Hat');
+    }
+    
+    theadRow.innerHTML = '';
+    allKeys.forEach(k => {
+      const th = document.createElement('th');
+      th.textContent = k === '_Hat' ? 'Hat' : k;
+      theadRow.appendChild(th);
+    });
+    
+    // Tablo verilerini oluştur
+    tbody.innerHTML = '';
+    allData.forEach(row => {
+      const tr = document.createElement('tr');
+      allKeys.forEach(k => {
+        const td = document.createElement('td');
+        const value = row[k];
+        td.textContent = value !== null && value !== undefined ? value : '';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    
+    let filterMsg = currentHareket ? ` (${currentHareket})` : '';
+    statusEl.textContent = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg}`;
+    meta.textContent = `Hatlar: ${selectedHats.join(', ')} | Toplam sütun: ${allKeys.length}`;
+    
+    // Çoklu hat timer'ı başlat
+    await startMultipleHatsTimer(selectedHats, currentHareket);
+    
+  } catch (err) {
+    console.error('Hat selection error:', err);
+    statusEl.innerHTML = `<span class="error">❌ Hata: ${err.message}</span>`;
+  } finally {
+    applyHatSelection.disabled = false;
+  }
 }
 
 // ==================== TIMER FUNCTIONS ====================
