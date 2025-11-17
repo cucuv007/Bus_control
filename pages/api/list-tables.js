@@ -25,13 +25,26 @@ export default async function handler(req, res) {
       });
     }
 
-    // Gün tablolarını filtrele
+    // Gün tablolarını ve depolama tablolarını filtrele
     const dayTables = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ', 'PAZAR'];
+    const depolomaTables = [
+      'AKSU', 'MEYDAN', 'VARSAK ALTIAYAK', 'OTOGAR', 'VARSAK AKTARMA', 
+      'ÜNSAL', 'SARISU', 'GÜRSU', 'ORGANİZE SANAYİ', 'TRT KAMPI', 
+      'VARSAK', 'GÜZELOBA', 'KURŞUNLU ŞELALESİ', 'TERMİNAL', 
+      'AKDENİZ ÜNİVERSİTESİ', 'KEPEZ KAYMAKAMLIĞI', 'VARSAK BELEDİYE', 
+      'DEEPO AVM', 'ŞEHİR HASTANESİ', 'ANTOBÜS'
+    ];
     
     // Sonuçları işle
     const tables = (data || [])
       .map(row => row.tablename)
-      .filter(name => name && !name.startsWith('pg_') && !name.startsWith('_') && !dayTables.includes(name))
+      .filter(name => 
+        name && 
+        !name.startsWith('pg_') && 
+        !name.startsWith('_') && 
+        !dayTables.includes(name) &&
+        !depolomaTables.includes(name)
+      )
       .sort();
 
     console.log(`✅ Found ${tables.length} tables:`, tables);
