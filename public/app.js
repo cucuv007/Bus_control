@@ -108,6 +108,18 @@ applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
 selectAllHats.addEventListener('change', handleSelectAllHats);
 applyHatSelection.addEventListener('click', handleApplyHatSelection);
 
+// Dinamik takip checkbox'ı değiştiğinde
+dynamicTrackingCheckbox.addEventListener('change', (e) => {
+  if (e.target.checked && currentTimerRow) {
+    // Checkbox seçildiğinde, mevcut timer satırını hemen bul ve scroll et
+    scrollToTimerRow(currentTimerRow);
+  } else if (!e.target.checked) {
+    // Checkbox kaldırıldığında vurguyu temizle
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(r => r.style.backgroundColor = '');
+  }
+});
+
 manualFileInput.addEventListener('change', handleManualFileSelect);
 
 // Search and Select All
