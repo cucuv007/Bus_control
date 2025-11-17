@@ -720,6 +720,11 @@ function renderDepolamaCheckboxes() {
   
   depolamaCheckboxList.innerHTML = '';
   
+  // Seçimleri sıfırla
+  selectedDepolamaTables = [];
+  selectAllDepolama.checked = false;
+  selectAllDepolama.indeterminate = false;
+  
   depolamaTables.forEach(tableName => {
     const label = document.createElement('label');
     label.style.display = 'block';
@@ -746,6 +751,11 @@ function handleSelectAllDepolama(e) {
   checkboxes.forEach(checkbox => {
     checkbox.checked = isChecked;
   });
+  
+  // Eğer tümü seç kaldırıldıysa, seçili olanları da temizle
+  if (!isChecked) {
+    selectedDepolamaTables = [];
+  }
 }
 
 function updateSelectAllDepolama() {
@@ -814,6 +824,10 @@ async function handleApplyDepolamaFilter() {
     // Filtrelenmiş tabloları yükle
     await loadFilteredTables();
     
+    // Hat seçimlerini sıfırla (depolama değiştiği için)
+    selectedHats = [];
+    selectAllHats.checked = false;
+    
   } catch (err) {
     console.error('Depolama filter error:', err);
     statusEl.innerHTML = `<span class="error">❌ Hata: ${err.message}</span>`;
@@ -880,6 +894,11 @@ function renderHatCheckboxes() {
   hatSelectionContainer.style.display = 'block';
   hatCheckboxList.innerHTML = '';
   
+  // Seçimleri sıfırla
+  selectedHats = [];
+  selectAllHats.checked = false;
+  selectAllHats.indeterminate = false;
+  
   availableHats.forEach(hatName => {
     const label = document.createElement('label');
     label.style.display = 'block';
@@ -906,6 +925,11 @@ function handleSelectAllHats(e) {
   checkboxes.forEach(checkbox => {
     checkbox.checked = isChecked;
   });
+  
+  // Eğer tümü seç kaldırıldıysa, seçili hatları da temizle
+  if (!isChecked) {
+    selectedHats = [];
+  }
 }
 
 function updateSelectAllHats() {
