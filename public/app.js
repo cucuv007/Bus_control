@@ -18,6 +18,7 @@ const timerTarife = document.getElementById('timerTarife');
 const timerHareket = document.getElementById('timerHareket');
 const closeTimerBtn = document.getElementById('closeTimerBtn');
 const dynamicTrackingCheckbox = document.getElementById('dynamicTrackingCheckbox');
+const reopenTimerIcon = document.getElementById('reopenTimerIcon');
 
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
@@ -87,6 +88,7 @@ let currentBusList = []; // Aynı saatteki tüm otobüsler
 let currentBusIndex = 0; // Slide index
 let slideInterval = null; // Slide timer
 let highlightedRows = []; // Vurgulanan satırlar (çoklu otobüs için)
+let timerClosedManually = false; // Timer kullanıcı tarafından manuel kapatıldı mı?
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -637,11 +639,26 @@ async function loadTableData() {
     });
     
     let filterMsg = currentHareket ? ` (${currentHareket})` : '';
-    statusEl.textContent = `Başarılı: ${data.length} kayıt alındı${filterMsg}`;
+    statusEl.innerHTML = `Başarılı: ${data.length} kayıt alındı${filterMsg} <span id="reopenTimerIcon" style="cursor: pointer; font-size: 18px; margin-left: 10px; opacity: 0.3;" title="Timer'ı Tekrar Aç">⏱️</span>`;
     meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
     
-    // Timer'ı başlat
-    startTimer(currentTable, currentHareket);
+    // Kronometre ikonunu referans al
+    const reopenIcon = document.getElementById('reopenTimerIcon');
+    if (reopenIcon) {
+      reopenIcon.addEventListener('click', () => {
+        if (reopenIcon.style.opacity !== '0.3') {
+          timerClosedManually = false;
+          startTimer(currentTable, currentHareket);
+        }
+      });
+    }
+    
+    // Timer'ı başlat (sadece manuel kapatılmadıysa)
+    if (!timerClosedManually) {
+      startTimer(currentTable, currentHareket);
+    } else {
+      updateReopenTimerIcon();
+    }
     
   } catch (err) {
     console.error('Get table data error:', err);
@@ -652,6 +669,9 @@ async function loadTableData() {
 
 // ==================== TIMER FUNCTIONS ====================
 function startTimer(tableName, hareket) {
+  timerClosedManually = false; // Timer açılıyor, flagı sıfırla
+  updateReopenTimerIcon(); // İkonu pasif yap
+  
   if (timerInterval) {
     clearInterval(timerInterval);
   }
@@ -764,9 +784,13 @@ function closeTimer() {
   currentTimerRow = null;
   currentBusList = [];
   currentBusIndex = 0;
+  timerClosedManually = true; // Manuel kapatıldı olarak işaretle
   
   // Tablo vurgusunu kaldır
   clearAllHighlights();
+  
+  // Kronometre ikonunu aktif et (eğer varsa)
+  updateReopenTimerIcon();
 }
 
 function startSlideShow() {
@@ -856,6 +880,26 @@ function clearAllHighlights() {
   const rows = tbody.querySelectorAll('tr');
   rows.forEach(r => r.style.backgroundColor = '');
   highlightedRows = [];
+}
+
+function updateReopenTimerIcon() {
+  const icon = document.getElementById('reopenTimerIcon');
+  if (!icon) return;
+  
+  const hasData = tbody.querySelectorAll('tr').length > 0 && 
+                  tbody.querySelector('tr td')?.textContent !== 'Henüz veri yok.';
+  
+  if (timerClosedManually && hasData) {
+    // Timer kapatıldı ve veri var - ikonu aktif et
+    icon.style.opacity = '1';
+    icon.style.cursor = 'pointer';
+    icon.title = 'Timer\'ı Tekrar Aç';
+  } else {
+    // Timer açık veya veri yok - ikonu pasif et
+    icon.style.opacity = '0.3';
+    icon.style.cursor = 'not-allowed';
+    icon.title = timerClosedManually ? 'Veri yok' : 'Timer zaten açık';
+  }
 }
 
 // ==================== DEPOLAMA FILTER FUNCTIONS ====================
@@ -1190,11 +1234,26 @@ async function handleApplyHatSelection() {
     });
     
     let filterMsg = currentHareket ? ` (${currentHareket})` : '';
-    statusEl.textContent = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg}`;
+    statusEl.innerHTML = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg} <span id="reopenTimerIcon" style="cursor: pointer; font-size: 18px; margin-left: 10px; opacity: 0.3;" title="Timer'ı Tekrar Aç">⏱️</span>`;
     meta.textContent = `Hatlar: ${selectedHats.join(', ')} | Toplam sütun: ${allKeys.length}`;
     
-    // Çoklu hat timer'ı başlat
-    await startMultipleHatsTimer(selectedHats, currentHareket);
+    // Kronometre ikonunu referans al
+    const reopenIcon = document.getElementById('reopenTimerIcon');
+    if (reopenIcon) {
+      reopenIcon.addEventListener('click', () => {
+        if (reopenIcon.style.opacity !== '0.3') {
+          timerClosedManually = false;
+          startMultipleHatsTimer(selectedHats, currentHareket);
+        }
+      });
+    }
+    
+    // Çoklu hat timer'ı başlat (sadece manuel kapatılmadıysa)
+    if (!timerClosedManually) {
+      await startMultipleHatsTimer(selectedHats, currentHareket);
+    } else {
+      updateReopenTimerIcon();
+    }
     
   } catch (err) {
     console.error('Hat selection error:', err);
@@ -1206,6 +1265,9 @@ async function handleApplyHatSelection() {
 
 // ==================== TIMER FUNCTIONS ====================
 async function startMultipleHatsTimer(hatList, hareket) {
+  timerClosedManually = false; // Timer açılıyor, flagı sıfırla
+  updateReopenTimerIcon(); // İkonu pasif yap
+  
   if (timerInterval) {
     clearInterval(timerInterval);
   }
