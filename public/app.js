@@ -153,9 +153,12 @@ if (scrollToTopBtn) {
 
 if (scrollToTimerRowBtn) {
   scrollToTimerRowBtn.addEventListener('click', () => {
-    // Timer satırına git (dinamik takip kontrolü yapmadan)
+    // Önce tüm vurguları temizle
+    clearAllHighlights();
+    
+    // Timer satırına git ve renklendir
     if (currentTimerRow) {
-      // Tek otobüs varsa, direkt scroll yap (dinamik takip kontrolsuz)
+      // Tek otobüs varsa
       const rows = tbody.querySelectorAll('tr');
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -174,35 +177,52 @@ if (scrollToTimerRowBtn) {
         });
         
         if (matchesTarife && matchesHareket) {
+          // Sarı vurgu (tek otobüs için)
+          row.style.backgroundColor = '#fff3cd';
+          highlightedRows.push(row);
           row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
           break;
         }
       }
     } else if (currentBusList && currentBusList.length > 0) {
-      // Çoklu otobüs varsa, mevcut index'teki otobüsün satırına git
-      const busData = currentBusList[currentBusIndex];
+      // Çoklu otobüs varsa, tüm otobüsleri renklendir
       const rows = tbody.querySelectorAll('tr');
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const cells = row.querySelectorAll('td');
-        let matchesTarife = false;
-        let matchesHareket = false;
-        
-        cells.forEach(cell => {
-          const text = cell.textContent.trim();
-          if (text === busData.tarifeSaati || text === busData.tarifeSaati.substring(0, 5)) {
-            matchesTarife = true;
+      
+      currentBusList.forEach(bus => {
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const cells = row.querySelectorAll('td');
+          
+          let matchesHatAdi = false;
+          let matchesTarife = false;
+          let matchesHareket = false;
+          let matchesTarifeSaati = false;
+          
+          cells.forEach(cell => {
+            const text = cell.textContent.trim();
+            // Hat Adı kontrolü
+            if (text === bus.tableName || text === bus.hatAdi) matchesHatAdi = true;
+            if (text === bus.tarife) matchesTarife = true;
+            if (text === bus.hareket) matchesHareket = true;
+            if (text === bus.tarifeSaati || text === bus.tarifeSaati.substring(0, 5)) {
+              matchesTarifeSaati = true;
+            }
+          });
+          
+          // Hat adı, tarife saati ve hareket ile eşleşme kontrolü
+          if (matchesHatAdi && matchesHareket && matchesTarifeSaati) {
+            // Yeşil vurgu (çoklu otobüs için)
+            row.style.backgroundColor = '#d4edda';
+            highlightedRows.push(row);
+            
+            // İlk eşleşen satıra scroll et
+            if (highlightedRows.length === 1) {
+              row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+            }
+            break;
           }
-          if (text === busData.hareket) {
-            matchesHareket = true;
-          }
-        });
-        
-        if (matchesTarife && matchesHareket) {
-          row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-          break;
         }
-      }
+      });
     } else {
       // Timer verisi yoksa en yukarı çık
       window.scrollTo({ top: 0, behavior: 'smooth' });
