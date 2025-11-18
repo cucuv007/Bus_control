@@ -1128,7 +1128,7 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     }
     
     if (closestBus) {
-      const { hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, remainingSeconds } = closestBus;
+      const { tableName, hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, remainingSeconds } = closestBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
@@ -1139,8 +1139,8 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         timerHareket.textContent = busHareket || '-';
         timerContainer.style.display = 'block';
         
-        // Önceki ve sonraki saatleri getir (hatAdi kullanarak tablo ismini belirle)
-        await updatePrevNextTimes(hatAdi, tarifeSaati, busHareket);
+        // Önceki ve sonraki saatleri getir (tableName kullan - API'den gelen gerçek tablo ismi)
+        await updatePrevNextTimes(tableName, tarifeSaati, busHareket);
         
         // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
         scrollToTimerRow(closestBus);

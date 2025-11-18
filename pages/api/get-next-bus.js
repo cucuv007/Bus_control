@@ -153,6 +153,7 @@ export default async function handler(req, res) {
         }
         
         nextBus = {
+          tableName: tableName, // Hangi tablodan geldiğini ekle
           hatAdi: row.Hat_Adi || '-',
           plaka: plaka,
           tarife: row.Tarife || '-',
