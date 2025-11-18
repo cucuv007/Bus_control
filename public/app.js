@@ -1137,9 +1137,10 @@ async function loadFilteredTables() {
     const result = await res.json();
     let tables = result.tables || [];
     
-    // Depolama filtresi varsa, sadece filtredeki hatları göster
+    // Depolama filtresi varsa, filteredHats'ı kullan
+    // Filteredeki hatlar zaten /api/get-depolama-hats'tan geldi
     if (filteredHats.length > 0) {
-      tables = tables.filter(table => filteredHats.includes(table));
+      tables = filteredHats; // Direkt filteredHats kullan
     }
     
     if (tables.length === 0) {
