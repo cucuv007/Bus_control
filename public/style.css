@@ -425,18 +425,26 @@ tbody tr:last-child td {
 }
 
 /* Timer Warning Animation - Red Blinking for < 2 minutes */
-@keyframes timer-warning-blink {
+@keyframes timer-warning-pulse {
   0%, 100% { 
-    color: #e74c3c; 
-    opacity: 1; 
+    color: #fff;
+    background: #e74c3c;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
   }
   50% { 
-    color: #c0392b; 
-    opacity: 0.6; 
+    color: #fff;
+    background: #c0392b;
+    transform: scale(1.15);
+    box-shadow: 0 0 20px 10px rgba(231, 76, 60, 0);
   }
 }
 
 .timer-warning {
-  animation: timer-warning-blink 1s ease-in-out infinite;
-  font-weight: bold;
+  animation: timer-warning-pulse 0.8s ease-in-out infinite !important;
+  font-size: 72px !important;
+  padding: 20px 30px !important;
+  border-radius: 15px !important;
+  font-weight: bold !important;
+  letter-spacing: 3px !important;
 }
