@@ -423,3 +423,20 @@ tbody tr:last-child td {
     font-size: 36px;
   }
 }
+
+/* Timer Warning Animation - Red Blinking for < 2 minutes */
+@keyframes timer-warning-blink {
+  0%, 100% { 
+    color: #e74c3c; 
+    opacity: 1; 
+  }
+  50% { 
+    color: #c0392b; 
+    opacity: 0.6; 
+  }
+}
+
+.timer-warning {
+  animation: timer-warning-blink 1s ease-in-out infinite;
+  font-weight: bold;
+}

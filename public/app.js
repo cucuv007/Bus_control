@@ -10,6 +10,8 @@ const meta = document.getElementById('meta');
 // Timer elements
 const timerContainer = document.getElementById('timerContainer');
 const timerDisplay = document.getElementById('timerDisplay');
+const timerPrevTime = document.getElementById('timerPrevTime');
+const timerNextTime = document.getElementById('timerNextTime');
 const timerHatAdi = document.getElementById('timerHatAdi');
 const timerPlaka = document.getElementById('timerPlaka');
 const timerTarife = document.getElementById('timerTarife');
@@ -686,6 +688,9 @@ async function updateTimer(tableName, hareket) {
         timerHareket.textContent = hareket || '-';
         timerContainer.style.display = 'block';
         
+        // Önceki ve sonraki saatleri getir
+        await updatePrevNextTimes(tableName, tarifeSaati, hareket);
+        
         // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
         scrollToTimerRow(result.nextBus);
       }
@@ -693,6 +698,13 @@ async function updateTimer(tableName, hareket) {
       const mins = Math.floor(remainingSeconds / 60);
       const secs = remainingSeconds % 60;
       timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      
+      // 2 dakikadan az kaldıysa kırmızı yanıp sönsün
+      if (remainingSeconds <= 120 && remainingSeconds > 0) {
+        timerDisplay.classList.add('timer-warning');
+      } else {
+        timerDisplay.classList.remove('timer-warning');
+      }
       
       if (remainingSeconds <= 0) {
         lastBusTime = null;
@@ -1127,6 +1139,9 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         timerHareket.textContent = busHareket || '-';
         timerContainer.style.display = 'block';
         
+        // Önceki ve sonraki saatleri getir (hatAdi kullanarak tablo ismini belirle)
+        await updatePrevNextTimes(hatAdi, tarifeSaati, busHareket);
+        
         // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
         scrollToTimerRow(closestBus);
       }
@@ -1134,6 +1149,13 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       const mins = Math.floor(remainingSeconds / 60);
       const secs = remainingSeconds % 60;
       timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      
+      // 2 dakikadan az kaldıysa kırmızı yanıp sönsün
+      if (remainingSeconds <= 120 && remainingSeconds > 0) {
+        timerDisplay.classList.add('timer-warning');
+      } else {
+        timerDisplay.classList.remove('timer-warning');
+      }
       
       if (remainingSeconds <= 0) {
         lastBusTime = null;
@@ -1195,6 +1217,42 @@ function scrollToTimerRow(busData) {
     }
   } catch (err) {
     console.error('Scroll to timer row error:', err);
+  }
+}
+
+async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
+  try {
+    const res = await fetch('/api/get-prev-next-times', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableName: tableName,
+        currentTarifeSaati: currentTarifeSaati,
+        hareket: hareket
+      })
+    });
+    
+    const result = await res.json();
+    
+    if (result.success) {
+      // Önceki saat (sol taraf)
+      if (result.prevTime) {
+        timerPrevTime.textContent = result.prevTime.substring(0, 5); // HH:MM formatı
+      } else {
+        timerPrevTime.textContent = '--:--';
+      }
+      
+      // Sonraki saat (sağ taraf)
+      if (result.nextTime) {
+        timerNextTime.textContent = result.nextTime.substring(0, 5); // HH:MM formatı
+      } else {
+        timerNextTime.textContent = '--:--';
+      }
+    }
+  } catch (err) {
+    console.error('Update prev/next times error:', err);
+    timerPrevTime.textContent = '--:--';
+    timerNextTime.textContent = '--:--';
   }
 }
 
