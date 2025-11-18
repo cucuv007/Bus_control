@@ -1190,6 +1190,14 @@ async function loadFilteredTables() {
       tableSelect.innerHTML = '<option value="">-- Tablo Bulunamadı --</option>';
       theadRow.innerHTML = "<th>Boş</th>";
       tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+      
+      // Hat seçimi bölümünü temizle ve gizle
+      availableHats = [];
+      hatCheckboxList.innerHTML = '';
+      hatSelectionContainer.style.display = 'none';
+      selectedHats = [];
+      selectAllHats.checked = false;
+      
       closeTimer();
       return;
     }
