@@ -93,6 +93,7 @@ let currentBusIndex = 0; // Slide index
 let slideInterval = null; // Slide timer
 let highlightedRows = []; // Vurgulanan satırlar (çoklu otobüs için)
 let timerClosedManually = false; // Timer kullanıcı tarafından manuel kapatıldı mı?
+let highlightTimeout = null; // Renklendirme timeout'u (2 saniye için)
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -153,12 +154,19 @@ if (scrollToTopBtn) {
 
 if (scrollToTimerRowBtn) {
   scrollToTimerRowBtn.addEventListener('click', () => {
-    // Önce tüm vurguları temizle
-    clearAllHighlights();
+    // Toggle mantığı: Eğer zaten vurgulanmışsa temizle, değilse vurgula
+    if (highlightedRows.length > 0) {
+      // Vurgular zaten var, kaldır
+      clearAllHighlights();
+      return;
+    }
     
     // Timer satırına git ve renklendir
     if (currentTimerRow) {
-      // Tek otobüs varsa
+      // Tek otobüs varsa - kalan süreyi hesapla
+      const remainingSeconds = currentTimerRow.remainingSeconds || 0;
+      const highlightColor = remainingSeconds <= 120 ? '#ffcccc' : '#fff3cd'; // Kırmızı veya sarı
+      
       const rows = tbody.querySelectorAll('tr');
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -177,15 +185,19 @@ if (scrollToTimerRowBtn) {
         });
         
         if (matchesTarife && matchesHareket) {
-          // Sarı vurgu (tek otobüs için)
-          row.style.backgroundColor = '#fff3cd';
+          row.style.backgroundColor = highlightColor;
           highlightedRows.push(row);
           row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
           break;
         }
       }
+      
     } else if (currentBusList && currentBusList.length > 0) {
-      // Çoklu otobüs varsa, tüm otobüsleri renklendir
+      // Çoklu otobüs varsa - ilk otobüsün kalan süresine göre renk seç
+      const firstBus = currentBusList[0];
+      const remainingSeconds = firstBus.remainingSeconds || 0;
+      const highlightColor = remainingSeconds <= 120 ? '#ffcccc' : '#d4edda'; // Kırmızı veya yeşil
+      
       const rows = tbody.querySelectorAll('tr');
       
       currentBusList.forEach(bus => {
@@ -211,8 +223,7 @@ if (scrollToTimerRowBtn) {
           
           // Hat adı, tarife saati ve hareket ile eşleşme kontrolü
           if (matchesHatAdi && matchesHareket && matchesTarifeSaati) {
-            // Yeşil vurgu (çoklu otobüs için)
-            row.style.backgroundColor = '#d4edda';
+            row.style.backgroundColor = highlightColor;
             highlightedRows.push(row);
             
             // İlk eşleşen satıra scroll et
@@ -223,6 +234,7 @@ if (scrollToTimerRowBtn) {
           }
         }
       });
+      
     } else {
       // Timer verisi yoksa en yukarı çık
       window.scrollTo({ top: 0, behavior: 'smooth' });
