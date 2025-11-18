@@ -1222,6 +1222,12 @@ function scrollToTimerRow(busData) {
 
 async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
   try {
+    console.log('📞 Calling get-prev-next-times API:', {
+      tableName,
+      currentTarifeSaati,
+      hareket
+    });
+
     const res = await fetch('/api/get-prev-next-times', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1233,6 +1239,8 @@ async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
     });
     
     const result = await res.json();
+    
+    console.log('📥 Prev/Next Times Response:', result);
     
     if (result.success) {
       // Önceki saat (sol taraf)

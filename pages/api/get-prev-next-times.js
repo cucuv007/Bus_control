@@ -18,6 +18,12 @@ export default async function handler(req, res) {
   try {
     const { tableName, currentTarifeSaati, hareket } = req.body;
 
+    console.log('🔍 Get Prev/Next Times - Params:', {
+      tableName,
+      currentTarifeSaati,
+      hareket
+    });
+
     if (!tableName || !currentTarifeSaati) {
       return res.status(400).json({
         success: false,
@@ -28,8 +34,7 @@ export default async function handler(req, res) {
     client = await pool.connect();
 
     // Hareket filtresini hazırla
-    const hareketFilter = hareket ? `AND "Hareket" = $3` : '';
-    const params = hareket ? [currentTarifeSaati, currentTarifeSaati, hareket] : [currentTarifeSaati, currentTarifeSaati];
+    const hareketFilter = hareket ? `AND "Hareket" = $2` : '';
 
     // Önceki saat (currentTarifeSaati'nden küçük en büyük)
     const prevQuery = `
@@ -39,21 +44,30 @@ export default async function handler(req, res) {
       ORDER BY "Tarife_Saati" DESC
       LIMIT 1;
     `;
+    const prevParams = hareket ? [currentTarifeSaati, hareket] : [currentTarifeSaati];
 
     // Sonraki saat (currentTarifeSaati'nden büyük en küçük)
     const nextQuery = `
       SELECT "Tarife_Saati"
       FROM public."${tableName}"
-      WHERE "Tarife_Saati" > $2 ${hareketFilter}
+      WHERE "Tarife_Saati" > $1 ${hareketFilter}
       ORDER BY "Tarife_Saati" ASC
       LIMIT 1;
     `;
+    const nextParams = hareket ? [currentTarifeSaati, hareket] : [currentTarifeSaati];
 
-    const prevResult = await client.query(prevQuery, params);
-    const nextResult = await client.query(nextQuery, params);
+    const prevResult = await client.query(prevQuery, prevParams);
+    const nextResult = await client.query(nextQuery, nextParams);
 
     const prevTime = prevResult.rows.length > 0 ? prevResult.rows[0].Tarife_Saati : null;
     const nextTime = nextResult.rows.length > 0 ? nextResult.rows[0].Tarife_Saati : null;
+
+    console.log('✅ Prev/Next Times Result:', {
+      prevTime,
+      nextTime,
+      prevRowCount: prevResult.rows.length,
+      nextRowCount: nextResult.rows.length
+    });
 
     return res.status(200).json({
       success: true,
