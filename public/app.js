@@ -945,14 +945,8 @@ function updateReopenTimerIcon() {
 }
 
 function updateScrollButtons() {
-  if (!scrollToTimerRowBtn) return;
-  
-  // Timer satırına git butonu - sadece timer aktifken ve currentTimerRow varsa görünür
-  if (timerInterval && (currentTimerRow || (currentBusList && currentBusList.length > 0))) {
-    scrollToTimerRowBtn.style.display = 'flex';
-  } else {
-    scrollToTimerRowBtn.style.display = 'none';
-  }
+  // Scroll butonları her zaman görünür kalacak
+  // Timer aktif olduğunda timer satırına scroll, değilse sayfanın başına scroll yapar
 }
 
 // ==================== DEPOLAMA FILTER FUNCTIONS ====================
