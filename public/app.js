@@ -677,7 +677,7 @@ async function updateTimer(tableName, hareket) {
     }
     
     if (result.success && result.nextBus) {
-      const { hatAdi, plaka, tarife, tarifeSaati, hareket, remainingSeconds } = result.nextBus;
+      const { hatAdi, plaka, tarife, tarifeSaati, hareket, calismaZamani, remainingSeconds } = result.nextBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
@@ -688,8 +688,8 @@ async function updateTimer(tableName, hareket) {
         timerHareket.textContent = hareket || '-';
         timerContainer.style.display = 'block';
         
-        // Önceki ve sonraki saatleri getir
-        await updatePrevNextTimes(tableName, tarifeSaati, hareket);
+        // Önceki ve sonraki saatleri getir (calismaZamani filtresi ile)
+        await updatePrevNextTimes(tableName, tarifeSaati, hareket, calismaZamani);
         
         // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
         scrollToTimerRow(result.nextBus);
@@ -1128,7 +1128,7 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     }
     
     if (closestBus) {
-      const { tableName, hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, remainingSeconds } = closestBus;
+      const { tableName, hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, calismaZamani, remainingSeconds } = closestBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
@@ -1139,8 +1139,8 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         timerHareket.textContent = busHareket || '-';
         timerContainer.style.display = 'block';
         
-        // Önceki ve sonraki saatleri getir (tableName kullan - API'den gelen gerçek tablo ismi)
-        await updatePrevNextTimes(tableName, tarifeSaati, busHareket);
+        // Önceki ve sonraki saatleri getir (tableName, hareket ve calismaZamani ile filtrele)
+        await updatePrevNextTimes(tableName, tarifeSaati, busHareket, calismaZamani);
         
         // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
         scrollToTimerRow(closestBus);
@@ -1220,12 +1220,13 @@ function scrollToTimerRow(busData) {
   }
 }
 
-async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
+async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket, calismaZamani) {
   try {
     console.log('📞 Calling get-prev-next-times API:');
     console.log('  tableName:', tableName);
     console.log('  currentTarifeSaati:', currentTarifeSaati);
     console.log('  hareket:', hareket);
+    console.log('  calismaZamani:', calismaZamani);
     console.log('  type:', typeof currentTarifeSaati);
 
     const res = await fetch('/api/get-prev-next-times', {
@@ -1234,7 +1235,8 @@ async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
       body: JSON.stringify({
         tableName: tableName,
         currentTarifeSaati: currentTarifeSaati,
-        hareket: hareket
+        hareket: hareket,
+        calismaZamani: calismaZamani
       })
     });
     

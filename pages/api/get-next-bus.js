@@ -174,6 +174,7 @@ export default async function handler(req, res) {
           plaka: plaka,
           tarife: row.Tarife || '-',
           hareket: row.Hareket || '-',
+          calismaZamani: row.Çalışma_Zamanı || null, // Çalışma zamanı bilgisi
           tarifeSaati: tarifeSaati,
           remainingSeconds: Math.max(0, remainingSeconds)
         };
