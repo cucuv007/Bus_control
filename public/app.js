@@ -1135,12 +1135,16 @@ async function loadFilteredTables() {
     }
     
     const result = await res.json();
-    let tables = result.tables || [];
+    let allTables = result.tables || []; // Tüm gerçek tablolar
+    let tables = allTables;
     
-    // Depolama filtresi varsa, filteredHats'ı kullan
-    // Filteredeki hatlar zaten /api/get-depolama-hats'tan geldi
+    // Depolama filtresi varsa, sadece hem filteredHats'ta hem de gerçek tablolarda olan hatları göster
     if (filteredHats.length > 0) {
-      tables = filteredHats; // Direkt filteredHats kullan
+      tables = allTables.filter(table => filteredHats.includes(table));
+      console.log('🔍 Filtreleme sonucu:');
+      console.log('  - Depolamadan gelen hatlar:', filteredHats);
+      console.log('  - Gerçek tablolar:', allTables);
+      console.log('  - Kesişim (gösterilecek):', tables);
     }
     
     if (tables.length === 0) {
@@ -1168,7 +1172,6 @@ async function loadFilteredTables() {
     // Mevcut hatları kaydet ve checkbox listesini oluştur
     availableHats = tables;
     console.log('🎯 Hat Seçimi için oluşturulan hatlar:', availableHats);
-    console.log('📦 Depolama filtresinden gelen hatlar:', filteredHats);
     renderHatCheckboxes();
     
   } catch (err) {
