@@ -153,6 +153,14 @@ if (scrollToTopBtn) {
 
 if (scrollToTimerRowBtn) {
   scrollToTimerRowBtn.addEventListener('click', () => {
+    // Dinamik takip açık mı kontrol et
+    if (!dynamicTrackingCheckbox.checked) {
+      // Dinamik takip kapalıysa en yukarı çık
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Dinamik takip açıksa timer satırına git
     if (currentTimerRow) {
       scrollToTimerRow(currentTimerRow);
     } else if (currentBusList && currentBusList.length > 0) {
