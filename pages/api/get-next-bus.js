@@ -115,8 +115,9 @@ export default async function handler(req, res) {
     const [hours, minutes, seconds] = currentTime.split(':').map(Number);
     const currentTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
 
-    let nextBus = null;
+    let nextBusList = []; // Aynı saatteki tüm otobüsleri sakla
     let minDifference = Infinity;
+    let closestTime = null;
 
     // Tüm satırları kontrol et ve en yakın saati bul
     const todayTable = getTodayTableName();
@@ -147,54 +148,56 @@ export default async function handler(req, res) {
         remainingSeconds += 24 * 3600;
       }
 
-      // En yakın gelecek saati bul (0'dan büyük olmalı)
-      if (remainingSeconds > 0 && remainingSeconds < minDifference) {
-        minDifference = remainingSeconds;
-        
-        console.log('🎯 New closest bus candidate:', {
-          tarifeSaati,
-          tarife: row.Tarife,
-          hareket: row.Hareket,
-          remainingSeconds,
-          minDifference
-        });
-        
-        // Plaka bilgisini bugünün gün tablosundan al
-        let plaka = 'Belediye Aracı';
-        if (row.Tarife) {
-          const plakaFromToday = await getPlakaForTarife(tableName, row.Tarife, todayTable);
-          if (plakaFromToday) {
-            plaka = plakaFromToday;
-          }
+      // En yakın gelecek saati bul
+      if (remainingSeconds > 0) {
+        if (remainingSeconds < minDifference) {
+          // Yeni en yakın saat bulundu, listeyi sıfırla
+          minDifference = remainingSeconds;
+          closestTime = tarifeSaati;
+          nextBusList = [];
+          
+          console.log('🎯 New closest time found:', {
+            tarifeSaati,
+            remainingSeconds
+          });
         }
         
-        nextBus = {
-          tableName: tableName, // Hangi tablodan geldiğini ekle
-          hatAdi: row.Hat_Adi || '-',
-          plaka: plaka,
-          tarife: row.Tarife || '-',
-          hareket: row.Hareket || '-',
-          calismaZamani: row.Çalışma_Zamanı || null, // Çalışma zamanı bilgisi
-          tarifeSaati: tarifeSaati,
-          remainingSeconds: Math.max(0, remainingSeconds)
-        };
-        
-        console.log('✅ Next bus found:', {
-          tableName,
-          tarifeSaati,
-          tarife: row.Tarife,
-          hareket: row.Hareket,
-          remainingSeconds
-        });
+        // Aynı saatteki tüm otobüsleri ekle
+        if (remainingSeconds === minDifference) {
+          // Plaka bilgisini bugünün gün tablosundan al
+          let plaka = 'Belediye Aracı';
+          if (row.Tarife) {
+            const plakaFromToday = await getPlakaForTarife(tableName, row.Tarife, todayTable);
+            if (plakaFromToday) {
+              plaka = plakaFromToday;
+            }
+          }
+          
+          nextBusList.push({
+            tableName: tableName,
+            hatAdi: row.Hat_Adi || '-',
+            plaka: plaka,
+            tarife: row.Tarife || '-',
+            hareket: row.Hareket || '-',
+            calismaZamani: row.Çalışma_Zamanı || null,
+            tarifeSaati: tarifeSaati,
+            remainingSeconds: Math.max(0, remainingSeconds)
+          });
+        }
       }
     }
 
+    if (nextBusList.length > 0) {
+      console.log(`✅ Found ${nextBusList.length} bus(es) at ${closestTime}`);
+    }
+
     return res.status(200).json({
-      success: !!nextBus,
-      nextBus: nextBus,
+      success: nextBusList.length > 0,
+      nextBusList: nextBusList, // Tüm otobüsleri döndür
+      nextBus: nextBusList[0] || null, // Geriye uyumluluk için ilkini de gönder
       receivedTime: currentTime,
       hareket: hareket || 'Tümü',
-      message: nextBus ? 'Sonraki otobüs bulundu' : 'Otobüs bulunamadı'
+      message: nextBusList.length > 0 ? `${nextBusList.length} otobüs bulundu` : 'Otobüs bulunamadı'
     });
 
   } catch (err) {

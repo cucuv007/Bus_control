@@ -83,6 +83,10 @@ let filteredHats = []; // Depolama'dan gelen hat listesi
 let availableHats = []; // Mevcut tüm hatlar (dropdown'daki)
 let selectedHats = []; // Timer takibi için seçilen hatlar
 let currentTimerRow = null; // Timer'da gösterilen satır verisi
+let currentBusList = []; // Aynı saatteki tüm otobüsler
+let currentBusIndex = 0; // Slide index
+let slideInterval = null; // Slide timer
+let highlightedRows = []; // Vurgulanan satırlar (çoklu otobüs için)
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -686,30 +690,49 @@ async function updateTimer(tableName, hareket) {
       return;
     }
     
-    if (result.success && result.nextBus) {
-      const { hatAdi, plaka, tarife, tarifeSaati, hareket, calismaZamani, remainingSeconds } = result.nextBus;
+    if (result.success && result.nextBusList && result.nextBusList.length > 0) {
+      const busList = result.nextBusList;
+      const currentBus = busList[currentBusIndex % busList.length];
+      const { hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, calismaZamani, remainingSeconds } = currentBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
-        currentTimerRow = result.nextBus; // Timer'daki satırı kaydet
-        timerHatAdi.textContent = hatAdi || '-';
-        timerPlaka.textContent = plaka || '-';
-        timerTarife.textContent = tarife || '-';
-        timerHareket.textContent = hareket || '-';
+        currentBusList = busList;
+        currentBusIndex = 0;
+        
+        // Slide mekanizması: birden fazla otobüs varsa başlat
+        if (busList.length > 1) {
+          startSlideShow();
+        } else {
+          stopSlideShow();
+        }
+        
         timerContainer.style.display = 'block';
-        
-        // Önceki ve sonraki saatleri getir (calismaZamani filtresi ile)
-        await updatePrevNextTimes(tableName, tarifeSaati, hareket, calismaZamani);
-        
-        // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
-        scrollToTimerRow(result.nextBus);
+      }
+      
+      // Timer bilgilerini güncelle (slide'daki mevcut otobüs)
+      timerHatAdi.textContent = currentBus.hatAdi || '-';
+      timerPlaka.textContent = currentBus.plaka || '-';
+      timerTarife.textContent = currentBus.tarife || '-';
+      timerHareket.textContent = currentBus.hareket || '-';
+      
+      // Önceki ve sonraki saatleri getir
+      await updatePrevNextTimes(tableName, tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
+      
+      // Dinamik takip ve renk kodlama
+      if (busList.length > 1) {
+        // Çoklu otobüs: yeşil (>2dk) veya kırmızı (<2dk) highlight
+        highlightMultipleBuses(busList, remainingSeconds);
+      } else {
+        // Tek otobüs: normal sarı highlight
+        scrollToTimerRow(currentBus);
       }
       
       const mins = Math.floor(remainingSeconds / 60);
       const secs = remainingSeconds % 60;
       timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
       
-      // 2 dakikadan az kaldıysa kırmızı yanıp sönsün
+      // 2 dakikadan az kaldıysa kırmızı warning
       if (remainingSeconds <= 120 && remainingSeconds > 0) {
         timerDisplay.classList.add('timer-warning');
       } else {
@@ -719,6 +742,8 @@ async function updateTimer(tableName, hareket) {
       if (remainingSeconds <= 0) {
         lastBusTime = null;
         currentTimerRow = null;
+        currentBusList = [];
+        stopSlideShow();
       }
     } else {
       closeTimer();
@@ -733,13 +758,100 @@ function closeTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+  stopSlideShow();
   timerContainer.style.display = 'none';
   lastBusTime = null;
   currentTimerRow = null;
+  currentBusList = [];
+  currentBusIndex = 0;
   
   // Tablo vurgusunu kaldır
+  clearAllHighlights();
+}
+
+function startSlideShow() {
+  stopSlideShow(); // Önce mevcut slide'ı durdur
+  
+  slideInterval = setInterval(() => {
+    if (currentBusList.length <= 1) {
+      stopSlideShow();
+      return;
+    }
+    
+    currentBusIndex = (currentBusIndex + 1) % currentBusList.length;
+    const currentBus = currentBusList[currentBusIndex];
+    
+    // Timer bilgilerini güncelle
+    timerHatAdi.textContent = currentBus.hatAdi || '-';
+    timerPlaka.textContent = currentBus.plaka || '-';
+    timerTarife.textContent = currentBus.tarife || '-';
+    timerHareket.textContent = currentBus.hareket || '-';
+    
+    // Önceki/sonraki saatleri güncelle
+    updatePrevNextTimes(currentBus.tableName, currentBus.tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
+  }, 2000); // 2 saniyede bir değişir
+}
+
+function stopSlideShow() {
+  if (slideInterval) {
+    clearInterval(slideInterval);
+    slideInterval = null;
+  }
+}
+
+function highlightMultipleBuses(busList, remainingSeconds) {
+  // Önce tüm vurguları temizle
+  clearAllHighlights();
+  
+  // Dinamik takip kapalıysa çık
+  if (!dynamicTrackingCheckbox.checked) {
+    return;
+  }
+  
+  const highlightColor = remainingSeconds <= 120 ? '#ffcccc' : '#d4edda'; // Kırmızı veya yeşil
+  const rows = tbody.querySelectorAll('tr');
+  
+  // Her otobüsü tabloda bul ve vurgula
+  busList.forEach(bus => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const cells = row.querySelectorAll('td');
+      
+      let matchesTarife = false;
+      let matchesHareket = false;
+      let matchesTarifeSaati = false;
+      
+      cells.forEach(cell => {
+        const text = cell.textContent.trim();
+        if (text === bus.tarife) matchesTarife = true;
+        if (text === bus.hareket) matchesHareket = true;
+        if (text === bus.tarifeSaati || text === bus.tarifeSaati.substring(0, 5)) {
+          matchesTarifeSaati = true;
+        }
+      });
+      
+      if (matchesTarife && matchesHareket && matchesTarifeSaati) {
+        row.style.backgroundColor = highlightColor;
+        highlightedRows.push(row);
+        
+        // İlk eşleşen satıra scroll et
+        if (highlightedRows.length === 1) {
+          row.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+        }
+        break;
+      }
+    }
+  });
+}
+
+function clearAllHighlights() {
   const rows = tbody.querySelectorAll('tr');
   rows.forEach(r => r.style.backgroundColor = '');
+  highlightedRows = [];
 }
 
 // ==================== DEPOLAMA FILTER FUNCTIONS ====================
@@ -1111,10 +1223,10 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}:${seconds}`;
     
-    let closestBus = null;
+    let allBusesList = [];
     let minRemaining = Infinity;
     
-    // Tüm seçili hatlardan en yakın otobüsü bul
+    // Tüm seçili hatlardan otobüsleri topla
     for (const tableName of hatList) {
       const res = await fetch('/api/get-next-bus', {
         method: 'POST',
@@ -1122,45 +1234,66 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         body: JSON.stringify({ 
           tableName: tableName,
           currentTime: currentTime,
-          hareket: hareket // Hareket filtresini gönder (null ise tümü)
+          hareket: hareket
         })
       });
       
       const result = await res.json();
       
-      if (result.success && result.nextBus) {
-        const { remainingSeconds } = result.nextBus;
-        if (remainingSeconds < minRemaining) {
-          minRemaining = remainingSeconds;
-          closestBus = result.nextBus;
-        }
+      if (result.success && result.nextBusList) {
+        // Her hattan gelen tüm otobüsleri ekle
+        result.nextBusList.forEach(bus => {
+          if (bus.remainingSeconds < minRemaining) {
+            minRemaining = bus.remainingSeconds;
+          }
+          allBusesList.push(bus);
+        });
       }
     }
     
-    if (closestBus) {
-      const { tableName, hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, calismaZamani, remainingSeconds } = closestBus;
+    // En yakın zamandaki tüm otobüsleri filtrele
+    const closestBuses = allBusesList.filter(bus => bus.remainingSeconds === minRemaining);
+    
+    if (closestBuses.length > 0) {
+      const currentBus = closestBuses[currentBusIndex % closestBuses.length];
+      const { tableName, hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, calismaZamani, remainingSeconds } = currentBus;
       
       if (lastBusTime !== tarifeSaati) {
         lastBusTime = tarifeSaati;
-        currentTimerRow = closestBus; // Timer'daki satırı kaydet
-        timerHatAdi.textContent = hatAdi || '-';
-        timerPlaka.textContent = plaka || '-';
-        timerTarife.textContent = tarife || '-';
-        timerHareket.textContent = busHareket || '-';
+        currentBusList = closestBuses;
+        currentBusIndex = 0;
+        
+        // Slide mekanizması
+        if (closestBuses.length > 1) {
+          startSlideShow();
+        } else {
+          stopSlideShow();
+        }
+        
         timerContainer.style.display = 'block';
-        
-        // Önceki ve sonraki saatleri getir (tableName, hareket ve calismaZamani ile filtrele)
-        await updatePrevNextTimes(tableName, tarifeSaati, busHareket, calismaZamani);
-        
-        // Dinamik takip aktifse, tabloda bu satırı bul ve scroll et
-        scrollToTimerRow(closestBus);
+      }
+      
+      // Timer bilgilerini güncelle
+      timerHatAdi.textContent = currentBus.hatAdi || '-';
+      timerPlaka.textContent = currentBus.plaka || '-';
+      timerTarife.textContent = currentBus.tarife || '-';
+      timerHareket.textContent = currentBus.hareket || '-';
+      
+      // Önceki ve sonraki saatleri getir
+      await updatePrevNextTimes(currentBus.tableName, currentBus.tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
+      
+      // Dinamik takip ve renk kodlama
+      if (closestBuses.length > 1) {
+        highlightMultipleBuses(closestBuses, remainingSeconds);
+      } else {
+        scrollToTimerRow(currentBus);
       }
       
       const mins = Math.floor(remainingSeconds / 60);
       const secs = remainingSeconds % 60;
       timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
       
-      // 2 dakikadan az kaldıysa kırmızı yanıp sönsün
+      // 2 dakikadan az kaldıysa kırmızı warning
       if (remainingSeconds <= 120 && remainingSeconds > 0) {
         timerDisplay.classList.add('timer-warning');
       } else {
@@ -1170,6 +1303,8 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       if (remainingSeconds <= 0) {
         lastBusTime = null;
         currentTimerRow = null;
+        currentBusList = [];
+        stopSlideShow();
       }
     } else {
       closeTimer();
@@ -1185,6 +1320,9 @@ function scrollToTimerRow(busData) {
     return;
   }
   
+  // Önce tüm vurguları temizle
+  clearAllHighlights();
+  
   try {
     const rows = tbody.querySelectorAll('tr');
     
@@ -1199,7 +1337,7 @@ function scrollToTimerRow(busData) {
       
       cells.forEach(cell => {
         const text = cell.textContent.trim();
-        if (text === busData.tarifeSaati) {
+        if (text === busData.tarifeSaati || text === busData.tarifeSaati.substring(0, 5)) {
           matchesTarife = true;
         }
         if (text === busData.hareket) {
@@ -1207,15 +1345,13 @@ function scrollToTimerRow(busData) {
         }
       });
       
-      // Eşleşen satır bulundu
+      // Eşleşen satır bulundu (tek otobüs - sarı highlight)
       if (matchesTarife && matchesHareket) {
-        // Eski vurgulamayı kaldır
-        rows.forEach(r => r.style.backgroundColor = '');
+        // Sarı vurgu (tek otobüs için)
+        row.style.backgroundColor = '#fff3cd';
+        highlightedRows.push(row);
         
-        // Yeni satırı vurgula
-        row.style.backgroundColor = '#fff3cd'; // Sarı vurgu
-        
-        // Satırı görünür alana kaydır (yukarıda olacak şekilde)
+        // Satırı görünür alana kaydır
         row.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start',
