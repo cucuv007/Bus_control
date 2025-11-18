@@ -121,6 +121,14 @@ export default async function handler(req, res) {
     // Tüm satırları kontrol et ve en yakın saati bul
     const todayTable = getTodayTableName();
     
+    console.log('🔍 Searching next bus for:', {
+      tableName,
+      currentTime,
+      currentTimeInSeconds,
+      hareket: hareket || 'Tümü',
+      totalRows: data.length
+    });
+    
     for (const row of data) {
       const tarifeSaati = row.Tarife_Saati; // Format: "HH:MM" veya "HH:MM:SS"
 
@@ -143,6 +151,14 @@ export default async function handler(req, res) {
       if (remainingSeconds > 0 && remainingSeconds < minDifference) {
         minDifference = remainingSeconds;
         
+        console.log('🎯 New closest bus candidate:', {
+          tarifeSaati,
+          tarife: row.Tarife,
+          hareket: row.Hareket,
+          remainingSeconds,
+          minDifference
+        });
+        
         // Plaka bilgisini bugünün gün tablosundan al
         let plaka = 'Belediye Aracı';
         if (row.Tarife) {
@@ -161,6 +177,14 @@ export default async function handler(req, res) {
           tarifeSaati: tarifeSaati,
           remainingSeconds: Math.max(0, remainingSeconds)
         };
+        
+        console.log('✅ Next bus found:', {
+          tableName,
+          tarifeSaati,
+          tarife: row.Tarife,
+          hareket: row.Hareket,
+          remainingSeconds
+        });
       }
     }
 
