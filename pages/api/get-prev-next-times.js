@@ -37,11 +37,12 @@ export default async function handler(req, res) {
     const hareketFilter = hareket ? `AND "Hareket" = $2` : '';
 
     // Önceki saat (currentTarifeSaati'nden küçük en büyük)
+    // CAST ile TIME tipine çevirip doğru karşılaştırma yapıyoruz
     const prevQuery = `
       SELECT "Tarife_Saati"
       FROM public."${tableName}"
-      WHERE "Tarife_Saati" < $1 ${hareketFilter}
-      ORDER BY "Tarife_Saati" DESC
+      WHERE CAST("Tarife_Saati" AS TIME) < CAST($1 AS TIME) ${hareketFilter}
+      ORDER BY CAST("Tarife_Saati" AS TIME) DESC
       LIMIT 1;
     `;
     const prevParams = hareket ? [currentTarifeSaati, hareket] : [currentTarifeSaati];
@@ -50,11 +51,16 @@ export default async function handler(req, res) {
     const nextQuery = `
       SELECT "Tarife_Saati"
       FROM public."${tableName}"
-      WHERE "Tarife_Saati" > $1 ${hareketFilter}
-      ORDER BY "Tarife_Saati" ASC
+      WHERE CAST("Tarife_Saati" AS TIME) > CAST($1 AS TIME) ${hareketFilter}
+      ORDER BY CAST("Tarife_Saati" AS TIME) ASC
       LIMIT 1;
     `;
     const nextParams = hareket ? [currentTarifeSaati, hareket] : [currentTarifeSaati];
+
+    console.log('📝 Executing queries with params:', {
+      prevParams,
+      nextParams
+    });
 
     const prevResult = await client.query(prevQuery, prevParams);
     const nextResult = await client.query(nextQuery, nextParams);
