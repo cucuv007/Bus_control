@@ -565,6 +565,16 @@ function handleHareketChange() {
     // Tek hat seçiliyse normal yükle
     loadTableData();
   }
+  
+  // Timer aktifse yeniden başlat (yeni hareket filtresi ile)
+  if (timerInterval) {
+    if (selectedHats.length > 0) {
+      // Çoklu hat timer zaten handleApplyHatSelection içinde başlatılıyor
+    } else if (currentTable) {
+      // Tek hat timer'ı yeniden başlat
+      startTimer(currentTable, currentHareket);
+    }
+  }
 }
 
 async function loadTableData() {
