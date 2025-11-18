@@ -1166,6 +1166,8 @@ async function loadFilteredTables() {
     
     // Mevcut hatları kaydet ve checkbox listesini oluştur
     availableHats = tables;
+    console.log('🎯 Hat Seçimi için oluşturulan hatlar:', availableHats);
+    console.log('📦 Depolama filtresinden gelen hatlar:', filteredHats);
     renderHatCheckboxes();
     
   } catch (err) {
