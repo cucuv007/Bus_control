@@ -571,9 +571,25 @@ tbody tr:last-child td {
 
 .timer-warning {
   animation: timer-warning-pulse 0.8s ease-in-out infinite !important;
-  font-size: 72px !important;
-  padding: 20px 30px !important;
-  border-radius: 15px !important;
+  font-size: 56px !important;
+  padding: 16px 24px !important;
+  border-radius: 12px !important;
   font-weight: bold !important;
-  letter-spacing: 3px !important;
+  letter-spacing: 2px !important;
+}
+
+@media (max-width: 768px) {
+  .timer-warning {
+    font-size: 42px !important;
+    padding: 12px 20px !important;
+    letter-spacing: 1px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .timer-warning {
+    font-size: 36px !important;
+    padding: 10px 16px !important;
+    letter-spacing: 0.5px !important;
+  }
 }

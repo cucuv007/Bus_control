@@ -153,18 +153,59 @@ if (scrollToTopBtn) {
 
 if (scrollToTimerRowBtn) {
   scrollToTimerRowBtn.addEventListener('click', () => {
-    // Dinamik takip açık mı kontrol et
-    if (!dynamicTrackingCheckbox.checked) {
-      // Dinamik takip kapalıysa en yukarı çık
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    
-    // Dinamik takip açıksa timer satırına git
+    // Timer satırına git (dinamik takip kontrolü yapmadan)
     if (currentTimerRow) {
-      scrollToTimerRow(currentTimerRow);
+      // Tek otobüs varsa, direkt scroll yap (dinamik takip kontrolsuz)
+      const rows = tbody.querySelectorAll('tr');
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.querySelectorAll('td');
+        let matchesTarife = false;
+        let matchesHareket = false;
+        
+        cells.forEach(cell => {
+          const text = cell.textContent.trim();
+          if (text === currentTimerRow.tarifeSaati || text === currentTimerRow.tarifeSaati.substring(0, 5)) {
+            matchesTarife = true;
+          }
+          if (text === currentTimerRow.hareket) {
+            matchesHareket = true;
+          }
+        });
+        
+        if (matchesTarife && matchesHareket) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+          break;
+        }
+      }
     } else if (currentBusList && currentBusList.length > 0) {
-      scrollToTimerRow(currentBusList[currentBusIndex]);
+      // Çoklu otobüs varsa, mevcut index'teki otobüsün satırına git
+      const busData = currentBusList[currentBusIndex];
+      const rows = tbody.querySelectorAll('tr');
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.querySelectorAll('td');
+        let matchesTarife = false;
+        let matchesHareket = false;
+        
+        cells.forEach(cell => {
+          const text = cell.textContent.trim();
+          if (text === busData.tarifeSaati || text === busData.tarifeSaati.substring(0, 5)) {
+            matchesTarife = true;
+          }
+          if (text === busData.hareket) {
+            matchesHareket = true;
+          }
+        });
+        
+        if (matchesTarife && matchesHareket) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+          break;
+        }
+      }
+    } else {
+      // Timer verisi yoksa en yukarı çık
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
 }
