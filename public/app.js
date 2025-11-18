@@ -20,6 +20,10 @@ const closeTimerBtn = document.getElementById('closeTimerBtn');
 const dynamicTrackingCheckbox = document.getElementById('dynamicTrackingCheckbox');
 const reopenTimerIcon = document.getElementById('reopenTimerIcon');
 
+// Scroll buttons
+const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+const scrollToTimerRowBtn = document.getElementById('scrollToTimerRowBtn');
+
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
 const closeModal = document.getElementById('closeModal');
@@ -139,6 +143,23 @@ dynamicTrackingCheckbox.addEventListener('change', (e) => {
 });
 
 manualFileInput.addEventListener('change', handleManualFileSelect);
+
+// Scroll butonları
+if (scrollToTopBtn) {
+  scrollToTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+if (scrollToTimerRowBtn) {
+  scrollToTimerRowBtn.addEventListener('click', () => {
+    if (currentTimerRow) {
+      scrollToTimerRow(currentTimerRow);
+    } else if (currentBusList && currentBusList.length > 0) {
+      scrollToTimerRow(currentBusList[currentBusIndex]);
+    }
+  });
+}
 
 // Search and Select All
 fileSearchInput.addEventListener('input', handleFileSearch);
@@ -649,7 +670,7 @@ async function loadTableData() {
     });
     
     let filterMsg = currentHareket ? ` (${currentHareket})` : '';
-    statusEl.innerHTML = `Başarılı: ${data.length} kayıt alındı${filterMsg} <span id="reopenTimerIcon" style="cursor: pointer; font-size: 18px; margin-left: 10px; opacity: 0.3;" title="Timer'ı Tekrar Aç">⏱️</span>`;
+    statusEl.innerHTML = `Başarılı: ${data.length} kayıt alındı${filterMsg} <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
     meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
     
     // Kronometre ikonunu referans al
@@ -684,6 +705,7 @@ async function loadTableData() {
 function startTimer(tableName, hareket) {
   timerClosedManually = false; // Timer açılıyor, flagı sıfırla
   updateReopenTimerIcon(); // İkonu pasif yap
+  updateScrollButtons(); // Scroll butonlarını güncelle
   
   if (timerInterval) {
     clearInterval(timerInterval);
@@ -808,6 +830,7 @@ function closeTimer() {
   requestAnimationFrame(() => {
     clearAllHighlights();
     updateReopenTimerIcon();
+    updateScrollButtons(); // Scroll butonlarını güncelle
   });
 }
 
@@ -918,6 +941,17 @@ function updateReopenTimerIcon() {
     icon.style.opacity = '0.3';
     icon.style.cursor = 'not-allowed';
     icon.title = timerClosedManually ? 'Veri yok' : 'Timer zaten açık';
+  }
+}
+
+function updateScrollButtons() {
+  if (!scrollToTimerRowBtn) return;
+  
+  // Timer satırına git butonu - sadece timer aktifken ve currentTimerRow varsa görünür
+  if (timerInterval && (currentTimerRow || (currentBusList && currentBusList.length > 0))) {
+    scrollToTimerRowBtn.style.display = 'flex';
+  } else {
+    scrollToTimerRowBtn.style.display = 'none';
   }
 }
 
@@ -1253,7 +1287,7 @@ async function handleApplyHatSelection() {
     });
     
     let filterMsg = currentHareket ? ` (${currentHareket})` : '';
-    statusEl.innerHTML = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg} <span id="reopenTimerIcon" style="cursor: pointer; font-size: 18px; margin-left: 10px; opacity: 0.3;" title="Timer'ı Tekrar Aç">⏱️</span>`;
+    statusEl.innerHTML = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg} <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
     meta.textContent = `Hatlar: ${selectedHats.join(', ')} | Toplam sütun: ${allKeys.length}`;
     
     // Kronometre ikonunu referans al
@@ -1289,6 +1323,7 @@ async function handleApplyHatSelection() {
 async function startMultipleHatsTimer(hatList, hareket) {
   timerClosedManually = false; // Timer açılıyor, flagı sıfırla
   updateReopenTimerIcon(); // İkonu pasif yap
+  updateScrollButtons(); // Scroll butonlarını güncelle
   
   if (timerInterval) {
     clearInterval(timerInterval);

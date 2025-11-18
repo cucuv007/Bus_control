@@ -275,6 +275,27 @@ tbody tr:last-child td {
   right: 20px;
   z-index: 1000;
   animation: slideIn 0.3s ease-out;
+  transition: top 0.3s ease, transform 0.3s ease;
+}
+
+/* Mobil ve tablet için ortalama */
+@media (max-width: 768px) {
+  .timer-container {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    animation: fadeIn 0.3s ease-out;
+  }
+}
+
+@media (max-width: 480px) {
+  .timer-container {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+  }
 }
 
 @keyframes slideIn {
@@ -286,6 +307,86 @@ tbody tr:last-child td {
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Scroll butonları */
+.scroll-buttons {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 999;
+}
+
+.scroll-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scroll-btn:hover {
+  transform: scale(1.2);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.scroll-btn:active {
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .scroll-buttons {
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .scroll-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+}
+
+/* Kronometre ikonu hover efekti */
+.reopen-timer-icon {
+  cursor: pointer;
+  font-size: 18px;
+  margin-left: 10px;
+  opacity: 0.3;
+  display: inline-block;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reopen-timer-icon:hover {
+  transform: scale(1.3);
+  opacity: 1;
+}
+
+.reopen-timer-icon:active {
+  transform: scale(1.15);
 }
 
 .timer-card {
@@ -410,9 +511,7 @@ tbody tr:last-child td {
   }
 
   .timer-container {
-    top: 10px;
-    right: 10px;
-    left: 10px;
+    /* Mobilde zaten ortalandı, tekrar ayarlama */
   }
 
   .timer-card {
