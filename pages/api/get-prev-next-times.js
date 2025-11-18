@@ -59,11 +59,18 @@ export default async function handler(req, res) {
 
     console.log('📝 Executing queries with params:', {
       prevParams,
-      nextParams
+      nextParams,
+      prevQuery,
+      nextQuery
     });
 
     const prevResult = await client.query(prevQuery, prevParams);
     const nextResult = await client.query(nextQuery, nextParams);
+
+    console.log('📊 Raw SQL Results:', {
+      prevRows: prevResult.rows,
+      nextRows: nextResult.rows
+    });
 
     const prevTime = prevResult.rows.length > 0 ? prevResult.rows[0].Tarife_Saati : null;
     const nextTime = nextResult.rows.length > 0 ? nextResult.rows[0].Tarife_Saati : null;

@@ -1225,7 +1225,9 @@ async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
     console.log('📞 Calling get-prev-next-times API:', {
       tableName,
       currentTarifeSaati,
-      hareket
+      hareket,
+      type: typeof currentTarifeSaati,
+      length: currentTarifeSaati?.length
     });
 
     const res = await fetch('/api/get-prev-next-times', {
@@ -1241,6 +1243,7 @@ async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket) {
     const result = await res.json();
     
     console.log('📥 Prev/Next Times Response:', result);
+    console.log('🔍 Expected: prev should be < ' + currentTarifeSaati + ', next should be > ' + currentTarifeSaati);
     
     if (result.success) {
       // Önceki saat (sol taraf)
