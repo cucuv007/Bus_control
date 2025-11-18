@@ -96,7 +96,17 @@ refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
-closeTimerBtn.addEventListener('click', closeTimer, { once: false });
+
+// Global close timer handler (HTML onclick için)
+window.handleCloseTimer = function(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }
+  closeTimer();
+  return false;
+};
 
 methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
 methodManualBtn.addEventListener('click', () => selectMethod('manual'));
