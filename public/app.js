@@ -645,8 +645,11 @@ async function loadTableData() {
     // Kronometre ikonunu referans al
     const reopenIcon = document.getElementById('reopenTimerIcon');
     if (reopenIcon) {
-      reopenIcon.addEventListener('click', () => {
-        if (reopenIcon.style.opacity !== '0.3') {
+      // Event listener'ın birden fazla kez eklenmesini engelle
+      const iconClone = reopenIcon.cloneNode(true);
+      reopenIcon.parentNode.replaceChild(iconClone, reopenIcon);
+      iconClone.addEventListener('click', () => {
+        if (iconClone.style.opacity !== '0.3') {
           timerClosedManually = false;
           startTimer(currentTable, currentHareket);
         }
@@ -1240,8 +1243,11 @@ async function handleApplyHatSelection() {
     // Kronometre ikonunu referans al
     const reopenIcon = document.getElementById('reopenTimerIcon');
     if (reopenIcon) {
-      reopenIcon.addEventListener('click', () => {
-        if (reopenIcon.style.opacity !== '0.3') {
+      // Event listener'ın birden fazla kez eklenmesini engelle
+      const iconClone = reopenIcon.cloneNode(true);
+      reopenIcon.parentNode.replaceChild(iconClone, reopenIcon);
+      iconClone.addEventListener('click', () => {
+        if (iconClone.style.opacity !== '0.3') {
           timerClosedManually = false;
           startMultipleHatsTimer(selectedHats, currentHareket);
         }
