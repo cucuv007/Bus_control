@@ -96,7 +96,11 @@ refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
-closeTimerBtn.addEventListener('click', closeTimer);
+closeTimerBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  closeTimer();
+});
 
 methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
 methodManualBtn.addEventListener('click', () => selectMethod('manual'));
@@ -782,18 +786,21 @@ function closeTimer() {
     timerInterval = null;
   }
   stopSlideShow();
-  timerContainer.style.display = 'none';
+  
   lastBusTime = null;
   currentTimerRow = null;
   currentBusList = [];
   currentBusIndex = 0;
   timerClosedManually = true; // Manuel kapatıldı olarak işaretle
   
-  // Tablo vurgusunu kaldır
+  // Tablo vurgusunu kaldır (önce)
   clearAllHighlights();
   
+  // Timer container'ı gizle (sonra)
+  timerContainer.style.display = 'none';
+  
   // Kronometre ikonunu aktif et (eğer varsa)
-  updateReopenTimerIcon();
+  setTimeout(() => updateReopenTimerIcon(), 0);
 }
 
 function startSlideShow() {
@@ -880,9 +887,27 @@ function highlightMultipleBuses(busList, remainingSeconds) {
 }
 
 function clearAllHighlights() {
-  const rows = tbody.querySelectorAll('tr');
-  rows.forEach(r => r.style.backgroundColor = '');
-  highlightedRows = [];
+  try {
+    if (highlightedRows && highlightedRows.length > 0) {
+      highlightedRows.forEach(r => {
+        if (r && r.style) {
+          r.style.backgroundColor = '';
+        }
+      });
+    }
+    highlightedRows = [];
+    
+    // Ek güvenlik için tüm satırları temizle
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(r => {
+      if (r && r.style) {
+        r.style.backgroundColor = '';
+      }
+    });
+  } catch (err) {
+    console.error('Clear highlights error:', err);
+    highlightedRows = [];
+  }
 }
 
 function updateReopenTimerIcon() {
