@@ -96,11 +96,7 @@ refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
-closeTimerBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  closeTimer();
-});
+closeTimerBtn.addEventListener('click', closeTimer, { once: false });
 
 methodAutoBtn.addEventListener('click', () => selectMethod('auto'));
 methodManualBtn.addEventListener('click', () => selectMethod('manual'));
@@ -781,26 +777,28 @@ async function updateTimer(tableName, hareket) {
 }
 
 function closeTimer() {
+  // Timer'ı hemen gizle
+  timerContainer.style.display = 'none';
+  
+  // Interval'ları temizle
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
   }
   stopSlideShow();
   
+  // State'leri sıfırla
   lastBusTime = null;
   currentTimerRow = null;
   currentBusList = [];
   currentBusIndex = 0;
-  timerClosedManually = true; // Manuel kapatıldı olarak işaretle
+  timerClosedManually = true;
   
-  // Tablo vurgusunu kaldır (önce)
-  clearAllHighlights();
-  
-  // Timer container'ı gizle (sonra)
-  timerContainer.style.display = 'none';
-  
-  // Kronometre ikonunu aktif et (eğer varsa)
-  setTimeout(() => updateReopenTimerIcon(), 0);
+  // Arka planda temizlik işlemlerini yap
+  requestAnimationFrame(() => {
+    clearAllHighlights();
+    updateReopenTimerIcon();
+  });
 }
 
 function startSlideShow() {
@@ -887,27 +885,10 @@ function highlightMultipleBuses(busList, remainingSeconds) {
 }
 
 function clearAllHighlights() {
-  try {
-    if (highlightedRows && highlightedRows.length > 0) {
-      highlightedRows.forEach(r => {
-        if (r && r.style) {
-          r.style.backgroundColor = '';
-        }
-      });
-    }
-    highlightedRows = [];
-    
-    // Ek güvenlik için tüm satırları temizle
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(r => {
-      if (r && r.style) {
-        r.style.backgroundColor = '';
-      }
-    });
-  } catch (err) {
-    console.error('Clear highlights error:', err);
-    highlightedRows = [];
-  }
+  highlightedRows.forEach(row => {
+    if (row && row.style) row.style.backgroundColor = '';
+  });
+  highlightedRows = [];
 }
 
 function updateReopenTimerIcon() {
