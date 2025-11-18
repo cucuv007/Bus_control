@@ -817,12 +817,15 @@ function highlightMultipleBuses(busList, remainingSeconds) {
       const row = rows[i];
       const cells = row.querySelectorAll('td');
       
+      let matchesHatAdi = false;
       let matchesTarife = false;
       let matchesHareket = false;
       let matchesTarifeSaati = false;
       
       cells.forEach(cell => {
         const text = cell.textContent.trim();
+        // Hat Adı kontrolü (tableName veya hatAdi)
+        if (text === bus.tableName || text === bus.hatAdi) matchesHatAdi = true;
         if (text === bus.tarife) matchesTarife = true;
         if (text === bus.hareket) matchesHareket = true;
         if (text === bus.tarifeSaati || text === bus.tarifeSaati.substring(0, 5)) {
@@ -830,7 +833,8 @@ function highlightMultipleBuses(busList, remainingSeconds) {
         }
       });
       
-      if (matchesTarife && matchesHareket && matchesTarifeSaati) {
+      // Hat adı, tarife saati ve hareket ile eşleşme kontrolü
+      if (matchesHatAdi && matchesHareket && matchesTarifeSaati) {
         row.style.backgroundColor = highlightColor;
         highlightedRows.push(row);
         
