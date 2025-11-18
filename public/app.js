@@ -157,7 +157,10 @@ if (scrollToTimerRowBtn) {
     // Toggle mantığı: Eğer zaten vurgulanmışsa temizle, değilse vurgula
     if (highlightedRows.length > 0) {
       // Vurgular zaten var, kaldır
-      clearAllHighlights();
+      highlightedRows.forEach(row => {
+        if (row && row.style) row.style.backgroundColor = '';
+      });
+      highlightedRows = []; // Manuel temizlik
       return;
     }
     
@@ -1002,7 +1005,7 @@ function clearAllHighlights() {
   highlightedRows.forEach(row => {
     if (row && row.style) row.style.backgroundColor = '';
   });
-  highlightedRows = [];
+  // highlightedRows = []; // Array temizlenmedi - toggle için gerekli
 }
 
 function updateReopenTimerIcon() {
@@ -1102,6 +1105,9 @@ function updateSelectAllDepolama() {
 async function handleApplyDepolamaFilter() {
   const checkboxes = document.querySelectorAll('.depolama-checkbox:checked');
   selectedDepolamaTables = Array.from(checkboxes).map(cb => cb.value);
+  
+  // Timer'ı kapat (filtre değiştiği için)
+  closeTimer();
   
   if (selectedDepolamaTables.length === 0) {
     // Depolama filtresi yok, tüm tabloları göster
