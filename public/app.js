@@ -1312,6 +1312,8 @@ async function handleApplyHatSelection() {
     const allData = [];
     
     for (const tableName of selectedHats) {
+      console.log(`📡 API çağrısı yapılıyor: /api/get-table-data → tableName: "${tableName}"`);
+      
       const res = await fetch('/api/get-table-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1321,7 +1323,15 @@ async function handleApplyHatSelection() {
         })
       });
       
+      console.log(`📡 API yanıt kodu: ${res.status} (${tableName})`);
+      
+      if (!res.ok) {
+        console.error(`❌ API hatası (${tableName}): Status ${res.status}`);
+        continue; // Bu hatta hata var, diğerine geç
+      }
+      
       const result = await res.json();
+      console.log(`✅ API başarılı (${tableName}):`, result);
       
       if (result.success && result.data) {
         // Her satıra kaynak hat bilgisini ekle
