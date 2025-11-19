@@ -740,8 +740,11 @@ function openApprovalConfirmation(rowData, tableName) {
     hatAdi: rowData.Hat_Adi,
     calismaZamani: rowData.Çalışma_Zamanı || '',
     tarife: rowData.Tarife,
-    tarifeSaati: rowData.Tarife_Saati
+    tarifeSaati: rowData.Tarife_Saati,
+    hareket: rowData.Hareket || ''
   };
+  
+  console.log('🔍 Onay için seçilen satır:', pendingApprovalData);
   
   // Modal içeriğini doldur
   approvalHat.textContent = rowData.Hat_Adi;
