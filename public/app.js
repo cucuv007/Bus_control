@@ -783,11 +783,14 @@ async function handleRowApproval() {
     
     console.log('✅ Satır onaylandı:', result);
     
+    // Veriyi sakla (modal kapatılmadan önce)
+    const savedData = { ...pendingApprovalData };
+    
     // Modal'ı kapat
     closeApprovalConfirmation();
     
     // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
-    updateRowInTable(pendingApprovalData, result.approvalTime);
+    updateRowInTable(savedData, result.approvalTime);
     
     alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
     
