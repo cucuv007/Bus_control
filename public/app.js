@@ -786,16 +786,8 @@ async function handleRowApproval() {
     // Modal'ı kapat
     closeApprovalConfirmation();
     
-    // Tabloyu yenile - mevcut tablo ve hareket değerlerini kullan
-    if (currentTable) {
-      // Tek hat seçimi ise handleTableSelect kullan
-      if (selectedHats.length === 0) {
-        await handleTableSelect({ target: { value: currentTable } });
-      } else {
-        // Çoklu hat seçimi ise handleApplyHatSelection kullan
-        await handleApplyHatSelection();
-      }
-    }
+    // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
+    updateRowInTable(pendingApprovalData, result.approvalTime);
     
     alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
     
@@ -805,6 +797,80 @@ async function handleRowApproval() {
   } finally {
     confirmApprovalBtn.disabled = false;
     confirmApprovalBtn.textContent = '✅ Onayla';
+  }
+}
+
+function updateRowInTable(rowData, approvalTime) {
+  // Tablodaki tüm satırları kontrol et ve eşleşeni bul
+  const rows = tbody.querySelectorAll('tr');
+  const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
+  
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    let isMatch = true;
+    
+    // Satırın verilerini oku
+    const rowValues = {};
+    cells.forEach((cell, index) => {
+      rowValues[headers[index]] = cell.textContent;
+    });
+    
+    // Eşleşme kontrolü (Hat, Tarife, Tarife_Saati, Çalışma_Zamanı, Hareket)
+    if (rowData.hatAdi && rowValues['Hat_Adi'] !== rowData.hatAdi && rowValues['Hat'] !== rowData.hatAdi) {
+      isMatch = false;
+    }
+    if (rowData.tarife && rowValues['Tarife'] !== rowData.tarife) {
+      isMatch = false;
+    }
+    if (rowData.tarifeSaati && rowValues['Tarife_Saati'] !== rowData.tarifeSaati) {
+      isMatch = false;
+    }
+    if (rowData.calismaZamani && rowValues['Çalışma_Zamanı'] !== rowData.calismaZamani) {
+      isMatch = false;
+    }
+    if (rowData.hareket && rowValues['Hareket'] !== rowData.hareket) {
+      isMatch = false;
+    }
+    
+    // Eşleşen satırı bulduk
+    if (isMatch) {
+      // "Onaylanan" sütununu bul ve güncelle
+      const onaylananIndex = headers.indexOf('Onaylanan');
+      if (onaylananIndex !== -1 && cells[onaylananIndex]) {
+        cells[onaylananIndex].textContent = approvalTime;
+        
+        // Sadece Onaylanan hücresinin font rengini değiştir
+        const tarifeSaati = rowData.tarifeSaati;
+        const fontColor = getApprovalFontColor(approvalTime, tarifeSaati);
+        cells[onaylananIndex].style.color = fontColor;
+        cells[onaylananIndex].style.fontWeight = 'bold';
+        
+        console.log('✅ Satır tabloda güncellendi:', approvalTime);
+      }
+    }
+  });
+}
+
+function getApprovalFontColor(onaylananTime, tarifeSaati) {
+  if (!onaylananTime || !tarifeSaati) {
+    return 'black';
+  }
+  
+  // Saatleri dakikaya çevir (saniyeyi göz ardı et)
+  const timeToMinutes = (timeStr) => {
+    const parts = timeStr.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  };
+  
+  const onaylananMinutes = timeToMinutes(onaylananTime);
+  const tarifeMinutes = timeToMinutes(tarifeSaati);
+  
+  if (onaylananMinutes === tarifeMinutes) {
+    return 'green'; // Yeşil - Tam zamanında
+  } else if (onaylananMinutes < tarifeMinutes) {
+    return 'orange'; // Sarı/Turuncu - Erken
+  } else {
+    return 'red'; // Kırmızı - Geç
   }
 }
 
@@ -986,10 +1052,15 @@ async function loadTableData() {
         openApprovalConfirmation(row, currentTable);
       });
       
-      // Eğer "Onaylanan" sütunu varsa renk kodla
+      // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
       if (row.Onaylanan && row.Tarife_Saati) {
-        const approvedColor = getApprovalColor(row.Onaylanan, row.Tarife_Saati);
-        tr.style.backgroundColor = approvedColor;
+        const onaylananIndex = allKeys.indexOf('Onaylanan');
+        if (onaylananIndex !== -1) {
+          const onaylananCell = tr.children[onaylananIndex];
+          const fontColor = getApprovalFontColor(row.Onaylanan, row.Tarife_Saati);
+          onaylananCell.style.color = fontColor;
+          onaylananCell.style.fontWeight = 'bold';
+        }
       }
       
       tbody.appendChild(tr);
@@ -1675,10 +1746,15 @@ async function handleApplyHatSelection() {
         openApprovalConfirmation(row, originalTableName);
       });
       
-      // Eğer "Onaylanan" sütunu varsa renk kodla
+      // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
       if (row.Onaylanan && row.Tarife_Saati) {
-        const approvedColor = getApprovalColor(row.Onaylanan, row.Tarife_Saati);
-        tr.style.backgroundColor = approvedColor;
+        const onaylananIndex = allKeys.indexOf('Onaylanan');
+        if (onaylananIndex !== -1) {
+          const onaylananCell = tr.children[onaylananIndex];
+          const fontColor = getApprovalFontColor(row.Onaylanan, row.Tarife_Saati);
+          onaylananCell.style.color = fontColor;
+          onaylananCell.style.fontWeight = 'bold';
+        }
       }
       
       tbody.appendChild(tr);
