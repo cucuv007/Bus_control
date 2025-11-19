@@ -138,6 +138,18 @@
     <div id="selectStatus" class="info" style="display: none;"></div>
     </div>
 
+    <!-- Upload Progress -->
+    <div id="uploadProgressContainer" style="display: none; margin-top: 15px;">
+      <div style="margin-bottom: 8px; font-size: 14px; color: #666;">
+        <span id="uploadProgressText">0 / 0 dosya yüklendi</span>
+        <span id="uploadProgressPercent" style="float: right; font-weight: bold;">0%</span>
+      </div>
+      <div style="width: 100%; background: #f0f0f0; border-radius: 10px; overflow: hidden; height: 24px;">
+        <div id="uploadProgressBar" style="width: 0%; background: linear-gradient(90deg, #4CAF50, #45a049); height: 100%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;"></div>
+      </div>
+      <div id="uploadCurrentFile" style="margin-top: 8px; font-size: 13px; color: #555; font-style: italic;"></div>
+    </div>
+
     <div id="uploadStatus" class="info" style="display: none;"></div>
     </div>
     <div class="modal-footer">

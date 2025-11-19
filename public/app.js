@@ -547,6 +547,32 @@ function updateSelectionStatus() {
   }
 }
 
+function updateUploadProgress(current, total, currentFileName = '') {
+  const progressContainer = document.getElementById('uploadProgressContainer');
+  const progressText = document.getElementById('uploadProgressText');
+  const progressPercent = document.getElementById('uploadProgressPercent');
+  const progressBar = document.getElementById('uploadProgressBar');
+  const currentFileEl = document.getElementById('uploadCurrentFile');
+  
+  // Yüzdelik hesapla
+  const percentage = Math.round((current / total) * 100);
+  
+  // Göstergeleri güncelle
+  progressContainer.style.display = 'block';
+  progressText.textContent = `${current} / ${total} dosya yüklendi`;
+  progressPercent.textContent = `${percentage}%`;
+  progressBar.style.width = `${percentage}%`;
+  progressBar.textContent = `${percentage}%`;
+  
+  // Mevcut dosya adını göster
+  if (currentFileName) {
+    currentFileEl.textContent = `📤 ${currentFileName}`;
+    currentFileEl.style.display = 'block';
+  } else {
+    currentFileEl.style.display = 'none';
+  }
+}
+
 async function handleUpload() {
   if (selectedFiles.length === 0) {
     uploadStatus.innerHTML = '❌ Hata: Dosya seçiniz';
@@ -555,17 +581,23 @@ async function handleUpload() {
   }
   
   confirmUploadBtn.disabled = true;
-  uploadStatus.innerHTML = '⏳ Dosyalar yükleniyor...';
-  uploadStatus.style.display = 'block';
+  uploadStatus.style.display = 'none';
   
+  const totalFiles = selectedFiles.length;
+  let completedCount = 0;
   let successCount = 0;
   let errorCount = 0;
   const errors = [];
   
+  // İlk progress göster
+  updateUploadProgress(0, totalFiles);
+  
   for (const file of selectedFiles) {
     try {
       console.log(`\n📤 UPLOADING: ${file.name}`);
-      uploadStatus.innerHTML = `⏳ ${file.name} yükleniyor...`;
+      
+      // Mevcut dosya yüklenmeye başladı
+      updateUploadProgress(completedCount, totalFiles, file.name);
       
       let fileData;
       
@@ -638,25 +670,36 @@ async function handleUpload() {
       }
       
       console.log(`✅ ${file.name} başarıyla yüklendi`);
-      uploadStatus.innerHTML = `✅ ${file.name} başarıyla yüklendi!`;
       successCount++;
+      completedCount++;
+      
+      // Progress güncelle
+      updateUploadProgress(completedCount, totalFiles);
       
     } catch (err) {
       console.error(`❌ ${file.name} yüklenemedi:`, err);
       console.error('Error details:', err.message, err.stack);
       errors.push(`${file.name}: ${err.message}`);
       errorCount++;
-      uploadStatus.innerHTML = `❌ ${file.name}: ${err.message}`;
+      completedCount++;
+      
+      // Progress güncelle (hatalı da olsa tamamlandı sayılır)
+      updateUploadProgress(completedCount, totalFiles);
     }
   }
   
-  let message = `✅ ${successCount} dosya yüklendi`;
+  // Progress bar'ı gizle
+  document.getElementById('uploadProgressContainer').style.display = 'none';
+  
+  // Özet mesajı göster
+  let message = `✅ ${successCount} dosya başarıyla yüklendi`;
   if (errorCount > 0) {
-    message += `<br>❌ ${errorCount} dosya hata:<br>`;
+    message += `<br>❌ ${errorCount} dosya hata aldı:<br>`;
     message += errors.map(e => `• ${e}`).join('<br>');
   }
   
   uploadStatus.innerHTML = message;
+  uploadStatus.style.display = 'block';
   confirmUploadBtn.disabled = false;
   
   // Başarılı yüklemeler varsa tabloları yenile
