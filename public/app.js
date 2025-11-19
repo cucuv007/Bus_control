@@ -95,6 +95,7 @@ let highlightedRows = []; // Vurgulanan satırlar (çoklu otobüs için)
 let timerClosedManually = false; // Timer kullanıcı tarafından manuel kapatıldı mı?
 let highlightTimeout = null; // Renklendirme timeout'u (2 saniye için)
 let isManualHighlight = false; // Scroll butonu ile manuel renklendirme yapıldı mı?
+let isClosingTimer = false; // Timer kapatılıyor mu? (debounce için)
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -105,12 +106,34 @@ cancelBtn.addEventListener('click', closeUploadModal);
 
 // Global close timer handler (HTML onclick için)
 window.handleCloseTimer = function(e) {
+  // Debounce: Eğer zaten kapatılıyorsa, tekrar çağrıyı engelle
+  if (isClosingTimer) {
+    console.log('⚠️ Timer zaten kapatılıyor, işlem atlandı');
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+    return false;
+  }
+  
+  isClosingTimer = true;
+  console.log('🔒 Timer kapatılıyor...');
+  
   if (e) {
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
   }
+  
   closeTimer();
+  
+  // 500ms sonra flag'ı sıfırla (yeni kapatılma işlemine izin ver)
+  setTimeout(() => {
+    isClosingTimer = false;
+    console.log('✅ Timer kapatılma işlemi tamamlandı');
+  }, 500);
+  
   return false;
 };
 
@@ -923,14 +946,31 @@ async function updateTimer(tableName, hareket) {
 }
 
 function closeTimer() {
+  console.log('🗑️ closeTimer() çağrıldı');
+  
   // Timer'ı hemen gizle
   timerContainer.style.display = 'none';
   
-  // Interval'ları temizle
+  // TÜM interval'ları ve timeout'ları temizle
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
+    console.log('  ✔️ timerInterval temizlendi');
   }
+  
+  if (slideInterval) {
+    clearInterval(slideInterval);
+    slideInterval = null;
+    console.log('  ✔️ slideInterval temizlendi');
+  }
+  
+  if (highlightTimeout) {
+    clearTimeout(highlightTimeout);
+    highlightTimeout = null;
+    console.log('  ✔️ highlightTimeout temizlendi');
+  }
+  
+  // stopSlideShow'u çağır (ek güvenlik)
   stopSlideShow();
   
   // State'leri sıfırla
@@ -940,12 +980,16 @@ function closeTimer() {
   currentBusIndex = 0;
   timerClosedManually = true;
   
-  // Arka planda temizlik işlemlerini yap
-  requestAnimationFrame(() => {
+  // Vurguları temizle (sadece timer vurguları)
+  if (!isManualHighlight) {
     clearAllHighlights();
-    updateReopenTimerIcon();
-    updateScrollButtons(); // Scroll butonlarını güncelle
-  });
+  }
+  
+  // UI güncellemelerini hemen yap (requestAnimationFrame yerine)
+  updateReopenTimerIcon();
+  updateScrollButtons();
+  
+  console.log('✅ closeTimer() tamamlandı');
 }
 
 function startSlideShow() {
