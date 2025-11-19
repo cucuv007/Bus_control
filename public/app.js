@@ -24,6 +24,15 @@ const reopenTimerIcon = document.getElementById('reopenTimerIcon');
 const scrollToTopBtn = document.getElementById('scrollToTopBtn');
 const scrollToTimerRowBtn = document.getElementById('scrollToTimerRowBtn');
 
+// Approval modal elements
+const approvalModal = document.getElementById('approvalModal');
+const closeApprovalModal = document.getElementById('closeApprovalModal');
+const approvalHat = document.getElementById('approvalHat');
+const approvalTarife = document.getElementById('approvalTarife');
+const approvalTime = document.getElementById('approvalTime');
+const cancelApprovalBtn = document.getElementById('cancelApprovalBtn');
+const confirmApprovalBtn = document.getElementById('confirmApprovalBtn');
+
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
 const closeModal = document.getElementById('closeModal');
@@ -96,6 +105,7 @@ let timerClosedManually = false; // Timer kullanıcı tarafından manuel kapatı
 let highlightTimeout = null; // Renklendirme timeout'u (2 saniye için)
 let isManualHighlight = false; // Scroll butonu ile manuel renklendirme yapıldı mı?
 let isClosingTimer = false; // Timer kapatılıyor mu? (debounce için)
+let pendingApprovalData = null; // Onay bekleyen satır verisi
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -103,6 +113,11 @@ refreshBtn.addEventListener('click', handleRefresh);
 approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
+
+// Approval modal listeners
+closeApprovalModal.addEventListener('click', closeApprovalConfirmation);
+cancelApprovalBtn.addEventListener('click', closeApprovalConfirmation);
+confirmApprovalBtn.addEventListener('click', handleRowApproval);
 
 // Global close timer handler (HTML onclick için)
 window.handleCloseTimer = function(e) {
@@ -711,6 +726,105 @@ async function handleUpload() {
   }
 }
 
+// ==================== ROW APPROVAL FUNCTIONS ====================
+function openApprovalConfirmation(rowData, tableName) {
+  // Gerekli alanları kontrol et
+  if (!rowData.Hat_Adi || !rowData.Tarife || !rowData.Tarife_Saati) {
+    alert('❌ Bu satır için gerekli bilgiler eksik (Hat_Adi, Tarife, Tarife_Saati)');
+    return;
+  }
+  
+  // Veriyi sakla
+  pendingApprovalData = {
+    tableName,
+    hatAdi: rowData.Hat_Adi,
+    calismaZamani: rowData.Çalışma_Zamanı || '',
+    tarife: rowData.Tarife,
+    tarifeSaati: rowData.Tarife_Saati
+  };
+  
+  // Modal içeriğini doldur
+  approvalHat.textContent = rowData.Hat_Adi;
+  approvalTarife.textContent = rowData.Tarife;
+  approvalTime.textContent = rowData.Tarife_Saati;
+  
+  // Modal'ı aç
+  approvalModal.style.display = 'flex';
+}
+
+function closeApprovalConfirmation() {
+  approvalModal.style.display = 'none';
+  pendingApprovalData = null;
+}
+
+async function handleRowApproval() {
+  if (!pendingApprovalData) {
+    return;
+  }
+  
+  confirmApprovalBtn.disabled = true;
+  confirmApprovalBtn.textContent = '⏳ Onaylanıyor...';
+  
+  try {
+    const res = await fetch('/api/approve-row', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingApprovalData)
+    });
+    
+    const result = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(result.error || 'Onaylama hatası');
+    }
+    
+    console.log('✅ Satır onaylandı:', result);
+    
+    // Modal'ı kapat
+    closeApprovalConfirmation();
+    
+    // Tabloyu yenile
+    const currentTableValue = tableSelect.value;
+    const currentHareketValue = movementSelect.value;
+    
+    if (currentTableValue) {
+      await handleTableSelect({ target: { value: currentTableValue } });
+    }
+    
+    alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
+    
+  } catch (err) {
+    console.error('Onaylama hatası:', err);
+    alert(`❌ Hata: ${err.message}`);
+  } finally {
+    confirmApprovalBtn.disabled = false;
+    confirmApprovalBtn.textContent = '✅ Onayla';
+  }
+}
+
+function getApprovalColor(onaylananTime, tarifeSaati) {
+  if (!onaylananTime || !tarifeSaati) {
+    return 'transparent';
+  }
+  
+  // Saatleri dakikaya çevir (saniyeyi göz ardı et)
+  const timeToMinutes = (timeStr) => {
+    const parts = timeStr.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  };
+  
+  const onaylananMinutes = timeToMinutes(onaylananTime);
+  const tarifeMinutes = timeToMinutes(tarifeSaati);
+  
+  if (onaylananMinutes === tarifeMinutes) {
+    return '#d4edda'; // Yeşil - Tam zamanında
+  } else if (onaylananMinutes < tarifeMinutes) {
+    return '#fff3cd'; // Sarı - Erken
+  } else {
+    return '#f8d7da'; // Kırmızı - Geç
+  }
+}
+
 // ==================== TABLE FUNCTIONS ====================
 async function handleRefresh() {
   if (isLoading) return;
@@ -859,6 +973,19 @@ async function loadTableData() {
         td.textContent = value !== null && value !== undefined ? value : '';
         tr.appendChild(td);
       });
+      
+      // Satıra tıklanınca onay popup'ı aç
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', () => {
+        openApprovalConfirmation(row, currentTable);
+      });
+      
+      // Eğer "Onaylanan" sütunu varsa renk kodla
+      if (row.Onaylanan && row.Tarife_Saati) {
+        const approvedColor = getApprovalColor(row.Onaylanan, row.Tarife_Saati);
+        tr.style.backgroundColor = approvedColor;
+      }
+      
       tbody.appendChild(tr);
     });
     
@@ -1534,6 +1661,20 @@ async function handleApplyHatSelection() {
         td.textContent = value !== null && value !== undefined ? value : '';
         tr.appendChild(td);
       });
+      
+      // Satıra tıklanınca onay popup'ı aç (orijinal tablo adını kullan)
+      const originalTableName = row._Hat || selectedHats[0];
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', () => {
+        openApprovalConfirmation(row, originalTableName);
+      });
+      
+      // Eğer "Onaylanan" sütunu varsa renk kodla
+      if (row.Onaylanan && row.Tarife_Saati) {
+        const approvedColor = getApprovalColor(row.Onaylanan, row.Tarife_Saati);
+        tr.style.backgroundColor = approvedColor;
+      }
+      
       tbody.appendChild(tr);
     });
     

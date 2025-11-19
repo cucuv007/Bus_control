@@ -68,6 +68,36 @@
     </div>
   </div>
 
+  <!-- Approval Confirmation Modal -->
+  <div id="approvalModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2>🚌 Çıkış Onayı</h2>
+        <button id="closeApprovalModal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <div style="margin-bottom: 10px;">
+            <strong>Hat:</strong> <span id="approvalHat" style="color: #2c3e50;">-</span>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong>Tarife:</strong> <span id="approvalTarife" style="color: #2c3e50;">-</span>
+          </div>
+          <div>
+            <strong>Çıkış Saati:</strong> <span id="approvalTime" style="color: #e74c3c; font-weight: bold;">-</span>
+          </div>
+        </div>
+        <p style="text-align: center; color: #7f8c8d; font-size: 14px;">
+          Bu çıkışı onaylamak istiyor musunuz?
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelApprovalBtn" class="btn btn-secondary">İptal</button>
+        <button id="confirmApprovalBtn" class="btn" style="background: #27ae60;">✅ Onayla</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Modal -->
   <div id="uploadModal" class="modal" style="display: none;">
     <div class="modal-content">
