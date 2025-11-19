@@ -128,11 +128,11 @@ window.handleCloseTimer = function(e) {
   
   closeTimer();
   
-  // 500ms sonra flag'ı sıfırla (yeni kapatılma işlemine izin ver)
+  // 300ms sonra flag'ı sıfırla (daha hızlı yeni kapatma izni)
   setTimeout(() => {
     isClosingTimer = false;
     console.log('✅ Timer kapatılma işlemi tamamlandı');
-  }, 500);
+  }, 300);
   
   return false;
 };
@@ -948,10 +948,19 @@ async function updateTimer(tableName, hareket) {
 function closeTimer() {
   console.log('🗑️ closeTimer() çağrıldı');
   
-  // Timer'ı hemen gizle
-  timerContainer.style.display = 'none';
+  // ÖNCE display:none yap - kullanıcıya hemen geri bildirim
+  if (timerContainer) {
+    timerContainer.style.display = 'none';
+  }
   
-  // TÜM interval'ları ve timeout'ları temizle
+  // State flag'lerini HEMEN sıfırla (yeniden açılmayı engelle)
+  timerClosedManually = true;
+  lastBusTime = null;
+  currentTimerRow = null;
+  currentBusList = [];
+  currentBusIndex = 0;
+  
+  // TÜM interval'ları ve timeout'ları agresif bir şekilde temizle
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -973,19 +982,12 @@ function closeTimer() {
   // stopSlideShow'u çağır (ek güvenlik)
   stopSlideShow();
   
-  // State'leri sıfırla
-  lastBusTime = null;
-  currentTimerRow = null;
-  currentBusList = [];
-  currentBusIndex = 0;
-  timerClosedManually = true;
-  
   // Vurguları temizle (sadece timer vurguları)
   if (!isManualHighlight) {
     clearAllHighlights();
   }
   
-  // UI güncellemelerini hemen yap (requestAnimationFrame yerine)
+  // UI güncellemelerini hemen yap
   updateReopenTimerIcon();
   updateScrollButtons();
   
