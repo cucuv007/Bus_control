@@ -1345,9 +1345,10 @@ async function handleApplyHatSelection() {
     }
     
     if (allData.length === 0) {
-      statusEl.innerHTML = '<span class="small">⚠️ Seçilen hatlarda veri bulunamadı.</span>';
+      statusEl.innerHTML = `<span class="small">⚠️ Seçilen hatlarda veri bulunamadı (Bugün: ${selectedHats[0] ? 'Çalışma zamanı filtresi uygulandı' : ''})</span>`;
       theadRow.innerHTML = "<th>Boş</th>";
-      tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
+      tbody.innerHTML = `<tr><td class="small">Seçilen hatlarda bugün için uygun veri yok.<br><small>Çalışma_Zamanı filtresi kontrol edilmelidir.</small></td></tr>`;
+      applyHatSelection.disabled = false;
       return;
     }
     
