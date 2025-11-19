@@ -203,7 +203,13 @@ if (scrollToTimerRowBtn) {
       
       const rows = tbody.querySelectorAll('tr');
       
-      currentBusList.forEach(bus => {
+      console.log(`🎯 Çoklu otobüs renklendirme: ${currentBusList.length} otobüs`);
+      
+      currentBusList.forEach((bus, busIndex) => {
+        console.log(`  🚌 ${busIndex + 1}. otobüs: ${bus.tableName || bus.hatAdi} - ${bus.tarifeSaati} - ${bus.hareket}`);
+        
+        let foundForThisBus = false;
+        
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           const cells = row.querySelectorAll('td');
@@ -215,8 +221,10 @@ if (scrollToTimerRowBtn) {
           
           cells.forEach(cell => {
             const text = cell.textContent.trim();
-            // Hat Adı kontrolü
-            if (text === bus.tableName || text === bus.hatAdi) matchesHatAdi = true;
+            // Hat Adı kontrolü - tableName veya hatAdi veya _Hat kolonuyla eşleşebilir
+            if (text === bus.tableName || text === bus.hatAdi || text === bus._Hat) {
+              matchesHatAdi = true;
+            }
             if (text === bus.tarife) matchesTarife = true;
             if (text === bus.hareket) matchesHareket = true;
             if (text === bus.tarifeSaati || text === bus.tarifeSaati.substring(0, 5)) {
@@ -228,15 +236,23 @@ if (scrollToTimerRowBtn) {
           if (matchesHatAdi && matchesHareket && matchesTarifeSaati) {
             row.style.backgroundColor = highlightColor;
             highlightedRows.push(row);
+            foundForThisBus = true;
+            console.log(`    ✅ Satır ${i + 1} renklendi`);
             
             // İlk eşleşen satıra scroll et
             if (highlightedRows.length === 1) {
               row.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
             }
-            break;
+            break; // Bu otobüs için ilk eşleşeni bulduk, bir sonraki otobüse geç
           }
         }
+        
+        if (!foundForThisBus) {
+          console.log(`    ❌ Satır bulunamadı`);
+        }
       });
+      
+      console.log(`✅ Toplam ${highlightedRows.length} satır renklendi`);
       
     } else {
       // Timer verisi yoksa en yukarı çık
