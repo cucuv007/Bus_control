@@ -858,6 +858,11 @@ function startTimer(tableName, hareket) {
 }
 
 async function updateTimer(tableName, hareket) {
+  // Manuel kapatıldıysa çık
+  if (timerClosedManually) {
+    return;
+  }
+  
   try {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
@@ -899,7 +904,10 @@ async function updateTimer(tableName, hareket) {
           stopSlideShow();
         }
         
-        timerContainer.style.display = 'block';
+        // Manuel kapatıldıysa timer'ı gösterme
+        if (!timerClosedManually) {
+          timerContainer.style.display = 'block';
+        }
       }
       
       // Timer bilgilerini güncelle (slide'daki mevcut otobüs)
@@ -1526,6 +1534,11 @@ async function startMultipleHatsTimer(hatList, hareket) {
 }
 
 async function updateMultipleHatsTimer(hatList, hareket) {
+  // Manuel kapatıldıysa çık
+  if (timerClosedManually) {
+    return;
+  }
+  
   try {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
@@ -1580,7 +1593,10 @@ async function updateMultipleHatsTimer(hatList, hareket) {
           stopSlideShow();
         }
         
-        timerContainer.style.display = 'block';
+        // Manuel kapatıldıysa timer'ı gösterme
+        if (!timerClosedManually) {
+          timerContainer.style.display = 'block';
+        }
       }
       
       // Timer bilgilerini güncelle
