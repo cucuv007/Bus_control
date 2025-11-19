@@ -88,20 +88,29 @@ export default async function handler(req, res) {
     }
 
     // Çalışma_Zamanı filtresi - bugüne uygun olanlar veya null olanlar
-    query = query.or(
-      allowedCalismaZamanlari.map(code => `Çalışma_Zamanı.eq.${code}`).join(',') + 
-      ',Çalışma_Zamanı.is.null'
-    );
+    // Hem boşluklu ("HI - HS") hem boşluksuz ("HI-HS") formatı destekle
+    const calismaZamaniConditions = [];
+    
+    allowedCalismaZamanlari.forEach(code => {
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code}`); // Boşluksuz: HI-HS
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code.replace('-', ' - ')}`); // Boşluklu: HI - HS
+    });
+    
+    calismaZamaniConditions.push('Çalışma_Zamanı.is.null');
+    
+    query = query.or(calismaZamaniConditions.join(','));
+    
+    console.log(`🔍 Çalışma_Zamanı filtreleri:`, allowedCalismaZamanlari);
 
     const { data, error } = await query;
 
     if (error) {
       console.error('Get table data error:', error);
+      console.log('📋 Hata detayı:', JSON.stringify(error, null, 2));
       return res.status(500).json({ error: 'Veri alınamadı: ' + error.message });
     }
 
     console.log(`✅ ${data.length} kayıt döndürüldü (Çalışma_Zamanı filtresi uygulandı)`);
-
     // Bugünün gün tablosundan plaka bilgilerini al
     const todayTable = getTodayTableName();
     console.log(`📅 Bugünün gün tablosu: ${todayTable}`);
