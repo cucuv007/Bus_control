@@ -440,8 +440,7 @@ function handleManualFileSelect(e) {
 // ==================== FILE LIST RENDER & FILTER ====================
 function renderFilesList(filterText = '') {
   filesList.innerHTML = '';
-  selectedFiles = [];
-  selectAllCheckbox.checked = false;
+  // selectedFiles'ı sıfırlamıyoruz - seçimleri koruyoruz!
   
   const filteredFiles = filterText 
     ? allFiles.filter(f => f.name.toLowerCase().includes(filterText.toLowerCase()))
@@ -458,12 +457,19 @@ function renderFilesList(filterText = '') {
     checkbox.dataset.name = file.name;
     checkbox.className = 'file-item-checkbox';
     
+    // Eğer bu dosya daha önce seçildiyse, checkbox'ı işaretle
+    const isSelected = selectedFiles.some(f => f.id === file.id);
+    checkbox.checked = isSelected;
+    
     checkbox.addEventListener('change', (e) => {
       if (e.target.checked) {
-        selectedFiles.push({
-          id: file.id,
-          name: file.name
-        });
+        // Eğer zaten seçili değilse ekle
+        if (!selectedFiles.some(f => f.id === file.id)) {
+          selectedFiles.push({
+            id: file.id,
+            name: file.name
+          });
+        }
       } else {
         selectedFiles = selectedFiles.filter(f => f.id !== file.id);
       }
@@ -489,15 +495,22 @@ function handleSelectAll(e) {
   const checkboxes = document.querySelectorAll('.file-item-checkbox');
   const isChecked = e.target.checked;
   
-  selectedFiles = [];
-  
   checkboxes.forEach(checkbox => {
     checkbox.checked = isChecked;
+    const fileId = checkbox.value;
+    const fileName = checkbox.dataset.name;
+    
     if (isChecked) {
-      selectedFiles.push({
-        id: checkbox.value,
-        name: checkbox.dataset.name
-      });
+      // Eğer zaten seçili değilse ekle
+      if (!selectedFiles.some(f => f.id === fileId)) {
+        selectedFiles.push({
+          id: fileId,
+          name: fileName
+        });
+      }
+    } else {
+      // Sadece görünen dosyaları seçimden kaldır
+      selectedFiles = selectedFiles.filter(f => f.id !== fileId);
     }
   });
   
