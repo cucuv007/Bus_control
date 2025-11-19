@@ -94,6 +94,7 @@ let slideInterval = null; // Slide timer
 let highlightedRows = []; // Vurgulanan satırlar (çoklu otobüs için)
 let timerClosedManually = false; // Timer kullanıcı tarafından manuel kapatıldı mı?
 let highlightTimeout = null; // Renklendirme timeout'u (2 saniye için)
+let isManualHighlight = false; // Scroll butonu ile manuel renklendirme yapıldı mı?
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -155,14 +156,27 @@ if (scrollToTopBtn) {
 if (scrollToTimerRowBtn) {
   scrollToTimerRowBtn.addEventListener('click', () => {
     // Toggle mantığı: Eğer zaten vurgulanmışsa temizle, değilse vurgula
-    if (highlightedRows.length > 0) {
-      // Vurgular zaten var, kaldır
+    if (highlightedRows.length > 0 && isManualHighlight) {
+      // Manuel vurgular zaten var, kaldır
       highlightedRows.forEach(row => {
         if (row && row.style) row.style.backgroundColor = '';
       });
-      highlightedRows = []; // Manuel temizlik
+      highlightedRows = [];
+      isManualHighlight = false; // Manuel vurgu kaldırıldı
+      console.log('❌ Manuel vurgu kaldırıldı');
       return;
     }
+    
+    // Timer vurguları varsa onları temizle
+    if (highlightedRows.length > 0 && !isManualHighlight) {
+      highlightedRows.forEach(row => {
+        if (row && row.style) row.style.backgroundColor = '';
+      });
+      highlightedRows = [];
+    }
+    
+    isManualHighlight = true; // Manuel vurgu başlatıldı
+    console.log('✅ Manuel vurgu aktif edildi');
     
     // Timer satırına git ve renklendir
     if (currentTimerRow) {
@@ -965,6 +979,11 @@ function stopSlideShow() {
 }
 
 function highlightMultipleBuses(busList, remainingSeconds) {
+  // Manuel vurgu aktifse timer vurgularını yapma
+  if (isManualHighlight) {
+    return;
+  }
+  
   // Önce tüm vurguları temizle
   clearAllHighlights();
   
