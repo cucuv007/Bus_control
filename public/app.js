@@ -783,12 +783,15 @@ async function handleRowApproval() {
     // Modal'ı kapat
     closeApprovalConfirmation();
     
-    // Tabloyu yenile
-    const currentTableValue = tableSelect.value;
-    const currentHareketValue = movementSelect.value;
-    
-    if (currentTableValue) {
-      await handleTableSelect({ target: { value: currentTableValue } });
+    // Tabloyu yenile - mevcut tablo ve hareket değerlerini kullan
+    if (currentTable) {
+      // Tek hat seçimi ise handleTableSelect kullan
+      if (selectedHats.length === 0) {
+        await handleTableSelect({ target: { value: currentTable } });
+      } else {
+        // Çoklu hat seçimi ise handleApplyHatSelection kullan
+        await handleApplyHatSelection();
+      }
     }
     
     alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
