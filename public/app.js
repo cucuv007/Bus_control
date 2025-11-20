@@ -1234,14 +1234,23 @@ function showSingleBusInfo(bus) {
 }
 
 function showMultipleBusesList(busList, currentRemainingSeconds) {
+  console.log('🚌 showMultipleBusesList çağrıldı, araç sayısı:', busList.length);
+  
   const singleBusInfo = document.getElementById('timerSingleBusInfo');
   const multipleBusList = document.getElementById('timerMultipleBusList');
   
-  if (!singleBusInfo || !multipleBusList) return;
+  console.log('📋 HTML elementleri:', { singleBusInfo, multipleBusList });
+  
+  if (!singleBusInfo || !multipleBusList) {
+    console.error('❌ Timer HTML elementleri bulunamadı!');
+    return;
+  }
   
   // Tek araç görünümünü gizle, liste görünümünü göster
   singleBusInfo.style.display = 'none';
   multipleBusList.style.display = 'block';
+  
+  console.log('✅ Liste görünümü aktif edildi');
   
   // Liste içeriğini oluştur
   multipleBusList.innerHTML = '';
@@ -1264,8 +1273,12 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
     
     busItem.innerHTML = `${hatAdi} - ${plaka} - ${tarife} - ${hareket}`;
     
+    console.log(`  ➡️ ${index + 1}. ${hatAdi} - ${plaka} - ${tarife} - ${hareket} (${bus.remainingSeconds}s)`);
+    
     multipleBusList.appendChild(busItem);
   });
+  
+  console.log(`✅ ${busList.length} araç listesi oluşturuldu`);
 }
 
 function closeTimer() {
