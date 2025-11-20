@@ -1336,43 +1336,6 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
   console.log(`✅ ${busList.length} araç listesi oluşturuldu`);
 }
 
-let slideResumeTimeout = null;
-
-function handleBusItemClick(bus) {
-  console.log('👆 Araç seçildi, slider 2 saniye durduruluyor:', bus);
-  
-  // Slider'ı durdur
-  stopSlideShow();
-  
-  // Mevcut resume timeout varsa iptal et
-  if (slideResumeTimeout) {
-    clearTimeout(slideResumeTimeout);
-  }
-  
-  // Timer bilgilerini güncelle
-  timerHatAdi.textContent = bus.hatAdi || '-';
-  timerPlaka.textContent = bus.plaka || '-';
-  timerTarife.textContent = bus.tarife || '-';
-  timerHareket.textContent = bus.hareket || '-';
-  
-  // Kalan süre altındaki hat adını güncelle
-  const timerCurrentHatName = document.getElementById('timerCurrentHatName');
-  if (timerCurrentHatName) {
-    timerCurrentHatName.textContent = bus.hatAdi || '-';
-  }
-  
-  // Önceki ve sonraki saatleri güncelle
-  updatePrevNextTimes(bus.tableName || currentTable, bus.tarifeSaati, bus.hareket, bus.calismaZamani);
-  
-  // 2 saniye sonra slider'ı yeniden başlat
-  slideResumeTimeout = setTimeout(() => {
-    console.log('▶️ 2 saniye geçti, slider yeniden başlatılıyor');
-    if (currentBusList.length > 1) {
-      startSlideShow();
-    }
-  }, 2000);
-}
-
 function closeTimer() {
   console.log('🗑️ closeTimer() çağrıldı');
   
