@@ -863,12 +863,6 @@ async function handleRowApproval() {
     }
   }
 }
-    alert(`❌ Hata: ${err.message}`);
-  } finally {
-    confirmApprovalBtn.disabled = false;
-    confirmApprovalBtn.textContent = '✅ Onayla';
-  }
-}
 
 function updateRowInTable(rowData, approvalTime) {
   // Tablodaki tüm satırları kontrol et ve eşleşeni bul
