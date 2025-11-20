@@ -1152,6 +1152,8 @@ async function updateTimer(tableName, hareket) {
     
     if (result.success && result.nextBusList && result.nextBusList.length > 0) {
       const busList = result.nextBusList;
+      console.log('🚌 Timer güncelleme: Araç sayısı =', busList.length);
+      
       const currentBus = busList[currentBusIndex % busList.length];
       const { hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, calismaZamani, remainingSeconds } = currentBus;
       
@@ -1174,9 +1176,12 @@ async function updateTimer(tableName, hareket) {
       }
       
       // Birden fazla araç varsa liste göster, tek araç varsa normal görünüm
+      console.log('🔍 Araç sayısı kontrolü:', busList.length, '> 1 =', busList.length > 1);
       if (busList.length > 1) {
+        console.log('✅ Çoklu araç modu - showMultipleBusesList çağrılıyor');
         showMultipleBusesList(busList, remainingSeconds);
       } else {
+        console.log('✅ Tek araç modu - showSingleBusInfo çağrılıyor');
         showSingleBusInfo(currentBus);
       }
       
