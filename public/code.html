@@ -32,7 +32,13 @@
         <button id="closeTimerBtn" class="close-timer-btn" onclick="window.handleCloseTimer(event)">×</button>
       </div>
       <div class="timer-content">
-        <div class="bus-info">
+        <!-- Çoklu araç listesi (sadece 2dk içinde birden fazla araç varsa göster) -->
+        <div id="timerMultipleBusList" class="timer-multiple-buses" style="display: none;">
+          <!-- Dinamik olarak doldurulacak -->
+        </div>
+        
+        <!-- Tek araç bilgisi (varsayılan) -->
+        <div id="timerSingleBusInfo" class="bus-info">
           <div class="info-row">
             <span class="label">Hat Adı:</span>
             <span id="timerHatAdi" class="value">-</span>

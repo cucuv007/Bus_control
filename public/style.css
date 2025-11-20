@@ -269,6 +269,46 @@ tbody tr:last-child td {
 }
 
 /* TIMER STYLES */
+.timer-multiple-buses {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-left: 4px solid #3498db;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.timer-bus-item {
+  background: white;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  border-left: 3px solid #e0e0e0;
+  transition: all 0.2s ease;
+}
+
+.timer-bus-item:hover {
+  border-left-color: #3498db;
+  transform: translateX(2px);
+}
+
+.timer-bus-item:last-child {
+  margin-bottom: 0;
+}
+
+.timer-bus-item.warning {
+  border-left-color: #e74c3c;
+  background-color: #fff5f5;
+}
+
+.timer-bus-item.safe {
+  border-left-color: #27ae60;
+  background-color: #f0fff4;
+}
+
 .timer-container {
   position: fixed;
   top: 20px;

@@ -1173,7 +1173,14 @@ async function updateTimer(tableName, hareket) {
         }
       }
       
-      // Timer bilgilerini güncelle (slide'daki mevcut otobüs)
+      // Birden fazla araç varsa liste göster, tek araç varsa normal görünüm
+      if (busList.length > 1) {
+        showMultipleBusesList(busList, remainingSeconds);
+      } else {
+        showSingleBusInfo(currentBus);
+      }
+      
+      // Timer bilgilerini güncelle (slide'daki mevcut otobüs - eski yapı ile uyumluluk için)
       timerHatAdi.textContent = currentBus.hatAdi || '-';
       timerPlaka.textContent = currentBus.plaka || '-';
       timerTarife.textContent = currentBus.tarife || '-';
@@ -1214,6 +1221,51 @@ async function updateTimer(tableName, hareket) {
   } catch (err) {
     console.error('Timer update error:', err);
   }
+}
+
+function showSingleBusInfo(bus) {
+  const singleBusInfo = document.getElementById('timerSingleBusInfo');
+  const multipleBusList = document.getElementById('timerMultipleBusList');
+  
+  if (singleBusInfo && multipleBusList) {
+    singleBusInfo.style.display = 'block';
+    multipleBusList.style.display = 'none';
+  }
+}
+
+function showMultipleBusesList(busList, currentRemainingSeconds) {
+  const singleBusInfo = document.getElementById('timerSingleBusInfo');
+  const multipleBusList = document.getElementById('timerMultipleBusList');
+  
+  if (!singleBusInfo || !multipleBusList) return;
+  
+  // Tek araç görünümünü gizle, liste görünümünü göster
+  singleBusInfo.style.display = 'none';
+  multipleBusList.style.display = 'block';
+  
+  // Liste içeriğini oluştur
+  multipleBusList.innerHTML = '';
+  
+  busList.forEach((bus, index) => {
+    const busItem = document.createElement('div');
+    busItem.className = 'timer-bus-item';
+    
+    // 2 dakikadan az kalan araçları kırmızı, fazla olanları yeşil yap
+    if (bus.remainingSeconds <= 120) {
+      busItem.classList.add('warning');
+    } else {
+      busItem.classList.add('safe');
+    }
+    
+    const hatAdi = bus.hatAdi || '-';
+    const plaka = bus.plaka || '-';
+    const tarife = bus.tarife || '-';
+    const hareket = bus.hareket || '-';
+    
+    busItem.innerHTML = `${hatAdi} - ${plaka} - ${tarife} - ${hareket}`;
+    
+    multipleBusList.appendChild(busItem);
+  });
 }
 
 function closeTimer() {
