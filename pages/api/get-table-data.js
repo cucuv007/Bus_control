@@ -117,8 +117,8 @@ export default async function handler(req, res) {
     
     // Her kayıt için plaka bilgisini ekle
     const dataWithPlaka = await Promise.all(data.map(async (row) => {
-      if (row.Tarife) {
-        const plaka = await getPlakaForTarife(tableName, row.Tarife, todayTable);
+      if (row.Tarife && row.Hat_Adi) {
+        const plaka = await getPlakaForTarife(row.Hat_Adi, row.Tarife, todayTable);
         return {
           ...row,
           Plaka: plaka || 'Belediye Aracı' // Bulunan plaka veya "Belediye Aracı"
