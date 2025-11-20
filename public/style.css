@@ -275,8 +275,8 @@ tbody tr:last-child td {
   padding: 12px;
   margin-bottom: 15px;
   border-left: 4px solid #3498db;
-  max-height: 200px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 .timer-bus-item {
