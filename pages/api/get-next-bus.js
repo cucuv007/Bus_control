@@ -180,6 +180,7 @@ export default async function handler(req, res) {
             tarife: row.Tarife || '-',
             hareket: row.Hareket || '-',
             calismaZamani: row.Çalışma_Zamanı || null,
+            durum: row.Durum || '', // Durum sütununu ekle
             tarifeSaati: tarifeSaati,
             remainingSeconds: Math.max(0, remainingSeconds)
           });
