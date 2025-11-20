@@ -1207,6 +1207,12 @@ async function updateTimer(tableName, hareket) {
       const secs = remainingSeconds % 60;
       timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
       
+      // Kalan süre altındaki hat adını güncelle
+      const timerCurrentHatName = document.getElementById('timerCurrentHatName');
+      if (timerCurrentHatName) {
+        timerCurrentHatName.textContent = currentBus.hatAdi || '-';
+      }
+      
       // 2 dakikadan az kaldıysa kırmızı warning
       if (remainingSeconds <= 120 && remainingSeconds > 0) {
         timerDisplay.classList.add('timer-warning');
@@ -1226,6 +1232,43 @@ async function updateTimer(tableName, hareket) {
   } catch (err) {
     console.error('Timer update error:', err);
   }
+}
+
+let slideResumeTimeout = null;
+
+function handleBusItemClick(bus) {
+  console.log('👆 Araç seçildi, slider 2 saniye durduruluyor:', bus);
+  
+  // Slider'ı durdur
+  stopSlideShow();
+  
+  // Mevcut resume timeout varsa iptal et
+  if (slideResumeTimeout) {
+    clearTimeout(slideResumeTimeout);
+  }
+  
+  // Timer bilgilerini güncelle
+  timerHatAdi.textContent = bus.hatAdi || '-';
+  timerPlaka.textContent = bus.plaka || '-';
+  timerTarife.textContent = bus.tarife || '-';
+  timerHareket.textContent = bus.hareket || '-';
+  
+  // Kalan süre altındaki hat adını güncelle
+  const timerCurrentHatName = document.getElementById('timerCurrentHatName');
+  if (timerCurrentHatName) {
+    timerCurrentHatName.textContent = bus.hatAdi || '-';
+  }
+  
+  // Önceki ve sonraki saatleri güncelle
+  updatePrevNextTimes(bus.tableName || currentTable, bus.tarifeSaati, bus.hareket, bus.calismaZamani);
+  
+  // 2 saniye sonra slider'ı yeniden başlat
+  slideResumeTimeout = setTimeout(() => {
+    console.log('▶️ 2 saniye geçti, slider yeniden başlatılıyor');
+    if (currentBusList.length > 1) {
+      startSlideShow();
+    }
+  }, 2000);
 }
 
 function showSingleBusInfo(bus) {
@@ -1263,6 +1306,7 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
   busList.forEach((bus, index) => {
     const busItem = document.createElement('div');
     busItem.className = 'timer-bus-item';
+    busItem.style.cursor = 'pointer';
     
     // 2 dakikadan az kalan araçları kırmızı, fazla olanları yeşil yap
     if (bus.remainingSeconds <= 120) {
@@ -1278,12 +1322,55 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
     
     busItem.innerHTML = `${hatAdi} - ${plaka} - ${tarife} - ${hareket}`;
     
+    // Tıklanma olayı ekle
+    busItem.addEventListener('click', () => {
+      console.log('👆 Çoklu araç listesinden seçildi:', bus);
+      handleBusItemClick(bus);
+    });
+    
     console.log(`  ➡️ ${index + 1}. ${hatAdi} - ${plaka} - ${tarife} - ${hareket} (${bus.remainingSeconds}s)`);
     
     multipleBusList.appendChild(busItem);
   });
   
   console.log(`✅ ${busList.length} araç listesi oluşturuldu`);
+}
+
+let slideResumeTimeout = null;
+
+function handleBusItemClick(bus) {
+  console.log('👆 Araç seçildi, slider 2 saniye durduruluyor:', bus);
+  
+  // Slider'ı durdur
+  stopSlideShow();
+  
+  // Mevcut resume timeout varsa iptal et
+  if (slideResumeTimeout) {
+    clearTimeout(slideResumeTimeout);
+  }
+  
+  // Timer bilgilerini güncelle
+  timerHatAdi.textContent = bus.hatAdi || '-';
+  timerPlaka.textContent = bus.plaka || '-';
+  timerTarife.textContent = bus.tarife || '-';
+  timerHareket.textContent = bus.hareket || '-';
+  
+  // Kalan süre altındaki hat adını güncelle
+  const timerCurrentHatName = document.getElementById('timerCurrentHatName');
+  if (timerCurrentHatName) {
+    timerCurrentHatName.textContent = bus.hatAdi || '-';
+  }
+  
+  // Önceki ve sonraki saatleri güncelle
+  updatePrevNextTimes(bus.tableName || currentTable, bus.tarifeSaati, bus.hareket, bus.calismaZamani);
+  
+  // 2 saniye sonra slider'ı yeniden başlat
+  slideResumeTimeout = setTimeout(() => {
+    console.log('▶️ 2 saniye geçti, slider yeniden başlatılıyor');
+    if (currentBusList.length > 1) {
+      startSlideShow();
+    }
+  }, 2000);
 }
 
 function closeTimer() {
@@ -1982,6 +2069,12 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       const mins = Math.floor(remainingSeconds / 60);
       const secs = remainingSeconds % 60;
       timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      
+      // Kalan süre altındaki hat adını güncelle
+      const timerCurrentHatName = document.getElementById('timerCurrentHatName');
+      if (timerCurrentHatName) {
+        timerCurrentHatName.textContent = currentBus.hatAdi || '-';
+      }
       
       // 2 dakikadan az kaldıysa kırmızı warning
       if (remainingSeconds <= 120 && remainingSeconds > 0) {
