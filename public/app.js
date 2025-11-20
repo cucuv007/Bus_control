@@ -30,8 +30,14 @@ const closeApprovalModal = document.getElementById('closeApprovalModal');
 const approvalHat = document.getElementById('approvalHat');
 const approvalTarife = document.getElementById('approvalTarife');
 const approvalTime = document.getElementById('approvalTime');
+const approvalModalTitle = document.getElementById('approvalModalTitle');
+const approvalQuestion = document.getElementById('approvalQuestion');
 const cancelApprovalBtn = document.getElementById('cancelApprovalBtn');
 const confirmApprovalBtn = document.getElementById('confirmApprovalBtn');
+
+// Mode switch
+const modeSwitch = document.getElementById('modeSwitch');
+let currentMode = 'depolama'; // 'depolama' or 'operasyon'
 
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
@@ -118,6 +124,12 @@ cancelBtn.addEventListener('click', closeUploadModal);
 closeApprovalModal.addEventListener('click', closeApprovalConfirmation);
 cancelApprovalBtn.addEventListener('click', closeApprovalConfirmation);
 confirmApprovalBtn.addEventListener('click', handleRowApproval);
+
+// Mode switch listener
+modeSwitch.addEventListener('change', function() {
+  currentMode = this.checked ? 'operasyon' : 'depolama';
+  console.log('🔄 Mod değişti:', currentMode);
+});
 
 // Global close timer handler (HTML onclick için)
 window.handleCloseTimer = function(e) {
@@ -741,15 +753,30 @@ function openApprovalConfirmation(rowData, tableName) {
     calismaZamani: rowData.Çalışma_Zamanı || '',
     tarife: rowData.Tarife,
     tarifeSaati: rowData.Tarife_Saati,
-    hareket: rowData.Hareket || ''
+    hareket: rowData.Hareket || '',
+    mode: currentMode,
+    rowData: rowData // Tüm satır verisini sakla
   };
   
-  console.log('🔍 Onay için seçilen satır:', pendingApprovalData);
+  console.log('🔍 Onay için seçilen satır (Mod: ' + currentMode + '):', pendingApprovalData);
   
   // Modal içeriğini doldur
   approvalHat.textContent = rowData.Hat_Adi;
   approvalTarife.textContent = rowData.Tarife;
   approvalTime.textContent = rowData.Tarife_Saati;
+  
+  // Modal başlığı ve soruyu moda göre değiştir
+  if (currentMode === 'operasyon') {
+    approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
+    approvalQuestion.textContent = 'Bu araç için arızalı kaydı oluşturmak istiyor musunuz?';
+    confirmApprovalBtn.style.background = '#e74c3c';
+    confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+  } else {
+    approvalModalTitle.textContent = '🚌 Çıkış Onayı';
+    approvalQuestion.textContent = 'Bu çıkışı onaylamak istiyor musunuz?';
+    confirmApprovalBtn.style.background = '#27ae60';
+    confirmApprovalBtn.innerHTML = '✅ Onayla';
+  }
   
   // Modal'ı aç
   approvalModal.style.display = 'flex';
@@ -766,36 +793,76 @@ async function handleRowApproval() {
   }
   
   confirmApprovalBtn.disabled = true;
-  confirmApprovalBtn.textContent = '⏳ Onaylanıyor...';
+  confirmApprovalBtn.textContent = '⏳ İşleniyor...';
   
   try {
-    const res = await fetch('/api/approve-row', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pendingApprovalData)
-    });
-    
-    const result = await res.json();
-    
-    if (!res.ok) {
-      throw new Error(result.error || 'Onaylama hatası');
+    if (currentMode === 'operasyon') {
+      // Operasyon modu: Durum sütununa "Arızalı" yaz
+      const res = await fetch('/api/mark-faulty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pendingApprovalData)
+      });
+      
+      const result = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(result.error || 'Arıza kaydı hatası');
+      }
+      
+      console.log('✅ Arızalı olarak işaretlendi:', result);
+      
+      // Veriyi sakla (modal kapatılmadan önce)
+      const savedData = { ...pendingApprovalData };
+      
+      // Modal'ı kapat
+      closeApprovalConfirmation();
+      
+      // Satırı tabloda hızlıca güncelle
+      updateRowStatus(savedData, 'Arızalı');
+      
+      alert('✅ Arızalı olarak işaretlendi!');
+      
+    } else {
+      // Depolama modu: Onaylanan sütununa saat yaz
+      const res = await fetch('/api/approve-row', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pendingApprovalData)
+      });
+      
+      const result = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(result.error || 'Onaylama hatası');
+      }
+      
+      console.log('✅ Satır onaylandı:', result);
+      
+      // Veriyi sakla (modal kapatılmadan önce)
+      const savedData = { ...pendingApprovalData };
+      
+      // Modal'ı kapat
+      closeApprovalConfirmation();
+      
+      // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
+      updateRowInTable(savedData, result.approvalTime);
+      
+      alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
     }
     
-    console.log('✅ Satır onaylandı:', result);
-    
-    // Veriyi sakla (modal kapatılmadan önce)
-    const savedData = { ...pendingApprovalData };
-    
-    // Modal'ı kapat
-    closeApprovalConfirmation();
-    
-    // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
-    updateRowInTable(savedData, result.approvalTime);
-    
-    alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
-    
   } catch (err) {
-    console.error('Onaylama hatası:', err);
+    console.error('İşlem hatası:', err);
+    alert(`❌ Hata: ${err.message}`);
+  } finally {
+    confirmApprovalBtn.disabled = false;
+    if (currentMode === 'operasyon') {
+      confirmApprovalBtn.textContent = '⚠️ Arızalı Olarak Işaretle';
+    } else {
+      confirmApprovalBtn.textContent = '✅ Onayla';
+    }
+  }
+}
     alert(`❌ Hata: ${err.message}`);
   } finally {
     confirmApprovalBtn.disabled = false;
@@ -849,6 +916,53 @@ function updateRowInTable(rowData, approvalTime) {
         cells[onaylananIndex].style.fontWeight = 'bold';
         
         console.log('✅ Satır tabloda güncellendi:', approvalTime);
+      }
+    }
+  });
+}
+
+function updateRowStatus(rowData, status) {
+  // Tablodaki tüm satırları kontrol et ve eşleşeni bul
+  const rows = tbody.querySelectorAll('tr');
+  const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
+  
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    let isMatch = true;
+    
+    // Satırın verilerini oku
+    const rowValues = {};
+    cells.forEach((cell, index) => {
+      rowValues[headers[index]] = cell.textContent;
+    });
+    
+    // Eşleşme kontrolü
+    if (rowData.hatAdi && rowValues['Hat_Adi'] !== rowData.hatAdi && rowValues['Hat'] !== rowData.hatAdi) {
+      isMatch = false;
+    }
+    if (rowData.tarife && rowValues['Tarife'] !== rowData.tarife) {
+      isMatch = false;
+    }
+    if (rowData.tarifeSaati && rowValues['Tarife_Saati'] !== rowData.tarifeSaati) {
+      isMatch = false;
+    }
+    if (rowData.calismaZamani && rowValues['Çalışma_Zamanı'] !== rowData.calismaZamani) {
+      isMatch = false;
+    }
+    if (rowData.hareket && rowValues['Hareket'] !== rowData.hareket) {
+      isMatch = false;
+    }
+    
+    // Eşleşen satırı bulduk
+    if (isMatch) {
+      // "Durum" sütununu bul ve güncelle
+      const durumIndex = headers.indexOf('Durum');
+      if (durumIndex !== -1 && cells[durumIndex]) {
+        cells[durumIndex].textContent = status;
+        cells[durumIndex].style.color = '#e74c3c';
+        cells[durumIndex].style.fontWeight = 'bold';
+        
+        console.log('✅ Durum sütunu güncellendi:', status);
       }
     }
   });
