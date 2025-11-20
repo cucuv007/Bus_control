@@ -16,6 +16,7 @@ const timerHatAdi = document.getElementById('timerHatAdi');
 const timerPlaka = document.getElementById('timerPlaka');
 const timerTarife = document.getElementById('timerTarife');
 const timerHareket = document.getElementById('timerHareket');
+const timerDurum = document.getElementById('timerDurum');
 const closeTimerBtn = document.getElementById('closeTimerBtn');
 const dynamicTrackingCheckbox = document.getElementById('dynamicTrackingCheckbox');
 const reopenTimerIcon = document.getElementById('reopenTimerIcon');
@@ -1299,6 +1300,18 @@ async function updateTimer(tableName, hareket) {
       timerTarife.textContent = currentBus.tarife || '-';
       timerHareket.textContent = currentBus.hareket || '-';
       
+      // Durum bilgisini güncelle
+      const durumValue = currentBus.durum || '';
+      if (durumValue && durumValue.trim() !== '') {
+        timerDurum.textContent = durumValue;
+        timerDurum.style.color = '#e74c3c';
+        timerDurum.style.fontWeight = 'bold';
+      } else {
+        timerDurum.textContent = 'Normal';
+        timerDurum.style.color = '#2c3e50';
+        timerDurum.style.fontWeight = 'normal';
+      }
+      
       // Önceki ve sonraki saatleri getir
       await updatePrevNextTimes(tableName, tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
       
@@ -1360,6 +1373,18 @@ function handleBusItemClick(bus) {
   timerPlaka.textContent = bus.plaka || '-';
   timerTarife.textContent = bus.tarife || '-';
   timerHareket.textContent = bus.hareket || '-';
+  
+  // Durum bilgisini güncelle
+  const durumValue = bus.durum || '';
+  if (durumValue && durumValue.trim() !== '') {
+    timerDurum.textContent = durumValue;
+    timerDurum.style.color = '#e74c3c';
+    timerDurum.style.fontWeight = 'bold';
+  } else {
+    timerDurum.textContent = 'Normal';
+    timerDurum.style.color = '#2c3e50';
+    timerDurum.style.fontWeight = 'normal';
+  }
   
   // Kalan süre altındaki hat adını güncelle
   const timerCurrentHatName = document.getElementById('timerCurrentHatName');
@@ -2126,6 +2151,18 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       timerPlaka.textContent = currentBus.plaka || '-';
       timerTarife.textContent = currentBus.tarife || '-';
       timerHareket.textContent = currentBus.hareket || '-';
+      
+      // Durum bilgisini güncelle
+      const durumValue = currentBus.durum || '';
+      if (durumValue && durumValue.trim() !== '') {
+        timerDurum.textContent = durumValue;
+        timerDurum.style.color = '#e74c3c';
+        timerDurum.style.fontWeight = 'bold';
+      } else {
+        timerDurum.textContent = 'Normal';
+        timerDurum.style.color = '#2c3e50';
+        timerDurum.style.fontWeight = 'normal';
+      }
       
       // Önceki ve sonraki saatleri getir
       await updatePrevNextTimes(currentBus.tableName, currentBus.tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
