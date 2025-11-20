@@ -1929,6 +1929,8 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     // En yakın zamandaki tüm otobüsleri filtrele
     const closestBuses = allBusesList.filter(bus => bus.remainingSeconds === minRemaining);
     
+    console.log('🚌 Çoklu hat timer güncelleme: Araç sayısı =', closestBuses.length);
+    
     if (closestBuses.length > 0) {
       const currentBus = closestBuses[currentBusIndex % closestBuses.length];
       const { tableName, hatAdi, plaka, tarife, tarifeSaati, hareket: busHareket, calismaZamani, remainingSeconds } = currentBus;
@@ -1951,7 +1953,17 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         }
       }
       
-      // Timer bilgilerini güncelle
+      // Birden fazla araç varsa liste göster, tek araç varsa normal görünüm
+      console.log('🔍 Çoklu hat - Araç sayısı kontrolü:', closestBuses.length, '> 1 =', closestBuses.length > 1);
+      if (closestBuses.length > 1) {
+        console.log('✅ Çoklu araç modu - showMultipleBusesList çağrılıyor');
+        showMultipleBusesList(closestBuses, remainingSeconds);
+      } else {
+        console.log('✅ Tek araç modu - showSingleBusInfo çağrılıyor');
+        showSingleBusInfo(currentBus);
+      }
+      
+      // Timer bilgilerini güncelle (eski yapı ile uyumluluk için)
       timerHatAdi.textContent = currentBus.hatAdi || '-';
       timerPlaka.textContent = currentBus.plaka || '-';
       timerTarife.textContent = currentBus.tarife || '-';
