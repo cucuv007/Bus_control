@@ -1360,6 +1360,9 @@ let slideResumeTimeout = null;
 function handleBusItemClick(bus) {
   console.log('👆 Araç seçildi, slider 2 saniye durduruluyor:', bus);
   
+  // currentTimerRow'u güncelle (dinamik takip için)
+  currentTimerRow = bus;
+  
   // Slider'ı durdur
   stopSlideShow();
   
@@ -1610,7 +1613,7 @@ function clearAllHighlights() {
   highlightedRows.forEach(row => {
     if (row && row.style) row.style.backgroundColor = '';
   });
-  // highlightedRows = []; // Array temizlenmedi - toggle için gerekli
+  highlightedRows = []; // Array'i temizle
 }
 
 function updateReopenTimerIcon() {
@@ -2170,6 +2173,9 @@ async function updateMultipleHatsTimer(hatList, hareket) {
         timerDurum.style.fontWeight = 'normal';
       }
       
+      // currentTimerRow'u güncelle (dinamik takip için)
+      currentTimerRow = currentBus;
+      
       // Önceki ve sonraki saatleri getir
       await updatePrevNextTimes(currentBus.tableName, currentBus.tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
       
@@ -2212,8 +2218,11 @@ async function updateMultipleHatsTimer(hatList, hareket) {
 }
 
 function scrollToTimerRow(busData) {
+  console.log('📍 scrollToTimerRow çağrıldı:', { busData, checkboxChecked: dynamicTrackingCheckbox.checked });
+  
   // Dinamik takip checkbox'ı seçili değilse çık
   if (!dynamicTrackingCheckbox.checked) {
+    console.log('❌ Dinamik takip kapalı, scroll iptal edildi');
     return;
   }
   
@@ -2235,28 +2244,48 @@ function scrollToTimerRow(busData) {
       hatAdiIndex,
       tarifeIndex,
       tarifeSaatiIndex,
-      hareketIndex
+      hareketIndex,
+      totalRows: rows.length
     });
     
     // Timer'daki otobüsü tabloda bul
+    let foundRow = false;
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const cells = row.querySelectorAll('td');
       
+      if (cells.length === 0) continue;
+      
       // Hat_Adi, Tarife_Saati ve Hareket eşleşmesine bak
-      const hatAdiMatch = hatAdiIndex >= 0 ? cells[hatAdiIndex]?.textContent.trim() === busData.hatAdi : true;
-      const tarifeMatch = tarifeIndex >= 0 ? cells[tarifeIndex]?.textContent.trim() === busData.tarife : true;
-      const tarifeSaatiText = tarifeSaatiIndex >= 0 ? cells[tarifeSaatiIndex]?.textContent.trim() : '';
-      const tarifeSaatiMatch = tarifeSaatiText === busData.tarifeSaati || tarifeSaatiText === busData.tarifeSaati?.substring(0, 5);
-      const hareketMatch = hareketIndex >= 0 ? cells[hareketIndex]?.textContent.trim() === busData.hareket : true;
+      const hatAdiCell = hatAdiIndex >= 0 ? cells[hatAdiIndex]?.textContent.trim() : '';
+      const tarifeCell = tarifeIndex >= 0 ? cells[tarifeIndex]?.textContent.trim() : '';
+      const tarifeSaatiCell = tarifeSaatiIndex >= 0 ? cells[tarifeSaatiIndex]?.textContent.trim() : '';
+      const hareketCell = hareketIndex >= 0 ? cells[hareketIndex]?.textContent.trim() : '';
+      
+      const hatAdiMatch = !busData.hatAdi || hatAdiCell === busData.hatAdi;
+      const tarifeMatch = !busData.tarife || tarifeCell === busData.tarife;
+      const tarifeSaatiMatch = tarifeSaatiCell === busData.tarifeSaati || tarifeSaatiCell === busData.tarifeSaati?.substring(0, 5);
+      const hareketMatch = !busData.hareket || hareketCell === busData.hareket;
       
       // Eşleşen satır bulundu
       if (hatAdiMatch && tarifeSaatiMatch && hareketMatch) {
-        // Sarı vurgu (tek otobüs için)
-        row.style.backgroundColor = '#fff3cd';
+        foundRow = true;
+        
+        // Kalan süreye göre renk seç
+        const remainingSeconds = busData.remainingSeconds || 0;
+        const highlightColor = remainingSeconds <= 120 ? '#ffcccc' : '#fff3cd'; // Kırmızı veya sarı
+        
+        row.style.backgroundColor = highlightColor;
         highlightedRows.push(row);
         
-        console.log('✅ Satır bulundu ve vurgulandı:', i);
+        console.log('✅ Satır bulundu ve vurgulandı:', {
+          rowIndex: i,
+          hatAdi: hatAdiCell,
+          tarife: tarifeCell,
+          tarifeSaati: tarifeSaatiCell,
+          hareket: hareketCell,
+          color: highlightColor
+        });
         
         // Satırı görünür alana kaydır
         row.scrollIntoView({ 
@@ -2267,6 +2296,10 @@ function scrollToTimerRow(busData) {
         
         break;
       }
+    }
+    
+    if (!foundRow) {
+      console.warn('⚠️ Satır bulunamadı! Aranan:', busData);
     }
   } catch (err) {
     console.error('Scroll to timer row error:', err);
