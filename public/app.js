@@ -2296,10 +2296,10 @@ function scrollToTimerRow(busData) {
           color: highlightColor
         });
         
-        // Satırı görünür alana kaydır
+        // Satırı görünür alana kaydır (en üste)
         row.scrollIntoView({ 
           behavior: 'smooth', 
-          block: 'center',
+          block: 'start',
           inline: 'nearest'
         });
         
