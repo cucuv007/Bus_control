@@ -1899,6 +1899,12 @@ function updateSelectAllHats() {
 }
 
 async function handleApplyHatSelection() {
+  // Timer açıksa önce kapat
+  if (timerContainer.style.display === 'block') {
+    console.log('🔄 Timer açık - kapatılıyor...');
+    closeTimer();
+  }
+  
   const checkboxes = document.querySelectorAll('.hat-checkbox:checked');
   selectedHats = Array.from(checkboxes).map(cb => cb.value);
   
@@ -2216,36 +2222,46 @@ function scrollToTimerRow(busData) {
   
   try {
     const rows = tbody.querySelectorAll('tr');
+    const headerCells = thead.querySelectorAll('th');
+    const headers = Array.from(headerCells).map(th => th.textContent.trim());
+    
+    const hatAdiIndex = headers.indexOf('Hat_Adi');
+    const tarifeIndex = headers.indexOf('Tarife');
+    const tarifeSaatiIndex = headers.indexOf('Tarife_Saati');
+    const hareketIndex = headers.indexOf('Hareket');
+    
+    console.log('🔍 Scrolling to timer row:', {
+      busData,
+      hatAdiIndex,
+      tarifeIndex,
+      tarifeSaatiIndex,
+      hareketIndex
+    });
     
     // Timer'daki otobüsü tabloda bul
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const cells = row.querySelectorAll('td');
       
-      // Tarife_Saati ve Hareket sütunlarını kontrol et
-      let matchesTarife = false;
-      let matchesHareket = false;
+      // Hat_Adi, Tarife_Saati ve Hareket eşleşmesine bak
+      const hatAdiMatch = hatAdiIndex >= 0 ? cells[hatAdiIndex]?.textContent.trim() === busData.hatAdi : true;
+      const tarifeMatch = tarifeIndex >= 0 ? cells[tarifeIndex]?.textContent.trim() === busData.tarife : true;
+      const tarifeSaatiText = tarifeSaatiIndex >= 0 ? cells[tarifeSaatiIndex]?.textContent.trim() : '';
+      const tarifeSaatiMatch = tarifeSaatiText === busData.tarifeSaati || tarifeSaatiText === busData.tarifeSaati?.substring(0, 5);
+      const hareketMatch = hareketIndex >= 0 ? cells[hareketIndex]?.textContent.trim() === busData.hareket : true;
       
-      cells.forEach(cell => {
-        const text = cell.textContent.trim();
-        if (text === busData.tarifeSaati || text === busData.tarifeSaati.substring(0, 5)) {
-          matchesTarife = true;
-        }
-        if (text === busData.hareket) {
-          matchesHareket = true;
-        }
-      });
-      
-      // Eşleşen satır bulundu (tek otobüs - sarı highlight)
-      if (matchesTarife && matchesHareket) {
+      // Eşleşen satır bulundu
+      if (hatAdiMatch && tarifeSaatiMatch && hareketMatch) {
         // Sarı vurgu (tek otobüs için)
         row.style.backgroundColor = '#fff3cd';
         highlightedRows.push(row);
         
+        console.log('✅ Satır bulundu ve vurgulandı:', i);
+        
         // Satırı görünür alana kaydır
         row.scrollIntoView({ 
           behavior: 'smooth', 
-          block: 'start',
+          block: 'center',
           inline: 'nearest'
         });
         
