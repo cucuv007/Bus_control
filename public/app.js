@@ -1367,7 +1367,7 @@ async function updateTimer(tableName, hareket) {
 let slideResumeTimeout = null;
 
 function handleBusItemClick(bus) {
-  console.log('👆 Araç seçildi, slider 2 saniye durduruluyor:', bus);
+  console.log('👆 Araç seçildi, slider 5 saniye durduruluyor:', bus);
   
   // currentTimerRow'u güncelle (dinamik takip için)
   currentTimerRow = bus;
@@ -1378,6 +1378,18 @@ function handleBusItemClick(bus) {
   // Mevcut resume timeout varsa iptal et
   if (slideResumeTimeout) {
     clearTimeout(slideResumeTimeout);
+    slideResumeTimeout = null;
+  }
+  
+  // Tıklanan otobüsün index'ini bul ve currentBusIndex'i güncelle
+  const busIndex = currentBusList.findIndex(b => 
+    b.hatAdi === bus.hatAdi && 
+    b.tarifeSaati === bus.tarifeSaati && 
+    b.hareket === bus.hareket
+  );
+  if (busIndex !== -1) {
+    currentBusIndex = busIndex;
+    console.log('🎯 currentBusIndex güncellendi:', currentBusIndex);
   }
   
   // Timer bilgilerini güncelle
