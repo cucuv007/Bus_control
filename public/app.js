@@ -1407,13 +1407,13 @@ function handleBusItemClick(bus) {
   // Önceki ve sonraki saatleri güncelle
   updatePrevNextTimes(bus.tableName || currentTable, bus.tarifeSaati, bus.hareket, bus.calismaZamani);
   
-  // 2 saniye sonra slider'ı yeniden başlat
+  // 5 saniye sonra slider'ı yeniden başlat
   slideResumeTimeout = setTimeout(() => {
-    console.log('▶️ 2 saniye geçti, slider yeniden başlatılıyor');
+    console.log('▶️ 5 saniye geçti, slider yeniden başlatılıyor');
     if (currentBusList.length > 1) {
       startSlideShow();
     }
-  }, 2000);
+  }, 5000);
 }
 
 function showSingleBusInfo(bus) {
@@ -1574,48 +1574,84 @@ function highlightMultipleBuses(busList, remainingSeconds) {
     return;
   }
   
-  const highlightColor = remainingSeconds <= 120 ? '#ffcccc' : '#d4edda'; // Kırmızı veya yeşil
+  console.log('🎨 highlightMultipleBuses çağrıldı:', {
+    busCount: busList.length,
+    remainingSeconds
+  });
+  
   const rows = tbody.querySelectorAll('tr');
+  const headerCells = theadRow.querySelectorAll('th');
+  const headers = Array.from(headerCells).map(th => th.textContent.trim());
+  
+  const hatAdiIndex = headers.indexOf('Hat_Adi');
+  const tarifeIndex = headers.indexOf('Tarife');
+  const tarifeSaatiIndex = headers.indexOf('Tarife_Saati');
+  const hareketIndex = headers.indexOf('Hareket');
+  
+  let firstMatchFound = false;
   
   // Her otobüsü tabloda bul ve vurgula
   busList.forEach(bus => {
+    // Her otobüs için kalan süresine göre renk belirle
+    const busRemainingSeconds = bus.remainingSeconds || 0;
+    const highlightColor = busRemainingSeconds <= 120 ? '#ffcccc' : '#d4edda'; // Kırmızı veya yeşil
+    
+    console.log('🔍 Aranan otobüs:', {
+      hatAdi: bus.hatAdi,
+      tarife: bus.tarife,
+      tarifeSaati: bus.tarifeSaati,
+      hareket: bus.hareket,
+      remainingSeconds: busRemainingSeconds,
+      color: highlightColor
+    });
+    
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const cells = row.querySelectorAll('td');
       
-      let matchesHatAdi = false;
-      let matchesTarife = false;
-      let matchesHareket = false;
-      let matchesTarifeSaati = false;
+      if (cells.length === 0) continue;
       
-      cells.forEach(cell => {
-        const text = cell.textContent.trim();
-        // Hat Adı kontrolü (tableName veya hatAdi)
-        if (text === bus.tableName || text === bus.hatAdi) matchesHatAdi = true;
-        if (text === bus.tarife) matchesTarife = true;
-        if (text === bus.hareket) matchesHareket = true;
-        if (text === bus.tarifeSaati || text === bus.tarifeSaati.substring(0, 5)) {
-          matchesTarifeSaati = true;
-        }
-      });
+      // Sütun indekslerini kullanarak eşleştir
+      const hatAdiCell = hatAdiIndex >= 0 ? cells[hatAdiIndex]?.textContent.trim() : '';
+      const tarifeCell = tarifeIndex >= 0 ? cells[tarifeIndex]?.textContent.trim() : '';
+      const tarifeSaatiCell = tarifeSaatiIndex >= 0 ? cells[tarifeSaatiIndex]?.textContent.trim() : '';
+      const hareketCell = hareketIndex >= 0 ? cells[hareketIndex]?.textContent.trim() : '';
+      
+      const hatAdiMatch = !bus.hatAdi || hatAdiCell === bus.hatAdi;
+      const tarifeMatch = !bus.tarife || tarifeCell === bus.tarife;
+      const tarifeSaatiMatch = tarifeSaatiCell === bus.tarifeSaati || tarifeSaatiCell === bus.tarifeSaati?.substring(0, 5);
+      const hareketMatch = !bus.hareket || hareketCell === bus.hareket;
       
       // Hat adı, tarife saati ve hareket ile eşleşme kontrolü
-      if (matchesHatAdi && matchesHareket && matchesTarifeSaati) {
+      if (hatAdiMatch && tarifeSaatiMatch && hareketMatch) {
         row.style.backgroundColor = highlightColor;
         highlightedRows.push(row);
         
-        // İlk eşleşen satıra scroll et
-        if (highlightedRows.length === 1) {
+        console.log('✅ Satır vurgulandı:', {
+          rowIndex: i,
+          hatAdi: hatAdiCell,
+          tarife: tarifeCell,
+          tarifeSaati: tarifeSaatiCell,
+          hareket: hareketCell,
+          color: highlightColor
+        });
+        
+        // İlk eşleşen satıra scroll et (sadece bir kez)
+        if (!firstMatchFound) {
+          firstMatchFound = true;
           row.scrollIntoView({ 
             behavior: 'smooth', 
             block: 'start',
             inline: 'nearest'
           });
         }
-        break;
+        
+        // break kaldırıldı - aynı otobüsün tüm satırlarını bul
       }
     }
   });
+  
+  console.log(`🎨 Toplam ${highlightedRows.length} satır vurgulandı`);
 }
 
 function clearAllHighlights() {
