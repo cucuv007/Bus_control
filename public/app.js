@@ -1550,7 +1550,7 @@ function startSlideShow() {
     
     // Önceki/sonraki saatleri güncelle
     updatePrevNextTimes(currentBus.tableName, currentBus.tarifeSaati, currentBus.hareket, currentBus.calismaZamani);
-  }, 2000); // 2 saniyede bir değişir
+  }, 5000); // 5 saniyede bir değişir
 }
 
 function stopSlideShow() {
