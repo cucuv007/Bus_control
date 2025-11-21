@@ -185,10 +185,19 @@ applyHatSelection.addEventListener('click', handleApplyHatSelection);
 
 // Dinamik takip checkbox'ı değiştiğinde
 dynamicTrackingCheckbox.addEventListener('change', (e) => {
+  console.log('🔄 Dinamik takip checkbox değişti:', {
+    checked: e.target.checked,
+    currentTimerRow: currentTimerRow
+  });
+  
   if (e.target.checked && currentTimerRow) {
+    console.log('✅ Checkbox seçili ve currentTimerRow var, scrollToTimerRow çağrılıyor...');
     // Checkbox seçildiğinde, mevcut timer satırını hemen bul ve scroll et
     scrollToTimerRow(currentTimerRow);
+  } else if (e.target.checked && !currentTimerRow) {
+    console.warn('⚠️ Checkbox seçili ama currentTimerRow null!');
   } else if (!e.target.checked) {
+    console.log('❌ Checkbox kaldırıldı, vurgular temizleniyor...');
     // Checkbox kaldırıldığında vurguyu temizle
     const rows = tbody.querySelectorAll('tr');
     rows.forEach(r => r.style.backgroundColor = '');
@@ -2231,7 +2240,7 @@ function scrollToTimerRow(busData) {
   
   try {
     const rows = tbody.querySelectorAll('tr');
-    const headerCells = thead.querySelectorAll('th');
+    const headerCells = theadRow.querySelectorAll('th');
     const headers = Array.from(headerCells).map(th => th.textContent.trim());
     
     const hatAdiIndex = headers.indexOf('Hat_Adi');
