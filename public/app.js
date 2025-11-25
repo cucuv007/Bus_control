@@ -183,7 +183,11 @@ applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
 
 selectAllHats.addEventListener('change', handleSelectAllHats);
 applyHatSelection.addEventListener('click', handleApplyHatSelection);
-refreshHatsBtn.addEventListener('click', handleRefreshHats);
+
+// refreshHatsBtn başlangıçta gizli olabilir, kontrol et
+if (refreshHatsBtn) {
+  refreshHatsBtn.addEventListener('click', handleRefreshHats);
+}
 
 // Dinamik takip checkbox'ı değiştiğinde
 dynamicTrackingCheckbox.addEventListener('change', (e) => {
