@@ -2103,6 +2103,13 @@ async function handleApplyHatSelection() {
         const td = document.createElement('td');
         const value = row[k];
         td.textContent = value !== null && value !== undefined ? value : '';
+        
+        // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
+        if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
+        
         tr.appendChild(td);
       });
       
@@ -2242,6 +2249,13 @@ async function refreshTableData(hatList, hareket) {
         const td = document.createElement('td');
         const value = row[k];
         td.textContent = value !== null && value !== undefined ? value : '';
+        
+        // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
+        if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
+        
         tr.appendChild(td);
       });
       
