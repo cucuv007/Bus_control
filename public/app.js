@@ -2571,26 +2571,37 @@ async function handleRefreshHats() {
       await new Promise(resolve => script.onload = resolve);
     }
 
-    // Tabloyu direkt capture et
-    const table = document.querySelector('table');
-    if (!table) {
+    // Tabloyu bul
+    let targetElement = document.querySelector('.table-wrap');
+    if (!targetElement) {
+      targetElement = document.querySelector('table');
+    }
+    if (!targetElement) {
       throw new Error('Tablo bulunamadı, ekran görüntüsü alınamıyor');
     }
 
-    const canvas = await html2canvas(table, { 
-      scale: 1.5,
-      logging: false,
+    console.log('🎯 Target element:', targetElement.tagName, 'Width:', targetElement.offsetWidth, 'Height:', targetElement.offsetHeight);
+
+    const canvas = await html2canvas(targetElement, { 
+      scale: 1,
+      logging: true,
       backgroundColor: '#ffffff',
-      windowWidth: table.scrollWidth,
-      windowHeight: table.scrollHeight
+      useCORS: true,
+      allowTaint: true
     });
     
+    console.log('🖼️ Canvas oluşturuldu:', 'Width:', canvas.width, 'Height:', canvas.height);
+    
     const screenshotDataUrl = canvas.toDataURL('image/png');
+    console.log('📦 DataURL uzunluğu:', screenshotDataUrl.length);
+    
     const screenshotBase64 = screenshotDataUrl.split(',')[1];
 
-    console.log(`✅ Ekran görüntüsü alındı (${screenshotBase64.length} karakter)`);
+    console.log(`✅ Ekran görüntüsü alındı (${screenshotBase64 ? screenshotBase64.length : 0} karakter)`);
 
     if (!screenshotBase64 || screenshotBase64.length < 100) {
+      console.error('❌ Screenshot base64 çok küçük veya boş!');
+      console.error('DataURL:', screenshotDataUrl.substring(0, 100));
       throw new Error('Ekran görüntüsü oluşturulamadı (boş veya çok küçük)');
     }
 
