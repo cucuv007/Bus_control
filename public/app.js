@@ -802,10 +802,24 @@ function openApprovalConfirmation(rowData, tableName) {
   
   // Modal başlığı ve soruyu moda göre değiştir
   if (currentMode === 'operasyon') {
-    approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
-    approvalQuestion.textContent = 'Bu araç için arızalı kaydı oluşturmak istiyor musunuz?';
-    confirmApprovalBtn.style.background = '#e74c3c';
-    confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+    // Eğer zaten Arızalı ise, kaldırma sorusu sor
+    const currentDurum = rowData.Durum || '';
+    const isAlreadyFaulty = currentDurum.toLowerCase().includes('arızalı');
+    
+    if (isAlreadyFaulty) {
+      approvalModalTitle.textContent = '✅ Arıza Kaydını Kaldır';
+      approvalQuestion.textContent = 'Otobüs zaten arızalı. Arızalı bilgisini kaldırmak istiyor musunuz?';
+      confirmApprovalBtn.style.background = '#27ae60';
+      confirmApprovalBtn.innerHTML = '✅ Arızalı Bilgisini Kaldır';
+      // Flag ekle: Kaldırma işlemi
+      pendingApprovalData.removeArizali = true;
+    } else {
+      approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
+      approvalQuestion.textContent = 'Bu araç için arızalı kaydı oluşturmak istiyor musunuz?';
+      confirmApprovalBtn.style.background = '#e74c3c';
+      confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+      pendingApprovalData.removeArizali = false;
+    }
   } else {
     approvalModalTitle.textContent = '🚌 Çıkış Onayı';
     approvalQuestion.textContent = 'Bu çıkışı onaylamak istiyor musunuz?';
@@ -832,20 +846,25 @@ async function handleRowApproval() {
   
   try {
     if (currentMode === 'operasyon') {
-      // Operasyon modu: Durum sütununa "Arızalı" yaz
+      // Operasyon modu: Durum sütununa "Arızalı" yaz veya kaldır
+      const isRemoving = pendingApprovalData.removeArizali;
+      
       const res = await fetch('/api/mark-faulty', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pendingApprovalData)
+        body: JSON.stringify({
+          ...pendingApprovalData,
+          clearFaulty: isRemoving // Arızalı bilgisini kaldırma flag'i
+        })
       });
       
       const result = await res.json();
       
       if (!res.ok) {
-        throw new Error(result.error || 'Arıza kaydı hatası');
+        throw new Error(result.error || (isRemoving ? 'Arıza kaldırma hatası' : 'Arıza kaydı hatası'));
       }
       
-      console.log('✅ Arızalı olarak işaretlendi:', result);
+      console.log(isRemoving ? '✅ Arızalı bilgisi kaldırıldı:' : '✅ Arızalı olarak işaretlendi:', result);
       
       // Veriyi sakla (modal kapatılmadan önce)
       const savedData = { ...pendingApprovalData };
@@ -854,9 +873,9 @@ async function handleRowApproval() {
       closeApprovalConfirmation();
       
       // Satırı tabloda hızlıca güncelle
-      updateRowStatus(savedData, 'Arızalı');
+      updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
-      alert('✅ Arızalı olarak işaretlendi!');
+      alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi!');
       
     } else {
       // Depolama modu: Onaylanan sütununa saat yaz

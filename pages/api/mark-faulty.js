@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { tableName, hatAdi, calismaZamani, tarife, tarifeSaati, hareket } = req.body;
+    const { tableName, hatAdi, calismaZamani, tarife, tarifeSaati, hareket, clearFaulty } = req.body;
 
     if (!tableName || !hatAdi || !tarife || !tarifeSaati) {
       return res.status(400).json({ 
@@ -19,23 +19,24 @@ export default async function handler(req, res) {
       });
     }
 
-    // Durum sütununa "Arızalı" yazılacak
-    const faultyStatus = 'Arızalı';
+    // clearFaulty true ise Durum'u NULL yap, değilse "Arızalı" yaz
+    const durumValue = clearFaulty ? null : 'Arızalı';
 
-    console.log('🔍 Arızalı işaretleme parametreleri:', {
+    console.log('🔍 Durum güncelleme parametreleri:', {
       tableName,
       hatAdi,
       calismaZamani,
       tarife,
       tarifeSaati,
       hareket,
-      faultyStatus
+      durumValue,
+      operation: clearFaulty ? 'KALDIR' : 'EKLE'
     });
 
     // Query oluştur
     let query = supabase
       .from(tableName)
-      .update({ Durum: faultyStatus })
+      .update({ Durum: durumValue })
       .eq('Hat_Adi', hatAdi)
       .eq('Tarife', tarife)
       .eq('Tarife_Saati', tarifeSaati);
@@ -76,12 +77,13 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('✅ Arızalı olarak işaretlendi:', data);
+    console.log('✅ Durum güncellendi:', data);
 
     return res.status(200).json({ 
       success: true, 
-      status: faultyStatus,
-      updatedRows: data.length
+      operation: clearFaulty ? 'removed' : 'marked',
+      updatedRows: data.length,
+      data: data[0]
     });
 
   } catch (err) {
