@@ -29,7 +29,20 @@
         return;
       }
       
-      console.log('✅ Kullanıcı oturum açık:', session.username);
+      console.log('✅ Kullanıcı oturum açık:', session.username, '- Görev:', session.gorev);
+      
+      // Sayfa yüklendikten sonra Admin kontrolü yap
+      window.addEventListener('DOMContentLoaded', function() {
+        const addUserBtn = document.getElementById('addUserBtn');
+        if (addUserBtn) {
+          if (session.gorev !== 'Admin') {
+            addUserBtn.disabled = true;
+            addUserBtn.style.opacity = '0.5';
+            addUserBtn.style.cursor = 'not-allowed';
+            addUserBtn.title = 'Sadece Admin kullanıcılar ekleyebilir';
+          }
+        }
+      });
     } catch (err) {
       // Session bozuksa temizle ve login'e yönlendir
       localStorage.removeItem('userSession');
@@ -42,7 +55,7 @@
 <div class="wrap">
   <header>
     <div>
-    <h1>📊 Otobüs Hareket Saati Yönetimi</h1>
+    <h1>📊 Otobüs Kontrol Sistemi</h1>
     <div class="sub">Google Drive'dan veri yükle ve yönet</div>
     </div>
     
@@ -56,11 +69,11 @@
       <label class="mode-switch-label">Operasyon</label>
     </div>
     
-    <div class="controls">
+    <div class="controls" style="display: flex; flex-wrap: wrap; gap: 10px;">
     <button id="uploadBtn" class="btn btn-upload">📤 Yükle</button>
     <button id="refreshBtn" class="btn">🔄 Yenile</button>
-    <button id="approveBtn" class="btn">✅ Onayla</button>
-    <button id="logoutBtn" class="btn" style="background: #e74c3c;">🚪 Çıkış</button>
+    <button id="addUserBtn" class="btn" style="background: #27ae60;">➕ Kullanıcı Ekle</button>
+    <button id="logoutBtn" class="btn" style="background: #e74c3c;">🚺 Çıkış</button>
     </div>
   </header>
 
@@ -318,6 +331,43 @@
       <polyline points="12 6 12 12 16 14"></polyline>
     </svg>
   </button>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 500px;">
+    <h2 style="margin-top: 0;">➕ Kullanıcı Ekle</h2>
+    
+    <div class="form-group">
+      <label for="newUsername">Kullanıcı Adı *</label>
+      <input type="text" id="newUsername" class="input-field" placeholder="Kullanıcı adı girin" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="newPassword">Şifre *</label>
+      <input type="password" id="newPassword" class="input-field" placeholder="Şifre girin" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="newGorev">Görev *</label>
+      <select id="newGorev" class="input-field" required>
+        <option value="">-- Görev Seçin --</option>
+        <option value="Admin">Admin</option>
+        <option value="Operasyon">Operasyon</option>
+        <option value="Rotasyon">Rotasyon</option>
+        <option value="Depolama">Depolama</option>
+        <option value="Otobüs_Şoförü">Otobüs Şoförü</option>
+        <option value="User">User</option>
+      </select>
+    </div>
+    
+    <div id="addUserStatus" class="info" style="display: none; margin-top: 10px;"></div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button id="cancelAddUser" class="btn" style="flex: 1; background: #95a5a6;">❌ İptal</button>
+      <button id="confirmAddUser" class="btn" style="flex: 1; background: #27ae60;">✅ Kullanıcı Ekle</button>
+    </div>
+  </div>
 </div>
 
 <!-- External Libraries -->

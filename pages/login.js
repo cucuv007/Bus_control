@@ -54,7 +54,7 @@ export default function Login() {
       </Head>
       <div style={styles.container}>
         <div style={styles.loginBox}>
-          <h1 style={styles.title}>🚌 Bus Control</h1>
+          <h1 style={styles.title}>🚌 Otobüs Kontrol</h1>
           <p style={styles.subtitle}>Giriş Yap</p>
           
           <form onSubmit={handleSubmit} style={styles.form}>

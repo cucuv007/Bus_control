@@ -119,7 +119,24 @@ let tableRefreshInterval = null; // Tablo otomatik yenileme interval'i
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
 refreshBtn.addEventListener('click', handleRefresh);
-approveBtn.addEventListener('click', handleApproval);
+
+// Add User Modal
+const addUserBtn = document.getElementById('addUserBtn');
+const addUserModal = document.getElementById('addUserModal');
+const cancelAddUser = document.getElementById('cancelAddUser');
+const confirmAddUser = document.getElementById('confirmAddUser');
+const addUserStatus = document.getElementById('addUserStatus');
+
+if (addUserBtn) {
+  addUserBtn.addEventListener('click', openAddUserModal);
+}
+if (cancelAddUser) {
+  cancelAddUser.addEventListener('click', closeAddUserModal);
+}
+if (confirmAddUser) {
+  confirmAddUser.addEventListener('click', handleAddUser);
+}
+
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
 
@@ -2597,6 +2614,63 @@ function handleLogout() {
   if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
     localStorage.removeItem('userSession');
     window.location.href = '/login';
+  }
+}
+
+// ==================== ADD USER ====================
+function openAddUserModal() {
+  document.getElementById('newUsername').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('newGorev').value = '';
+  addUserStatus.style.display = 'none';
+  addUserModal.style.display = 'flex';
+}
+
+function closeAddUserModal() {
+  addUserModal.style.display = 'none';
+}
+
+async function handleAddUser() {
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value.trim();
+  const gorev = document.getElementById('newGorev').value;
+  
+  // Validasyon
+  if (!username || !password || !gorev) {
+    addUserStatus.innerHTML = '<span class="error">❌ Tüm alanları doldurun</span>';
+    addUserStatus.style.display = 'block';
+    return;
+  }
+  
+  confirmAddUser.disabled = true;
+  confirmAddUser.textContent = '⏳ Ekleniyor...';
+  
+  try {
+    const res = await fetch('/api/add-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, gorev })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Kullanıcı eklenemedi');
+    }
+    
+    addUserStatus.innerHTML = '<span class="success">✅ Kullanıcı başarıyla eklendi!</span>';
+    addUserStatus.style.display = 'block';
+    
+    setTimeout(() => {
+      closeAddUserModal();
+    }, 1500);
+    
+  } catch (err) {
+    addUserStatus.innerHTML = `<span class="error">❌ ${err.message}</span>`;
+    addUserStatus.style.display = 'block';
+  } finally {
+    confirmAddUser.disabled = false;
+    confirmAddUser.textContent = '✅ Kullanıcı Ekle';
   }
 }
 
