@@ -114,6 +114,7 @@ let highlightTimeout = null; // Renklendirme timeout'u (2 saniye için)
 let isManualHighlight = false; // Scroll butonu ile manuel renklendirme yapıldı mı?
 let isClosingTimer = false; // Timer kapatılıyor mu? (debounce için)
 let pendingApprovalData = null; // Onay bekleyen satır verisi
+let tableRefreshInterval = null; // Tablo otomatik yenileme interval'i
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -1551,6 +1552,12 @@ function closeTimer() {
     console.log('  ✔️ timerInterval temizlendi');
   }
   
+  if (tableRefreshInterval) {
+    clearInterval(tableRefreshInterval);
+    tableRefreshInterval = null;
+    console.log('  ✔️ tableRefreshInterval temizlendi');
+  }
+  
   if (slideInterval) {
     clearInterval(slideInterval);
     slideInterval = null;
@@ -2159,6 +2166,15 @@ async function startMultipleHatsTimer(hatList, hareket) {
   updateReopenTimerIcon(); // İkonu pasif yap
   updateScrollButtons(); // Scroll butonlarını güncelle
   
+  // Tablo otomatik yenileme başlat (5 saniyede bir)
+  if (tableRefreshInterval) {
+    clearInterval(tableRefreshInterval);
+  }
+  
+  tableRefreshInterval = setInterval(() => {
+    refreshTableData(hatList, hareket);
+  }, 5000); // 5 saniyede bir yenile
+  
   if (timerInterval) {
     clearInterval(timerInterval);
   }
@@ -2170,6 +2186,72 @@ async function startMultipleHatsTimer(hatList, hareket) {
   }, 1000);
   
   updateMultipleHatsTimer(hatList, hareket);
+}
+
+// Tablo verilerini sessizce yenile (kullanıcı etkileşimi olmadan)
+async function refreshTableData(hatList, hareket) {
+  try {
+    const allData = [];
+    
+    for (const tableName of hatList) {
+      const res = await fetch('/api/get-table-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableName: tableName,
+          hareket: hareket
+        })
+      });
+      
+      if (!res.ok) continue;
+      
+      const result = await res.json();
+      
+      if (result.success && result.data) {
+        result.data.forEach(row => {
+          allData.push({
+            ...row,
+            _Hat: tableName
+          });
+        });
+      }
+    }
+    
+    if (allData.length === 0) return;
+    
+    // Tarife_Saati'ne göre sırala
+    allData.sort((a, b) => {
+      const timeA = a.Tarife_Saati || '';
+      const timeB = b.Tarife_Saati || '';
+      return timeA.localeCompare(timeB);
+    });
+    
+    // Sadece tbody'yi güncelle (başlıklar değişmesin)
+    const firstRow = allData[0];
+    const allKeys = Object.keys(firstRow);
+    const hatIndex = allKeys.indexOf('_Hat');
+    if (hatIndex > -1) {
+      allKeys.splice(hatIndex, 1);
+      allKeys.unshift('_Hat');
+    }
+    
+    tbody.innerHTML = '';
+    allData.forEach(row => {
+      const tr = document.createElement('tr');
+      allKeys.forEach(k => {
+        const td = document.createElement('td');
+        const value = row[k];
+        td.textContent = value !== null && value !== undefined ? value : '';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    
+    console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
+    
+  } catch (err) {
+    console.error('⚠️ Tablo yenileme hatası:', err.message);
+  }
 }
 
 async function updateMultipleHatsTimer(hatList, hareket) {
