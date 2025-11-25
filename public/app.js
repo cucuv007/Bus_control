@@ -127,8 +127,18 @@ const cancelAddUser = document.getElementById('cancelAddUser');
 const confirmAddUser = document.getElementById('confirmAddUser');
 const addUserStatus = document.getElementById('addUserStatus');
 
+// Add User butonu için event listener sadece Admin için eklenecek
+// Admin olmayanlar için code.html'de onclick ile şifre değiştirme atanıyor
 if (addUserBtn) {
-  addUserBtn.addEventListener('click', openAddUserModal);
+  // Session kontrolü yap
+  const userSession = localStorage.getItem('userSession');
+  if (userSession) {
+    const session = JSON.parse(userSession);
+    // Sadece Admin ise Kullanıcı Ekle modalını aç
+    if (session.gorev === 'Admin') {
+      addUserBtn.addEventListener('click', openAddUserModal);
+    }
+  }
 }
 if (cancelAddUser) {
   cancelAddUser.addEventListener('click', closeAddUserModal);
