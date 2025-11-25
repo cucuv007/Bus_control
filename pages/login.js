@@ -80,7 +80,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  style={{...styles.input, paddingRight: '45px'}}
+                  style={{...styles.input, paddingRight: '50px'}}
                   placeholder="Şifrenizi girin"
                 />
                 <span 
@@ -196,11 +196,12 @@ const styles = {
   },
   eyeIcon: {
     position: 'absolute',
-    right: '12px',
+    right: '15px',
     top: '50%',
     transform: 'translateY(-50%)',
     cursor: 'pointer',
-    fontSize: '18px',
-    userSelect: 'none'
+    fontSize: '20px',
+    userSelect: 'none',
+    padding: '5px'
   }
 };
