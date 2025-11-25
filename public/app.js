@@ -1887,20 +1887,22 @@ async function loadFilteredTables() {
       hatCheckboxList.innerHTML = '';
       hatSelectionContainer.style.display = 'none';
       selectedHats = [];
-      selectAllHats.checked = false;
+      if (selectAllHats) selectAllHats.checked = false;
       
       closeTimer();
       return;
     }
     
     // Tabloları dropdown'a ekle
-    tableSelect.innerHTML = '<option value="">-- Tablo Seçin --</option>';
-    tables.forEach(table => {
-      const option = document.createElement('option');
-      option.value = table;
-      option.textContent = table;
-      tableSelect.appendChild(option);
-    });
+    if (tableSelect) {
+      tableSelect.innerHTML = '<option value="">-- Tablo Seçin --</option>';
+      tables.forEach(table => {
+        const option = document.createElement('option');
+        option.value = table;
+        option.textContent = table;
+        tableSelect.appendChild(option);
+      });
+    }
     
     statusEl.textContent = `${tables.length} tablo listeleniyor (${filteredHats.length > 0 ? 'Filtrelenmiş' : 'Tümü'}).`;
     theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
@@ -2605,30 +2607,29 @@ async function handleRefreshHats() {
 
     console.log('✅ Mailler gönderildi');
 
-    // 7. Masaüstüne kaydet (tarayıcıdan indirme)
-    console.log('💾 Dosyalar indiriliyor...');
+    // 7. Dosyaları ZIP olarak kaydet
+    console.log('💾 Dosyalar ZIP olarak hazırlanıyor...');
     
-    // Excel'i indir
-    const excelBlob = new Blob([new Uint8Array(excelBuffer)], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    });
-    const excelUrl = URL.createObjectURL(excelBlob);
-    const excelLink = document.createElement('a');
-    excelLink.href = excelUrl;
-    excelLink.download = `Hat_Listesi_${timestamp}.xlsx`;
-    excelLink.click();
-    URL.revokeObjectURL(excelUrl);
-
-    // Screenshot'ı indir
+    const zip = new JSZip();
+    const folderName = `Hat_Yenileme_${timestamp}`;
+    
+    // Excel dosyasını ekle
+    zip.file(`${folderName}/Hat_Listesi_${timestamp}.xlsx`, new Uint8Array(excelBuffer));
+    
+    // Screenshot'ı ekle
     const screenshotBlob = await (await fetch(`data:image/png;base64,${screenshotBase64}`)).blob();
-    const screenshotUrl = URL.createObjectURL(screenshotBlob);
-    const screenshotLink = document.createElement('a');
-    screenshotLink.href = screenshotUrl;
-    screenshotLink.download = `Ekran_Goruntusu_${timestamp}.png`;
-    screenshotLink.click();
-    URL.revokeObjectURL(screenshotUrl);
+    zip.file(`${folderName}/Ekran_Goruntusu_${timestamp}.png`, screenshotBlob);
+    
+    // ZIP'i oluştur ve indir
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const zipLink = document.createElement('a');
+    zipLink.href = zipUrl;
+    zipLink.download = `${folderName}.zip`;
+    zipLink.click();
+    URL.revokeObjectURL(zipUrl);
 
-    console.log('✅ Dosyalar indirildi');
+    console.log('✅ ZIP dosyası indirildi');
 
     // 8. Veritabanını temizle
     console.log('🧹 Onaylanan ve Durum sütunları temizleniyor...');
