@@ -1491,19 +1491,29 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
     busItem.className = 'timer-bus-item';
     busItem.style.cursor = 'pointer';
     
-    // 2 dakikadan az kalan araçları kırmızı, fazla olanları yeşil yap
-    if (bus.remainingSeconds <= 120) {
-      busItem.classList.add('warning');
-    } else {
-      busItem.classList.add('safe');
-    }
-    
     const hatAdi = bus.hatAdi || '-';
     const plaka = bus.plaka || '-';
     const tarife = bus.tarife || '-';
     const hareket = bus.hareket || '-';
+    const durum = bus.durum || '';
     
-    busItem.innerHTML = `${hatAdi} - ${plaka} - ${tarife} - ${hareket}`;
+    // Arızalı durumunda kırmızı arka plan + beyaz yazı
+    if (durum && durum.toLowerCase().includes('arızalı')) {
+      busItem.style.backgroundColor = '#e74c3c';
+      busItem.style.color = '#ffffff';
+      busItem.style.fontWeight = 'bold';
+    } else {
+      // 2 dakikadan az kalan araçları kırmızı, fazla olanları yeşil yap
+      if (bus.remainingSeconds <= 120) {
+        busItem.classList.add('warning');
+      } else {
+        busItem.classList.add('safe');
+      }
+    }
+    
+    // Durum bilgisini ekle
+    const durumText = durum ? ` - <strong>${durum}</strong>` : '';
+    busItem.innerHTML = `${hatAdi} - ${plaka} - ${tarife} - ${hareket}${durumText}`;
     
     // Tıklanma olayı ekle
     busItem.addEventListener('click', () => {
@@ -1511,7 +1521,7 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
       handleBusItemClick(bus);
     });
     
-    console.log(`  ➡️ ${index + 1}. ${hatAdi} - ${plaka} - ${tarife} - ${hareket} (${bus.remainingSeconds}s)`);
+    console.log(`  ➡️ ${index + 1}. ${hatAdi} - ${plaka} - ${tarife} - ${hareket} - Durum: ${durum || 'Normal'} (${bus.remainingSeconds}s)`);
     
     multipleBusList.appendChild(busItem);
   });
