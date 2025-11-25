@@ -2547,7 +2547,16 @@ async function handleRefreshHats() {
     const ws = XLSX.utils.json_to_sheet(tableData);
     XLSX.utils.book_append_sheet(wb, ws, 'Hat Listesi');
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const excelBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(excelBuffer)));
+    
+    // Büyük veriyi chunk'lara bölerek base64'e çevir (stack overflow önleme)
+    const uint8Array = new Uint8Array(excelBuffer);
+    let binaryString = '';
+    const chunkSize = 8192; // 8KB chunk
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode.apply(null, chunk);
+    }
+    const excelBase64 = btoa(binaryString);
 
     console.log('✅ Excel oluşturuldu');
 
