@@ -1062,27 +1062,29 @@ async function handleRefresh() {
     
     if (tables.length === 0) {
       statusEl.innerHTML = '<span class="small">Henüz tablo yok. Yükle butonuna tıklayarak dosya yükleyiniz.</span>';
-      tableSelection.style.display = 'none';
+      if (tableSelection) tableSelection.style.display = 'none';
       theadRow.innerHTML = "<th>Boş</th>";
       tbody.innerHTML = '<tr><td class="small">Kayıt yok.</td></tr>';
       return;
     }
     
     // Tabloları dropdown'a ekle
-    tableSelect.innerHTML = '<option value="">-- Tablo Seçin --</option>';
-    tables.forEach(table => {
-      const option = document.createElement('option');
-      option.value = table;
-      option.textContent = table;
-      tableSelect.appendChild(option);
-    });
+    if (tableSelect) {
+      tableSelect.innerHTML = '<option value="">-- Tablo Seçin --</option>';
+      tables.forEach(table => {
+        const option = document.createElement('option');
+        option.value = table;
+        option.textContent = table;
+        tableSelect.appendChild(option);
+      });
+    }
     
     // Mevcut hatları kaydet ve checkbox listesini oluştur
     availableHats = tables;
     renderHatCheckboxes();
     
-    tableSelection.style.display = 'block';
-    hareketSelect.value = '';
+    if (tableSelection) tableSelection.style.display = 'block';
+    if (hareketSelect) hareketSelect.value = '';
     
     // Depolama checkbox listesini oluştur
     renderDepolamaCheckboxes();
