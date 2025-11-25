@@ -173,10 +173,18 @@ uploadTypeHatBtn.addEventListener('click', () => selectUploadType('hat'));
 uploadTypePlakaBtn.addEventListener('click', () => selectUploadType('plaka'));
 uploadTypeDepolamaBtn.addEventListener('click', () => selectUploadType('depolama'));
 
-listFilesBtn.addEventListener('click', handleListFiles);
-confirmUploadBtn.addEventListener('click', handleUpload);
-tableSelect.addEventListener('change', handleTableSelect);
-hareketSelect.addEventListener('change', handleHareketChange);
+if (listFilesBtn) {
+  listFilesBtn.addEventListener('click', handleListFiles);
+}
+if (confirmUploadBtn) {
+  confirmUploadBtn.addEventListener('click', handleUpload);
+}
+if (tableSelect) {
+  tableSelect.addEventListener('change', handleTableSelect);
+}
+if (hareketSelect) {
+  hareketSelect.addEventListener('change', handleHareketChange);
+}
 
 if (selectAllDepolama) {
   selectAllDepolama.addEventListener('change', handleSelectAllDepolama);
