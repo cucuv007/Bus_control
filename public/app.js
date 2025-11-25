@@ -123,6 +123,12 @@ approveBtn.addEventListener('click', handleApproval);
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
 
+// Logout button
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', handleLogout);
+}
+
 // Approval modal listeners
 closeApprovalModal.addEventListener('click', closeApprovalConfirmation);
 cancelApprovalBtn.addEventListener('click', closeApprovalConfirmation);
@@ -2586,6 +2592,15 @@ async function updatePrevNextTimes(tableName, currentTarifeSaati, hareket, calis
 }
 
 // ==================== APPROVAL FUNCTION ====================
+// ==================== LOGOUT ====================
+function handleLogout() {
+  if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+    localStorage.removeItem('userSession');
+    window.location.href = '/login';
+  }
+}
+
+// ==================== APPROVAL ====================
 async function handleApproval() {
   if (!currentTable) {
     statusEl.innerHTML = '<span class="error">❌ Hata: Önce bir tablo seçiniz</span>';

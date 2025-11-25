@@ -5,6 +5,38 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Otobüs Hareket Saati Yönetimi</title>
 <link rel="stylesheet" href="/style.css">
+<script>
+  // Sayfa yüklendiğinde session kontrolü yap
+  (function() {
+    const userSession = localStorage.getItem('userSession');
+    
+    if (!userSession) {
+      // Session yoksa login'e yönlendir
+      window.location.href = '/login';
+      return;
+    }
+    
+    try {
+      const session = JSON.parse(userSession);
+      const loginTime = new Date(session.loginTime);
+      const now = new Date();
+      const hoursPassed = (now - loginTime) / (1000 * 60 * 60);
+      
+      // 24 saat geçtiyse session'ı temizle ve login'e yönlendir
+      if (hoursPassed > 24) {
+        localStorage.removeItem('userSession');
+        window.location.href = '/login';
+        return;
+      }
+      
+      console.log('✅ Kullanıcı oturum açık:', session.username);
+    } catch (err) {
+      // Session bozuksa temizle ve login'e yönlendir
+      localStorage.removeItem('userSession');
+      window.location.href = '/login';
+    }
+  })();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -28,6 +60,7 @@
     <button id="uploadBtn" class="btn btn-upload">📤 Yükle</button>
     <button id="refreshBtn" class="btn">🔄 Yenile</button>
     <button id="approveBtn" class="btn">✅ Onayla</button>
+    <button id="logoutBtn" class="btn" style="background: #e74c3c;">🚪 Çıkış</button>
     </div>
   </header>
 
