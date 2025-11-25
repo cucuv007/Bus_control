@@ -137,6 +137,19 @@ if (confirmAddUser) {
   confirmAddUser.addEventListener('click', handleAddUser);
 }
 
+// Change Password Modal
+const changePasswordModal = document.getElementById('changePasswordModal');
+const cancelChangePassword = document.getElementById('cancelChangePassword');
+const confirmChangePassword = document.getElementById('confirmChangePassword');
+const changePasswordStatus = document.getElementById('changePasswordStatus');
+
+if (cancelChangePassword) {
+  cancelChangePassword.addEventListener('click', closeChangePasswordModal);
+}
+if (confirmChangePassword) {
+  confirmChangePassword.addEventListener('click', handleChangePassword);
+}
+
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
 
@@ -2671,6 +2684,89 @@ async function handleAddUser() {
   } finally {
     confirmAddUser.disabled = false;
     confirmAddUser.textContent = '✅ Kullanıcı Ekle';
+  }
+}
+
+// ==================== CHANGE PASSWORD ====================
+function openChangePasswordModal() {
+  document.getElementById('changePasswordNew').value = '';
+  document.getElementById('changePasswordConfirm').value = '';
+  changePasswordStatus.style.display = 'none';
+  changePasswordModal.style.display = 'flex';
+}
+
+// Make it globally accessible for the onclick handler
+window.openChangePasswordModal = openChangePasswordModal;
+
+function closeChangePasswordModal() {
+  changePasswordModal.style.display = 'none';
+}
+
+async function handleChangePassword() {
+  const newPassword = document.getElementById('changePasswordNew').value.trim();
+  const confirmPassword = document.getElementById('changePasswordConfirm').value.trim();
+  
+  // Validasyon
+  if (!newPassword || !confirmPassword) {
+    changePasswordStatus.innerHTML = '<span class="error">❌ Tüm alanları doldurun</span>';
+    changePasswordStatus.style.display = 'block';
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    changePasswordStatus.innerHTML = '<span class="error">❌ Şifreler eşleşmiyor</span>';
+    changePasswordStatus.style.display = 'block';
+    return;
+  }
+  
+  if (newPassword.length < 4) {
+    changePasswordStatus.innerHTML = '<span class="error">❌ Şifre en az 4 karakter olmalıdır</span>';
+    changePasswordStatus.style.display = 'block';
+    return;
+  }
+  
+  // Get current user from session
+  const userSession = localStorage.getItem('userSession');
+  if (!userSession) {
+    changePasswordStatus.innerHTML = '<span class="error">❌ Oturum bulunamadı</span>';
+    changePasswordStatus.style.display = 'block';
+    return;
+  }
+  
+  const session = JSON.parse(userSession);
+  
+  confirmChangePassword.disabled = true;
+  confirmChangePassword.textContent = '⏳ Değiştiriliyor...';
+  
+  try {
+    const res = await fetch('/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: session.username, 
+        newPassword: newPassword 
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Şifre değiştirilemedi');
+    }
+    
+    changePasswordStatus.innerHTML = '<span class="success">✅ Şifre başarıyla değiştirildi!</span>';
+    changePasswordStatus.style.display = 'block';
+    
+    setTimeout(() => {
+      closeChangePasswordModal();
+    }, 1500);
+    
+  } catch (err) {
+    changePasswordStatus.innerHTML = `<span class="error">❌ ${err.message}</span>`;
+    changePasswordStatus.style.display = 'block';
+  } finally {
+    confirmChangePassword.disabled = false;
+    confirmChangePassword.textContent = '✅ Şifre Değiştir';
   }
 }
 

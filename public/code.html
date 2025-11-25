@@ -31,15 +31,33 @@
       
       console.log('✅ Kullanıcı oturum açık:', session.username, '- Görev:', session.gorev);
       
-      // Sayfa yüklendikten sonra Admin kontrolü yap
+      // Sayfa yüklendikten sonra kullanıcı bilgilerini göster ve Admin kontrolü yap
       window.addEventListener('DOMContentLoaded', function() {
+        // Kullanıcı bilgilerini göster
+        const currentUserSpan = document.getElementById('currentUser');
+        const currentGorevSpan = document.getElementById('currentGorev');
+        if (currentUserSpan) currentUserSpan.textContent = '👤 ' + session.username;
+        if (currentGorevSpan) currentGorevSpan.textContent = session.gorev;
+        
+        // Admin kontrolü - Buton metnini ve işlevini değiştir
         const addUserBtn = document.getElementById('addUserBtn');
         if (addUserBtn) {
-          if (session.gorev !== 'Admin') {
-            addUserBtn.disabled = true;
-            addUserBtn.style.opacity = '0.5';
-            addUserBtn.style.cursor = 'not-allowed';
-            addUserBtn.title = 'Sadece Admin kullanıcılar ekleyebilir';
+          if (session.gorev === 'Admin') {
+            // Admin için "Kullanıcı Ekle" butonu
+            addUserBtn.innerHTML = '➕ Kullanıcı Ekle';
+            addUserBtn.onclick = null; // app.js'deki event listener kullanılacak
+          } else {
+            // Admin değil için "Şifre Değiştir" butonu
+            addUserBtn.innerHTML = '🔑 Şifre Değiştir';
+            addUserBtn.style.background = '#e67e22'; // Turuncu renk
+            addUserBtn.disabled = false;
+            addUserBtn.style.opacity = '1';
+            addUserBtn.style.cursor = 'pointer';
+            addUserBtn.title = 'Şifrenizi değiştirin';
+            // Şifre değiştirme modalını aç
+            addUserBtn.onclick = function() {
+              window.openChangePasswordModal && window.openChangePasswordModal();
+            };
           }
         }
       });
@@ -57,6 +75,10 @@
     <div>
     <h1>📊 Otobüs Kontrol Sistemi</h1>
     <div class="sub">Google Drive'dan veri yükle ve yönet</div>
+    <div id="userInfo" style="font-size: 13px; margin-top: 8px; color: #7f8c8d;">
+      <span id="currentUser" style="font-weight: bold;"></span>
+      <span id="currentGorev" style="margin-left: 10px; padding: 2px 8px; background: #ecf0f1; border-radius: 4px; font-size: 11px;"></span>
+    </div>
     </div>
     
     <!-- Mode Switch -->
@@ -206,7 +228,7 @@
     <div style="display: flex; gap: 10px; margin-top: 12px; margin-bottom: 20px;">
     <button id="uploadTypeHatBtn" class="btn" style="flex: 1;">🚌 Hat Yükle</button>
     <button id="uploadTypePlakaBtn" class="btn" style="flex: 1;">🚗 Plaka Yükle</button>
-    <button id="uploadTypeDepolamaBtn" class="btn" style="flex: 1;">📦 Depolama Yükle</button>
+    <button id="uploadTypeDepolamaBtn" class="btn" style="flex: 1;">🏠 Depolama Yükle</button>
     </div>
     </div>
     <div class="form-group" id="manualFileInputGroup" style="display: none;">
@@ -264,7 +286,7 @@
     
     <!-- Depolama Filtreleme -->
     <div class="form-group" style="margin-bottom: 20px;">
-      <label>📦 Depolama Filtresi:</label>
+      <label>🏠 Depolama Filtresi:</label>
       <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #f9f9f9;">
         <label style="display: block; margin-bottom: 8px; font-weight: bold;">
           <input type="checkbox" id="selectAllDepolama" style="margin-right: 8px;">
@@ -335,22 +357,26 @@
 
 <!-- Add User Modal -->
 <div id="addUserModal" class="modal" style="display: none;">
-  <div class="modal-content" style="max-width: 500px;">
-    <h2 style="margin-top: 0;">➕ Kullanıcı Ekle</h2>
-    
-    <div class="form-group">
-      <label for="newUsername">Kullanıcı Adı *</label>
-      <input type="text" id="newUsername" class="input-field" placeholder="Kullanıcı adı girin" required>
+  <div class="modal-content" style="max-width: 450px; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 28px;">👤</div>
+      <h2 id="addUserModalTitle" style="margin: 0; font-size: 24px; color: #2c3e50;">➕ Kullanıcı Ekle</h2>
+      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Yeni kullanıcı bilgilerini girin</p>
     </div>
     
-    <div class="form-group">
-      <label for="newPassword">Şifre *</label>
-      <input type="password" id="newPassword" class="input-field" placeholder="Şifre girin" required>
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="newUsername" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">👤 Kullanıcı Adı *</label>
+      <input type="text" id="newUsername" class="input-field" placeholder="Kullanıcı adı girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e0e0'">
     </div>
     
-    <div class="form-group">
-      <label for="newGorev">Görev *</label>
-      <select id="newGorev" class="input-field" required>
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="newPassword" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">🔒 Şifre *</label>
+      <input type="password" id="newPassword" class="input-field" placeholder="Şifre girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e0e0'">
+    </div>
+    
+    <div id="gorevGroup" class="form-group" style="margin-bottom: 20px;">
+      <label for="newGorev" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">💼 Görev *</label>
+      <select id="newGorev" class="input-field" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
         <option value="">-- Görev Seçin --</option>
         <option value="Admin">Admin</option>
         <option value="Operasyon">Operasyon</option>
@@ -361,11 +387,39 @@
       </select>
     </div>
     
-    <div id="addUserStatus" class="info" style="display: none; margin-top: 10px;"></div>
+    <div id="addUserStatus" class="info" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
     
-    <div style="display: flex; gap: 10px; margin-top: 20px;">
-      <button id="cancelAddUser" class="btn" style="flex: 1; background: #95a5a6;">❌ İptal</button>
-      <button id="confirmAddUser" class="btn" style="flex: 1; background: #27ae60;">✅ Kullanıcı Ekle</button>
+    <div style="display: flex; gap: 12px; margin-top: 25px;">
+      <button id="cancelAddUser" class="btn" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#7f8c8d'" onmouseout="this.style.background='#95a5a6'">❌ İptal</button>
+      <button id="confirmAddUser" class="btn" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">✅ Kullanıcı Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="changePasswordModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 450px; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 28px;">🔑</div>
+      <h2 style="margin: 0; font-size: 24px; color: #2c3e50;">🔒 Şifre Değiştir</h2>
+      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Yeni şifrenizi girin</p>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="changePasswordNew" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">🔒 Yeni Şifre *</label>
+      <input type="password" id="changePasswordNew" class="input-field" placeholder="Yeni şifre girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="changePasswordConfirm" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">🔒 Şifre Tekrar *</label>
+      <input type="password" id="changePasswordConfirm" class="input-field" placeholder="Şifreyi tekrar girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+    </div>
+    
+    <div id="changePasswordStatus" class="info" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 25px;">
+      <button id="cancelChangePassword" class="btn" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#7f8c8d'" onmouseout="this.style.background='#95a5a6'">❌ İptal</button>
+      <button id="confirmChangePassword" class="btn" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">✅ Şifre Değiştir</button>
     </div>
   </div>
 </div>
