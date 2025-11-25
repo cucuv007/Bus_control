@@ -88,6 +88,7 @@ const hatSelectionContainer = document.getElementById('hatSelectionContainer');
 const hatCheckboxList = document.getElementById('hatCheckboxList');
 const selectAllHats = document.getElementById('selectAllHats');
 const applyHatSelection = document.getElementById('applyHatSelection');
+const refreshHatsBtn = document.getElementById('refreshHatsBtn');
 
 // State variables
 let selectedFiles = [];
@@ -182,6 +183,7 @@ applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
 
 selectAllHats.addEventListener('change', handleSelectAllHats);
 applyHatSelection.addEventListener('click', handleApplyHatSelection);
+refreshHatsBtn.addEventListener('click', handleRefreshHats);
 
 // Dinamik takip checkbox'ı değiştiğinde
 dynamicTrackingCheckbox.addEventListener('change', (e) => {
@@ -2461,6 +2463,193 @@ async function handleApproval() {
     isLoading = false;
     approveBtn.disabled = false;
     refreshBtn.disabled = false;
+  }
+}
+
+// ==================== HATLAR YENİLE İŞLEMİ ====================
+async function handleRefreshHats() {
+  try {
+    // Seçili hatları kontrol et
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('td')?.textContent === 'Henüz veri yok.')) {
+      alert('⚠️ Listelenmiş veri bulunamadı. Önce hatları seçip listeleyin.');
+      return;
+    }
+
+    // Onay al
+    const confirmMsg = '🔄 Hatları Yenile İşlemi\n\n' +
+      'Bu işlem:\n' +
+      '1. Mevcut listeyi Excel olarak kaydedecek\n' +
+      '2. Ekran görüntüsü alacak\n' +
+      '3. Kullanıcılara mail gönderecek\n' +
+      '4. Onaylanan ve Durum sütunlarını temizleyecek\n\n' +
+      'Devam etmek istiyor musunuz?';
+    
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    refreshHatsBtn.disabled = true;
+    refreshHatsBtn.textContent = '⏳ İşlem yapılıyor...';
+
+    // 1. Tablodaki verileri topla
+    const tableData = [];
+    const headerCells = theadRow.querySelectorAll('th');
+    const headers = Array.from(headerCells).map(th => th.textContent.trim());
+
+    const hatAdiIndex = headers.indexOf('Hat_Adi');
+    const tarifeIndex = headers.indexOf('Tarife');
+    const tarifeSaatiIndex = headers.indexOf('Tarife_Saati');
+    const calismaZamaniIndex = headers.indexOf('Çalışma_Zamanı');
+    const hareketIndex = headers.indexOf('Hareket');
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length > 0 && cells[0].textContent !== 'Henüz veri yok.') {
+        const rowData = {};
+        headers.forEach((header, index) => {
+          rowData[header] = cells[index]?.textContent.trim() || '';
+        });
+        tableData.push(rowData);
+      }
+    });
+
+    console.log(`📊 ${tableData.length} satır toplanıyor...`);
+
+    // 2. Excel oluştur (XLSX kütüphanesi kullanarak)
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(tableData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Hat Listesi');
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const excelBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(excelBuffer)));
+
+    console.log('✅ Excel oluşturuldu');
+
+    // 3. Ekran görüntüsü al (html2canvas ile)
+    console.log('📸 Ekran görüntüsü alınıyor...');
+    
+    // html2canvas yüklenmediyse yükle
+    if (typeof html2canvas === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      document.head.appendChild(script);
+      await new Promise(resolve => script.onload = resolve);
+    }
+
+    const tableWrap = document.querySelector('.table-wrap');
+    const canvas = await html2canvas(tableWrap, { 
+      scale: 2,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
+    const screenshotBase64 = canvas.toDataURL('image/png').split(',')[1];
+
+    console.log('✅ Ekran görüntüsü alındı');
+
+    // 4. Kullanıcıları getir
+    console.log('👥 Kullanıcılar getiriliyor...');
+    const usersRes = await fetch('/api/get-users');
+    const usersData = await usersRes.json();
+
+    if (!usersData.success || !usersData.users || usersData.users.length === 0) {
+      throw new Error('Kullanıcı bulunamadı. Lütfen Kullanıcılar tablosunu kontrol edin.');
+    }
+
+    console.log(`✅ ${usersData.users.length} kullanıcı bulundu`);
+
+    // 5. Timestamp oluştur
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+
+    // 6. Mail gönder
+    console.log('📧 Mailler gönderiliyor...');
+    const emailRes = await fetch('/api/send-refresh-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipients: usersData.users,
+        excelData: excelBase64,
+        screenshotData: screenshotBase64,
+        timestamp
+      })
+    });
+
+    const emailData = await emailRes.json();
+
+    if (!emailData.success) {
+      throw new Error('Mail gönderilemedi: ' + (emailData.message || 'Bilinmeyen hata'));
+    }
+
+    console.log('✅ Mailler gönderildi');
+
+    // 7. Masaüstüne kaydet (tarayıcıdan indirme)
+    console.log('💾 Dosyalar indiriliyor...');
+    
+    // Excel'i indir
+    const excelBlob = new Blob([new Uint8Array(excelBuffer)], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    const excelUrl = URL.createObjectURL(excelBlob);
+    const excelLink = document.createElement('a');
+    excelLink.href = excelUrl;
+    excelLink.download = `Hat_Listesi_${timestamp}.xlsx`;
+    excelLink.click();
+    URL.revokeObjectURL(excelUrl);
+
+    // Screenshot'ı indir
+    const screenshotBlob = await (await fetch(`data:image/png;base64,${screenshotBase64}`)).blob();
+    const screenshotUrl = URL.createObjectURL(screenshotBlob);
+    const screenshotLink = document.createElement('a');
+    screenshotLink.href = screenshotUrl;
+    screenshotLink.download = `Ekran_Goruntusu_${timestamp}.png`;
+    screenshotLink.click();
+    URL.revokeObjectURL(screenshotUrl);
+
+    console.log('✅ Dosyalar indirildi');
+
+    // 8. Veritabanını temizle
+    console.log('🧹 Onaylanan ve Durum sütunları temizleniyor...');
+    
+    const clearData = tableData.map(row => ({
+      Hat_Adi: row.Hat_Adi,
+      Tarife: row.Tarife,
+      Tarife_Saati: row.Tarife_Saati,
+      Calisma_Zamani: row['Çalışma_Zamanı'],
+      Hareket: row.Hareket
+    }));
+
+    const clearRes = await fetch('/api/clear-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: clearData })
+    });
+
+    const clearResult = await clearRes.json();
+
+    if (!clearResult.success) {
+      throw new Error('Temizleme hatası: ' + clearResult.error);
+    }
+
+    console.log(`✅ ${clearResult.updatedCount} satır temizlendi`);
+
+    // 9. Tabloyu yenile
+    alert(`✅ İşlem Tamamlandı!\n\n` +
+      `📧 ${usersData.users.length} kullanıcıya mail gönderildi\n` +
+      `🧹 ${clearResult.updatedCount} satır temizlendi\n` +
+      `💾 Dosyalar indirildi\n\n` +
+      `Tablo yenileniyor...`);
+
+    // Seçili hatları tekrar yükle
+    const selectedHats = Array.from(document.querySelectorAll('.hat-checkbox:checked')).map(cb => cb.value);
+    if (selectedHats.length > 0) {
+      await handleApplyHatSelection();
+    }
+
+  } catch (err) {
+    console.error('Hatları yenile hatası:', err);
+    alert(`❌ Hata: ${err.message}`);
+  } finally {
+    refreshHatsBtn.disabled = false;
+    refreshHatsBtn.textContent = '🔄 Hatları Yenile';
   }
 }
 

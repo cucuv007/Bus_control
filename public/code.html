@@ -213,7 +213,7 @@
 
   <div id="mainCard" class="card">
     
-    <!-- Table & Movement Selection -->
+    <!-- Hat Selection - Tablo seçimi kaldırıldı -->
     <div id="tableSelection" style="display: none; margin-bottom: 20px;">
     
     <!-- Depolama Filtreleme -->
@@ -229,13 +229,8 @@
       <button id="applyDepolamaFilter" class="btn" style="margin-top: 10px; width: 100%;">🔍 Filtre Uygula</button>
     </div>
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-      <div class="form-group">
-      <label for="tableSelect">Tablo Seçin:</label>
-      <select id="tableSelect" class="input-field">
-      <option value="">-- Tablo Seçin --</option>
-      </select>
-      </div>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+      <!-- Tablo seçimi kaldırıldı -->
       
       <div class="form-group">
       <label for="hareketSelect">Hareket Filtresi:</label>
@@ -258,6 +253,7 @@
         <div id="hatCheckboxList"></div>
       </div>
       <button id="applyHatSelection" class="btn" style="margin-top: 10px; width: 100%;">⏱️ Seçili Hatları Takip Et</button>
+      <button id="refreshHatsBtn" class="btn" style="margin-top: 10px; width: 100%; background: #e74c3c;">🔄 Hatları Yenile</button>
     </div>
     </div>
 
@@ -291,6 +287,9 @@
   </button>
 </div>
 
+<!-- External Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
