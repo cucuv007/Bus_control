@@ -62,9 +62,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Her alıcıya mail gönder
-    const results = [];
-    for (const recipient of recipients) {
+    // Her alıcıya paralel olarak mail gönder (hız için)
+    const sendPromises = recipients.map(async (recipient) => {
       try {
         await transporter.sendMail({
           from: `"Bus Control Sistemi" <${process.env.SMTP_USER}>`,
@@ -82,12 +81,14 @@ export default async function handler(req, res) {
         });
 
         console.log(`✅ Mail gönderildi: ${recipient.mail}`);
-        results.push({ email: recipient.mail, success: true });
+        return { email: recipient.mail, success: true };
       } catch (err) {
         console.error(`❌ Mail gönderilemedi (${recipient.mail}):`, err.message);
-        results.push({ email: recipient.mail, success: false, error: err.message });
+        return { email: recipient.mail, success: false, error: err.message };
       }
-    }
+    });
+
+    const results = await Promise.all(sendPromises);
 
     const allSuccess = results.every(r => r.success);
 

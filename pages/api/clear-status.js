@@ -31,45 +31,46 @@ export default async function handler(req, res) {
 
     let updatedCount = 0;
 
-    for (const row of rows) {
-      const { Hat_Adi, Tarife, Tarife_Saati, Calisma_Zamani, Hareket } = row;
-
-      if (!Hat_Adi || !Tarife_Saati) {
-        console.warn('⚠️ Eksik veri, atlanıyor:', row);
-        continue;
+    // Hatları grupla
+    const hatGroups = {};
+    rows.forEach(row => {
+      const { Hat_Adi } = row;
+      if (!hatGroups[Hat_Adi]) {
+        hatGroups[Hat_Adi] = [];
       }
+      hatGroups[Hat_Adi].push(row);
+    });
 
-      // UPDATE query
-      let query = `
-        UPDATE public."${Hat_Adi}"
-        SET "Onaylanan" = NULL, "Durum" = NULL
-        WHERE "Tarife" = $1 AND "Tarife_Saati" = $2
-      `;
+    console.log(`📊 ${Object.keys(hatGroups).length} farklı hat tablosunda işlem yapılacak`);
 
-      const params = [Tarife, Tarife_Saati];
-      let paramIndex = 3;
-
-      // Çalışma_Zamanı filtresi
-      if (Calisma_Zamani) {
-        query += ` AND "Çalışma_Zamanı" = $${paramIndex}`;
-        params.push(Calisma_Zamani);
-        paramIndex++;
-      }
-
-      // Hareket filtresi
-      if (Hareket) {
-        query += ` AND "Hareket" = $${paramIndex}`;
-        params.push(Hareket);
-      }
-
-      query += ';';
-
+    // Her hat için toplu UPDATE
+    for (const [hatAdi, hatRows] of Object.entries(hatGroups)) {
       try {
-        const result = await client.query(query, params);
+        // WHERE koşullarını oluştur
+        const conditions = hatRows.map((row, idx) => {
+          const { Tarife, Tarife_Saati, Calisma_Zamani, Hareket } = row;
+          let cond = `("Tarife" = '${Tarife}' AND "Tarife_Saati" = '${Tarife_Saati}'`;
+          if (Calisma_Zamani) {
+            cond += ` AND "Çalışma_Zamanı" = '${Calisma_Zamani}'`;
+          }
+          if (Hareket) {
+            cond += ` AND "Hareket" = '${Hareket}'`;
+          }
+          cond += ')';
+          return cond;
+        }).join(' OR ');
+
+        const query = `
+          UPDATE public."${hatAdi}"
+          SET "Onaylanan" = NULL, "Durum" = NULL
+          WHERE ${conditions};
+        `;
+
+        const result = await client.query(query);
         updatedCount += result.rowCount;
-        console.log(`✅ ${Hat_Adi} - ${Tarife_Saati} (${Hareket || 'Tümü'}) temizlendi`);
+        console.log(`✅ ${hatAdi} - ${result.rowCount} satır temizlendi`);
       } catch (err) {
-        console.error(`❌ Güncelleme hatası (${Hat_Adi}):`, err.message);
+        console.error(`❌ ${hatAdi} temizlenemedi:`, err.message);
       }
     }
 

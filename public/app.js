@@ -2571,15 +2571,28 @@ async function handleRefreshHats() {
       await new Promise(resolve => script.onload = resolve);
     }
 
-    const tableWrap = document.querySelector('.table-wrap');
-    const canvas = await html2canvas(tableWrap, { 
-      scale: 2,
-      logging: false,
-      backgroundColor: '#ffffff'
-    });
-    const screenshotBase64 = canvas.toDataURL('image/png').split(',')[1];
+    // Tabloyu direkt capture et
+    const table = document.querySelector('table');
+    if (!table) {
+      throw new Error('Tablo bulunamadı, ekran görüntüsü alınamıyor');
+    }
 
-    console.log('✅ Ekran görüntüsü alındı');
+    const canvas = await html2canvas(table, { 
+      scale: 1.5,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: table.scrollWidth,
+      windowHeight: table.scrollHeight
+    });
+    
+    const screenshotDataUrl = canvas.toDataURL('image/png');
+    const screenshotBase64 = screenshotDataUrl.split(',')[1];
+
+    console.log(`✅ Ekran görüntüsü alındı (${screenshotBase64.length} karakter)`);
+
+    if (!screenshotBase64 || screenshotBase64.length < 100) {
+      throw new Error('Ekran görüntüsü oluşturulamadı (boş veya çok küçük)');
+    }
 
     // 4. Kullanıcıları getir
     console.log('👥 Kullanıcılar getiriliyor...');
