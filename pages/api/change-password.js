@@ -12,31 +12,32 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { username, newPassword } = req.body;
+    const { username, oldPassword, newPassword } = req.body;
 
     // Validation
-    if (!username || !newPassword) {
-      console.log('❌ Eksik alanlar:', { username: !!username, newPassword: !!newPassword });
+    if (!username || !oldPassword || !newPassword) {
+      console.log('❌ Eksik alanlar:', { username: !!username, oldPassword: !!oldPassword, newPassword: !!newPassword });
       return res.status(400).json({ 
         success: false, 
-        message: 'Kullanıcı adı ve yeni şifre gereklidir' 
+        message: 'Kullanıcı adı, eski şifre ve yeni şifre gereklidir' 
       });
     }
 
     console.log('🔄 Şifre güncelleniyor:', username);
 
-    // Check if user exists
+    // Check if user exists and old password is correct
     const { data: existingUser, error: checkError } = await supabase
       .from('Kullanıcı_Verileri')
       .select('*')
       .eq('Kullanıcı', username)
+      .eq('Şifre', oldPassword)
       .single();
 
     if (checkError || !existingUser) {
-      console.log('❌ Kullanıcı bulunamadı:', username);
-      return res.status(404).json({ 
+      console.log('❌ Kullanıcı bulunamadı veya eski şifre yanlış:', username);
+      return res.status(401).json({ 
         success: false, 
-        message: 'Kullanıcı bulunamadı' 
+        message: 'Mevcut şifre yanlış' 
       });
     }
 

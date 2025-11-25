@@ -76,6 +76,18 @@
       window.location.href = '/login';
     }
   })();
+  
+  // Şifre göster/gizle fonksiyonu
+  function togglePasswordVisibility(inputId, eyeIcon) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      eyeIcon.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      eyeIcon.textContent = '👁️';
+    }
+  }
 </script>
 </head>
 <body>
@@ -411,17 +423,31 @@
     <div style="text-align: center; margin-bottom: 25px;">
       <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 28px;">🔑</div>
       <h2 style="margin: 0; font-size: 24px; color: #2c3e50;">🔒 Şifre Değiştir</h2>
-      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Yeni şifrenizi girin</p>
+      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Şifrenizi güncelleyin</p>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="changePasswordOld" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">🔒 Mevcut Şifre *</label>
+      <div style="position: relative;">
+        <input type="password" id="changePasswordOld" class="input-field" placeholder="Mevcut şifrenizi girin" required style="width: 100%; padding: 12px 45px 12px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+        <span onclick="togglePasswordVisibility('changePasswordOld', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none;">👁️</span>
+      </div>
     </div>
     
     <div class="form-group" style="margin-bottom: 20px;">
       <label for="changePasswordNew" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">🔒 Yeni Şifre *</label>
-      <input type="password" id="changePasswordNew" class="input-field" placeholder="Yeni şifre girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+      <div style="position: relative;">
+        <input type="password" id="changePasswordNew" class="input-field" placeholder="Yeni şifre girin" required style="width: 100%; padding: 12px 45px 12px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+        <span onclick="togglePasswordVisibility('changePasswordNew', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none;">👁️</span>
+      </div>
     </div>
     
     <div class="form-group" style="margin-bottom: 20px;">
       <label for="changePasswordConfirm" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">🔒 Şifre Tekrar *</label>
-      <input type="password" id="changePasswordConfirm" class="input-field" placeholder="Şifreyi tekrar girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+      <div style="position: relative;">
+        <input type="password" id="changePasswordConfirm" class="input-field" placeholder="Şifreyi tekrar girin" required style="width: 100%; padding: 12px 45px 12px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#e67e22'" onblur="this.style.borderColor='#e0e0e0'">
+        <span onclick="togglePasswordVisibility('changePasswordConfirm', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none;">👁️</span>
+      </div>
     </div>
     
     <div id="changePasswordStatus" class="info" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px;"></div>

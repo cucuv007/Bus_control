@@ -8,6 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,14 +74,22 @@ export default function Login() {
 
             <div style={styles.inputGroup}>
               <label style={styles.label}>Şifre</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={styles.input}
-                placeholder="Şifrenizi girin"
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{...styles.input, paddingRight: '45px'}}
+                  placeholder="Şifrenizi girin"
+                />
+                <span 
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </span>
+              </div>
             </div>
 
             {error && (
@@ -184,5 +193,14 @@ const styles = {
     borderRadius: '6px',
     fontSize: '14px',
     textAlign: 'center'
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: '12px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    cursor: 'pointer',
+    fontSize: '18px',
+    userSelect: 'none'
   }
 };

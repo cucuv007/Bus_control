@@ -2699,6 +2699,7 @@ async function handleAddUser() {
 
 // ==================== CHANGE PASSWORD ====================
 function openChangePasswordModal() {
+  document.getElementById('changePasswordOld').value = '';
   document.getElementById('changePasswordNew').value = '';
   document.getElementById('changePasswordConfirm').value = '';
   changePasswordStatus.style.display = 'none';
@@ -2713,18 +2714,19 @@ function closeChangePasswordModal() {
 }
 
 async function handleChangePassword() {
+  const oldPassword = document.getElementById('changePasswordOld').value.trim();
   const newPassword = document.getElementById('changePasswordNew').value.trim();
   const confirmPassword = document.getElementById('changePasswordConfirm').value.trim();
   
   // Validasyon
-  if (!newPassword || !confirmPassword) {
+  if (!oldPassword || !newPassword || !confirmPassword) {
     changePasswordStatus.innerHTML = '<span class="error">❌ Tüm alanları doldurun</span>';
     changePasswordStatus.style.display = 'block';
     return;
   }
   
   if (newPassword !== confirmPassword) {
-    changePasswordStatus.innerHTML = '<span class="error">❌ Şifreler eşleşmiyor</span>';
+    changePasswordStatus.innerHTML = '<span class="error">❌ Yeni şifreler eşleşmiyor</span>';
     changePasswordStatus.style.display = 'block';
     return;
   }
@@ -2754,6 +2756,7 @@ async function handleChangePassword() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         username: session.username, 
+        oldPassword: oldPassword,
         newPassword: newPassword 
       })
     });
