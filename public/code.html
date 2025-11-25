@@ -39,6 +39,15 @@
         if (currentUserSpan) currentUserSpan.textContent = '👤 ' + session.username;
         if (currentGorevSpan) currentGorevSpan.textContent = session.gorev;
         
+        // Yükle butonunu User için pasif yap
+        const uploadBtn = document.getElementById('uploadBtn');
+        if (uploadBtn && session.gorev === 'User') {
+          uploadBtn.disabled = true;
+          uploadBtn.style.opacity = '0.5';
+          uploadBtn.style.cursor = 'not-allowed';
+          uploadBtn.title = 'User yetkisi ile yükleme yapamazsınız';
+        }
+        
         // Admin kontrolü - Buton metnini ve işlevini değiştir
         const addUserBtn = document.getElementById('addUserBtn');
         if (addUserBtn) {
