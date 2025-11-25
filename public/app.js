@@ -178,11 +178,19 @@ confirmUploadBtn.addEventListener('click', handleUpload);
 tableSelect.addEventListener('change', handleTableSelect);
 hareketSelect.addEventListener('change', handleHareketChange);
 
-selectAllDepolama.addEventListener('change', handleSelectAllDepolama);
-applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
+if (selectAllDepolama) {
+  selectAllDepolama.addEventListener('change', handleSelectAllDepolama);
+}
+if (applyDepolamaFilter) {
+  applyDepolamaFilter.addEventListener('click', handleApplyDepolamaFilter);
+}
 
-selectAllHats.addEventListener('change', handleSelectAllHats);
-applyHatSelection.addEventListener('click', handleApplyHatSelection);
+if (selectAllHats) {
+  selectAllHats.addEventListener('change', handleSelectAllHats);
+}
+if (applyHatSelection) {
+  applyHatSelection.addEventListener('click', handleApplyHatSelection);
+}
 
 // refreshHatsBtn başlangıçta gizli olabilir, kontrol et
 if (refreshHatsBtn) {
@@ -190,25 +198,27 @@ if (refreshHatsBtn) {
 }
 
 // Dinamik takip checkbox'ı değiştiğinde
-dynamicTrackingCheckbox.addEventListener('change', (e) => {
-  console.log('🔄 Dinamik takip checkbox değişti:', {
-    checked: e.target.checked,
-    currentTimerRow: currentTimerRow
+if (dynamicTrackingCheckbox) {
+  dynamicTrackingCheckbox.addEventListener('change', (e) => {
+    console.log('🔄 Dinamik takip checkbox değişti:', {
+      checked: e.target.checked,
+      currentTimerRow: currentTimerRow
+    });
+    
+    if (e.target.checked && currentTimerRow) {
+      console.log('✅ Checkbox seçili ve currentTimerRow var, scrollToTimerRow çağrılıyor...');
+      // Checkbox seçildiğinde, mevcut timer satırını hemen bul ve scroll et
+      scrollToTimerRow(currentTimerRow);
+    } else if (e.target.checked && !currentTimerRow) {
+      console.warn('⚠️ Checkbox seçili ama currentTimerRow null!');
+    } else if (!e.target.checked) {
+      console.log('❌ Checkbox kaldırıldı, vurgular temizleniyor...');
+      // Checkbox kaldırıldığında vurguyu temizle
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(r => r.style.backgroundColor = '');
+    }
   });
-  
-  if (e.target.checked && currentTimerRow) {
-    console.log('✅ Checkbox seçili ve currentTimerRow var, scrollToTimerRow çağrılıyor...');
-    // Checkbox seçildiğinde, mevcut timer satırını hemen bul ve scroll et
-    scrollToTimerRow(currentTimerRow);
-  } else if (e.target.checked && !currentTimerRow) {
-    console.warn('⚠️ Checkbox seçili ama currentTimerRow null!');
-  } else if (!e.target.checked) {
-    console.log('❌ Checkbox kaldırıldı, vurgular temizleniyor...');
-    // Checkbox kaldırıldığında vurguyu temizle
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(r => r.style.backgroundColor = '');
-  }
-});
+}
 
 manualFileInput.addEventListener('change', handleManualFileSelect);
 
