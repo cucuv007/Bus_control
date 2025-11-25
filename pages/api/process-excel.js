@@ -266,16 +266,16 @@ export default async function handler(req, res) {
       const tempCols = [];
       let maxTCol = 0;
       
-      // Önce T01, T02... başlıklarını bul
+      // Önce T01, T02... veya T1, T2... başlıklarını bul
       for (let col = 4; col <= 30; col++) {
         const cell = headerRow.getCell(col);
         if (!cell || !cell.value) continue;
         const headerValue = String(cell.value).trim();
         
-        // T01 veya T02 (A) gibi formatları destekle
-        const match = headerValue.match(/^(T\d{2})(\s*\(A\))?$/);
+        // T01, T02 veya T1, T2 formatlarını destekle (A) ekli veya eksiz
+        const match = headerValue.match(/^(T\d{1,2})(\s*\(A\))?$/);
         if (match) {
-          const tarifeName = match[1]; // "T01"
+          const tarifeName = match[1]; // "T01" veya "T1"
           const hasA = !!match[2]; // "(A)" var mı?
           
           tempCols.push({ col, name: tarifeName, hasA });
@@ -322,7 +322,7 @@ export default async function handler(req, res) {
     if (tarifeColumns.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'T01, T02... sütunları bulunamadı'
+        error: 'T01, T02... veya T1, T2... tarife sütunları bulunamadı'
       });
     }
     
