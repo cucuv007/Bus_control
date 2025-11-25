@@ -2244,6 +2244,25 @@ async function refreshTableData(hatList, hareket) {
         td.textContent = value !== null && value !== undefined ? value : '';
         tr.appendChild(td);
       });
+      
+      // Satıra tıklanınca onay popup'ı aç (orijinal tablo adını kullan)
+      const originalTableName = row._Hat || hatList[0];
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', () => {
+        openApprovalConfirmation(row, originalTableName);
+      });
+      
+      // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
+      if (row.Onaylanan && row.Tarife_Saati) {
+        const onaylananIndex = allKeys.indexOf('Onaylanan');
+        if (onaylananIndex !== -1) {
+          const onaylananCell = tr.children[onaylananIndex];
+          const fontColor = getApprovalFontColor(row.Onaylanan, row.Tarife_Saati);
+          onaylananCell.style.color = fontColor;
+          onaylananCell.style.fontWeight = 'bold';
+        }
+      }
+      
       tbody.appendChild(tr);
     });
     
