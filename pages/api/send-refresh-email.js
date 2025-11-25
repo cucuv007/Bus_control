@@ -4,8 +4,9 @@ import nodemailer from 'nodemailer';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb'
-    }
+      sizeLimit: '50mb'
+    },
+    responseLimit: '50mb'
   }
 };
 
@@ -56,9 +57,9 @@ export default async function handler(req, res) {
 
     if (screenshotData) {
       attachments.push({
-        filename: `Ekran_Goruntusu_${timestamp}.png`,
+        filename: `Ekran_Goruntusu_${timestamp}.jpg`,
         content: Buffer.from(screenshotData, 'base64'),
-        contentType: 'image/png'
+        contentType: 'image/jpeg'
       });
     }
 

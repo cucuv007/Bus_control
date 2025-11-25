@@ -2583,8 +2583,8 @@ async function handleRefreshHats() {
     console.log('🎯 Target element:', targetElement.tagName, 'Width:', targetElement.offsetWidth, 'Height:', targetElement.offsetHeight);
 
     const canvas = await html2canvas(targetElement, { 
-      scale: 1,
-      logging: true,
+      scale: 0.8,
+      logging: false,
       backgroundColor: '#ffffff',
       useCORS: true,
       allowTaint: true
@@ -2592,12 +2592,13 @@ async function handleRefreshHats() {
     
     console.log('🖼️ Canvas oluşturuldu:', 'Width:', canvas.width, 'Height:', canvas.height);
     
-    const screenshotDataUrl = canvas.toDataURL('image/png');
-    console.log('📦 DataURL uzunluğu:', screenshotDataUrl.length);
+    // JPEG formatında sıkıştır (daha küçük dosya boyutu)
+    const screenshotDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    console.log('📦 DataURL uzunluğu:', screenshotDataUrl.length, '(~' + Math.round(screenshotDataUrl.length / 1024) + ' KB)');
     
     const screenshotBase64 = screenshotDataUrl.split(',')[1];
 
-    console.log(`✅ Ekran görüntüsü alındı (${screenshotBase64 ? screenshotBase64.length : 0} karakter)`);
+    console.log(`✅ Ekran görüntüsü alındı (${screenshotBase64 ? Math.round(screenshotBase64.length / 1024) : 0} KB)`);
 
     if (!screenshotBase64 || screenshotBase64.length < 100) {
       console.error('❌ Screenshot base64 çok küçük veya boş!');
@@ -2649,9 +2650,9 @@ async function handleRefreshHats() {
     // Excel dosyasını ekle
     zip.file(`${folderName}/Hat_Listesi_${timestamp}.xlsx`, new Uint8Array(excelBuffer));
     
-    // Screenshot'ı ekle
-    const screenshotBlob = await (await fetch(`data:image/png;base64,${screenshotBase64}`)).blob();
-    zip.file(`${folderName}/Ekran_Goruntusu_${timestamp}.png`, screenshotBlob);
+    // Screenshot'ı ekle (JPEG formatında)
+    const screenshotBlob = await (await fetch(`data:image/jpeg;base64,${screenshotBase64}`)).blob();
+    zip.file(`${folderName}/Ekran_Goruntusu_${timestamp}.jpg`, screenshotBlob);
     
     // ZIP'i oluştur ve indir
     const zipBlob = await zip.generateAsync({ type: 'blob' });
