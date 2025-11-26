@@ -204,6 +204,25 @@ if (confirmChangePassword) {
   confirmChangePassword.addEventListener('click', handleChangePassword);
 }
 
+// Açıklama Modal
+const aciklamaBtn = document.getElementById('aciklamaBtn');
+const aciklamaModal = document.getElementById('aciklamaModal');
+const cancelAciklama = document.getElementById('cancelAciklama');
+const confirmAciklama = document.getElementById('confirmAciklama');
+const aciklamaStatus = document.getElementById('aciklamaStatus');
+
+let selectedRowForAciklama = null;
+
+if (aciklamaBtn) {
+  aciklamaBtn.addEventListener('click', openAciklamaModal);
+}
+if (cancelAciklama) {
+  cancelAciklama.addEventListener('click', closeAciklamaModal);
+}
+if (confirmAciklama) {
+  confirmAciklama.addEventListener('click', handleAddAciklama);
+}
+
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
 
@@ -1303,10 +1322,30 @@ async function loadTableData() {
         tr.appendChild(td);
       });
       
-      // Satıra tıklanınca onay popup'ı aç
+      // Satıra tıklanınca onay popup'ı aç veya satırı seç (Operasyon/Depolama için)
       tr.style.cursor = 'pointer';
-      tr.addEventListener('click', () => {
-        openApprovalConfirmation(row, currentTable);
+      tr.addEventListener('click', (e) => {
+        // Session kontrolü
+        const userSession = localStorage.getItem('userSession');
+        if (userSession) {
+          const session = JSON.parse(userSession);
+          
+          // Operasyon veya Depolama ise satır seçimi yap
+          if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
+            // Önceki seçimi temizle
+            document.querySelectorAll('#tbody tr').forEach(tr => {
+              tr.style.backgroundColor = '';
+            });
+            // Yeni satırı seç
+            tr.style.backgroundColor = '#e3f2fd';
+            selectedRowForAciklama = row;
+          } else {
+            // Diğer kullanıcılar için onay popup'ı
+            openApprovalConfirmation(row, currentTable);
+          }
+        } else {
+          openApprovalConfirmation(row, currentTable);
+        }
       });
       
       // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
@@ -3056,6 +3095,109 @@ async function handleChangePassword() {
   } finally {
     confirmChangePassword.disabled = false;
     confirmChangePassword.textContent = '✅ Şifre Değiştir';
+  }
+}
+
+// ==================== AÇIKLAMA EKLEME ====================
+function openAciklamaModal() {
+  // Kullanıcının bir satır seçip seçmediğini kontrol et
+  if (!selectedRowForAciklama) {
+    alert('⚠️ Lütfen önce bir satır seçin!');
+    return;
+  }
+  
+  // Satır bilgilerini modalda göster
+  document.getElementById('aciklamaHatAdi').textContent = selectedRowForAciklama.Hat_Adi || '-';
+  document.getElementById('aciklamaCalismaZamani').textContent = selectedRowForAciklama['Çalışma_Zamanı'] || '-';
+  document.getElementById('aciklamaTarife').textContent = selectedRowForAciklama.Tarife || '-';
+  document.getElementById('aciklamaTarifeSaati').textContent = selectedRowForAciklama.Tarife_Saati || '-';
+  document.getElementById('aciklamaPlaka').textContent = selectedRowForAciklama.Plaka || '-';
+  
+  document.getElementById('aciklamaText').value = '';
+  aciklamaStatus.style.display = 'none';
+  aciklamaModal.style.display = 'flex';
+}
+
+function closeAciklamaModal() {
+  aciklamaModal.style.display = 'none';
+}
+
+async function handleAddAciklama() {
+  const aciklamaText = document.getElementById('aciklamaText').value.trim();
+  
+  if (!aciklamaText) {
+    aciklamaStatus.innerHTML = '<span class="error">❌ Açıklama giriniz</span>';
+    aciklamaStatus.style.display = 'block';
+    return;
+  }
+  
+  if (!selectedRowForAciklama) {
+    aciklamaStatus.innerHTML = '<span class="error">❌ Satır bilgisi bulunamadı</span>';
+    aciklamaStatus.style.display = 'block';
+    return;
+  }
+  
+  // Session'dan kullanıcı görevini al
+  const userSession = localStorage.getItem('userSession');
+  if (!userSession) {
+    aciklamaStatus.innerHTML = '<span class="error">❌ Oturum bulunamadı</span>';
+    aciklamaStatus.style.display = 'block';
+    return;
+  }
+  
+  const session = JSON.parse(userSession);
+  const isOperasyon = session.gorev === 'Operasyon';
+  const isDepolama = session.gorev === 'Depolama';
+  
+  if (!isOperasyon && !isDepolama) {
+    aciklamaStatus.innerHTML = '<span class="error">❌ Bu işlem için yetkiniz yok</span>';
+    aciklamaStatus.style.display = 'block';
+    return;
+  }
+  
+  confirmAciklama.disabled = true;
+  confirmAciklama.textContent = '⏳ Ekleniyor...';
+  
+  try {
+    const apiUrl = isOperasyon ? '/api/add-operasyon-aciklama' : '/api/add-depolama-aciklama';
+    
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Hat_Adi: selectedRowForAciklama.Hat_Adi,
+        Calisma_Zamani: selectedRowForAciklama['Çalışma_Zamanı'],
+        Tarife: selectedRowForAciklama.Tarife,
+        Tarife_Saati: selectedRowForAciklama.Tarife_Saati,
+        Plaka: selectedRowForAciklama.Plaka,
+        Aciklama: aciklamaText
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Açıklama eklenemedi');
+    }
+    
+    aciklamaStatus.innerHTML = '<span class="success">✅ Açıklama başarıyla eklendi!</span>';
+    aciklamaStatus.style.display = 'block';
+    
+    setTimeout(() => {
+      closeAciklamaModal();
+      selectedRowForAciklama = null;
+      // Seçili satırın stilini kaldır
+      document.querySelectorAll('#tbody tr').forEach(tr => {
+        tr.style.backgroundColor = '';
+      });
+    }, 1500);
+    
+  } catch (err) {
+    aciklamaStatus.innerHTML = `<span class="error">❌ ${err.message}</span>`;
+    aciklamaStatus.style.display = 'block';
+  } finally {
+    confirmAciklama.disabled = false;
+    confirmAciklama.textContent = '✅ Açıklama Ekle';
   }
 }
 

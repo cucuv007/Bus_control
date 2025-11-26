@@ -48,6 +48,12 @@
           uploadBtn.title = 'User yetkisi ile yükleme yapamazsınız';
         }
         
+        // Açıklama Ekle butonu - Sadece Operasyon ve Depolama için
+        const aciklamaBtn = document.getElementById('aciklamaBtn');
+        if (aciklamaBtn && (session.gorev === 'Operasyon' || session.gorev === 'Depolama')) {
+          aciklamaBtn.style.display = 'block';
+        }
+        
         // Admin kontrolü - Buton metnini ve işlevini değiştir
         const addUserBtn = document.getElementById('addUserBtn');
         if (addUserBtn) {
@@ -115,6 +121,7 @@
     <div class="controls" style="display: flex; flex-wrap: wrap; gap: 10px;">
     <button id="uploadBtn" class="btn btn-upload">📤 Yükle</button>
     <button id="refreshBtn" class="btn">🔄 Yenile</button>
+    <button id="aciklamaBtn" class="btn" style="background: #3498db; display: none;">📝 Açıklama Ekle</button>
     <button id="addUserBtn" class="btn" style="background: #27ae60;">➕ Kullanıcı Ekle</button>
     <button id="logoutBtn" class="btn" style="background: #e74c3c;">🚺 Çıkış</button>
     </div>
@@ -497,6 +504,40 @@
     <div style="display: flex; gap: 12px; margin-top: 25px;">
       <button id="cancelChangePassword" class="btn" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#7f8c8d'" onmouseout="this.style.background='#95a5a6'">❌ İptal</button>
       <button id="confirmChangePassword" class="btn" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">✅ Şifre Değiştir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Açıklama Ekleme Modal -->
+<div id="aciklamaModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 600px; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 28px;">📝</div>
+      <h2 style="margin: 0; font-size: 24px; color: #2c3e50;">📋 Açıklama Ekle</h2>
+      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Seçili satır için açıklama girin</p>
+    </div>
+    
+    <!-- Satır Bilgileri -->
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div><strong>Hat:</strong> <span id="aciklamaHatAdi"></span></div>
+        <div><strong>Çalışma Zamanı:</strong> <span id="aciklamaCalismaZamani"></span></div>
+        <div><strong>Tarife:</strong> <span id="aciklamaTarife"></span></div>
+        <div><strong>Tarife Saati:</strong> <span id="aciklamaTarifeSaati"></span></div>
+        <div style="grid-column: 1 / -1;"><strong>Plaka:</strong> <span id="aciklamaPlaka"></span></div>
+      </div>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="aciklamaText" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">📝 Açıklama *</label>
+      <textarea id="aciklamaText" class="input-field" placeholder="Açıklama yazın..." required style="width: 100%; min-height: 150px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; resize: vertical; font-family: Arial, sans-serif; transition: border-color 0.3s;" onfocus="this.style.borderColor='#3498db'" onblur="this.style.borderColor='#e0e0e0'"></textarea>
+    </div>
+    
+    <div id="aciklamaStatus" class="info" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 25px;">
+      <button id="cancelAciklama" class="btn" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#7f8c8d'" onmouseout="this.style.background='#95a5a6'">❌ İptal</button>
+      <button id="confirmAciklama" class="btn" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">✅ Açıklama Ekle</button>
     </div>
   </div>
 </div>
