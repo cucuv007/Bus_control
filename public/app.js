@@ -127,6 +127,50 @@ const cancelAddUser = document.getElementById('cancelAddUser');
 const confirmAddUser = document.getElementById('confirmAddUser');
 const addUserStatus = document.getElementById('addUserStatus');
 
+// Mode buttons
+const addUserModeBtn = document.getElementById('addUserModeBtn');
+const updateUserModeBtn = document.getElementById('updateUserModeBtn');
+const deleteUserModeBtn = document.getElementById('deleteUserModeBtn');
+const listUserModeBtn = document.getElementById('listUserModeBtn');
+
+// Filter and dropdowns
+const filterGorev = document.getElementById('filterGorev');
+const existingUserSelect = document.getElementById('existingUserSelect');
+const existingUserDropdown = document.getElementById('existingUserDropdown');
+const userListContainer = document.getElementById('userListContainer');
+const addUserFormContainer = document.getElementById('addUserFormContainer');
+
+let currentUserMode = 'add'; // 'add', 'update', 'delete', 'list'
+
+// Mode button event listeners
+if (addUserModeBtn) addUserModeBtn.addEventListener('click', () => setUserMode('add'));
+if (updateUserModeBtn) updateUserModeBtn.addEventListener('click', () => setUserMode('update'));
+if (deleteUserModeBtn) deleteUserModeBtn.addEventListener('click', () => setUserMode('delete'));
+if (listUserModeBtn) listUserModeBtn.addEventListener('click', () => setUserMode('list'));
+
+// Filter görev değiştiğinde
+if (filterGorev) {
+  filterGorev.addEventListener('change', async () => {
+    if (currentUserMode === 'list') {
+      await loadUserList();
+    } else if (currentUserMode === 'update' || currentUserMode === 'delete') {
+      await loadUserDropdown();
+    }
+  });
+}
+
+// Mevcut kullanıcı seçildiğinde
+if (existingUserSelect) {
+  existingUserSelect.addEventListener('change', () => {
+    const username = existingUserSelect.value;
+    if (username && currentUserMode === 'update') {
+      // Kullanıcı adını input'a doldur
+      document.getElementById('newUsername').value = username;
+      document.getElementById('newUsername').disabled = true;
+    }
+  });
+}
+
 // Add User butonu için event listener sadece Admin için eklenecek
 // Admin olmayanlar için code.html'de onclick ile şifre değiştirme atanıyor
 if (addUserBtn) {
@@ -144,7 +188,7 @@ if (cancelAddUser) {
   cancelAddUser.addEventListener('click', closeAddUserModal);
 }
 if (confirmAddUser) {
-  confirmAddUser.addEventListener('click', handleAddUser);
+  confirmAddUser.addEventListener('click', handleUserAction);
 }
 
 // Change Password Modal
@@ -2641,11 +2685,143 @@ function handleLogout() {
 }
 
 // ==================== ADD USER ====================
+function setUserMode(mode) {
+  currentUserMode = mode;
+  
+  // Buton renklerini güncelle
+  const buttons = [addUserModeBtn, updateUserModeBtn, deleteUserModeBtn, listUserModeBtn];
+  buttons.forEach(btn => {
+    if (btn) btn.style.background = '#95a5a6';
+  });
+  
+  // Aktif butonu vurgula
+  const activeColors = {
+    'add': '#27ae60',
+    'update': '#3498db',
+    'delete': '#e74c3c',
+    'list': '#f39c12'
+  };
+  
+  if (mode === 'add' && addUserModeBtn) addUserModeBtn.style.background = activeColors.add;
+  if (mode === 'update' && updateUserModeBtn) updateUserModeBtn.style.background = activeColors.update;
+  if (mode === 'delete' && deleteUserModeBtn) deleteUserModeBtn.style.background = activeColors.delete;
+  if (mode === 'list' && listUserModeBtn) listUserModeBtn.style.background = activeColors.list;
+  
+  // UI'ı güncelle
+  if (mode === 'list') {
+    // Liste modu
+    addUserFormContainer.style.display = 'none';
+    existingUserDropdown.style.display = 'none';
+    userListContainer.style.display = 'block';
+    confirmAddUser.style.display = 'none';
+    loadUserList();
+  } else if (mode === 'add') {
+    // Ekleme modu
+    addUserFormContainer.style.display = 'block';
+    existingUserDropdown.style.display = 'none';
+    userListContainer.style.display = 'none';
+    confirmAddUser.style.display = 'block';
+    confirmAddUser.textContent = '✅ Kullanıcı Ekle';
+    confirmAddUser.style.background = 'linear-gradient(135deg, #27ae60 0%, #229954 100%)';
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newGorev').value = '';
+    document.getElementById('newUsername').disabled = false;
+    document.getElementById('newPassword').disabled = false;
+    document.getElementById('gorevGroup').style.display = 'block';
+    addUserStatus.style.display = 'none';
+  } else if (mode === 'update') {
+    // Güncelleme modu
+    addUserFormContainer.style.display = 'block';
+    existingUserDropdown.style.display = 'block';
+    userListContainer.style.display = 'none';
+    confirmAddUser.style.display = 'block';
+    confirmAddUser.textContent = '✏️ Görevi Güncelle';
+    confirmAddUser.style.background = 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)';
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newGorev').value = '';
+    document.getElementById('newUsername').disabled = false;
+    document.getElementById('newPassword').disabled = true;
+    document.getElementById('gorevGroup').style.display = 'block';
+    addUserStatus.style.display = 'none';
+    loadUserDropdown();
+  } else if (mode === 'delete') {
+    // Silme modu
+    addUserFormContainer.style.display = 'none';
+    existingUserDropdown.style.display = 'block';
+    userListContainer.style.display = 'none';
+    confirmAddUser.style.display = 'block';
+    confirmAddUser.textContent = '🗑️ Kullanıcıyı Sil';
+    confirmAddUser.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+    addUserStatus.style.display = 'none';
+    loadUserDropdown();
+  }
+}
+
+async function loadUserDropdown() {
+  const gorevFilter = filterGorev.value;
+  
+  try {
+    const res = await fetch(`/api/list-users?gorev=${encodeURIComponent(gorevFilter)}`);
+    const data = await res.json();
+    
+    if (data.success) {
+      existingUserSelect.innerHTML = '<option value="">-- Kullanıcı Seçin --</option>';
+      data.users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.Kullanıcı;
+        option.textContent = `${user.Kullanıcı} (${user.Görev})`;
+        existingUserSelect.appendChild(option);
+      });
+    }
+  } catch (err) {
+    console.error('Kullanıcı dropdown yükleme hatası:', err);
+  }
+}
+
+async function loadUserList() {
+  const gorevFilter = filterGorev.value;
+  const userListContent = document.getElementById('userListContent');
+  
+  try {
+    const res = await fetch(`/api/list-users?gorev=${encodeURIComponent(gorevFilter)}`);
+    const data = await res.json();
+    
+    if (data.success) {
+      if (data.users.length === 0) {
+        userListContent.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">Kullanıcı bulunamadı</p>';
+      } else {
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: #34495e; color: white;"><th style="padding: 10px; text-align: left;">Kullanıcı</th><th style="padding: 10px; text-align: left;">Görev</th></tr></thead>';
+        html += '<tbody>';
+        data.users.forEach((user, index) => {
+          const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
+          html += `<tr style="background: ${bgColor};"><td style="padding: 10px; border-bottom: 1px solid #ddd;">${user.Kullanıcı}</td><td style="padding: 10px; border-bottom: 1px solid #ddd;">${user.Görev}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        userListContent.innerHTML = html;
+      }
+    }
+  } catch (err) {
+    console.error('Kullanıcı listesi yükleme hatası:', err);
+    userListContent.innerHTML = '<p style="text-align: center; color: #e74c3c; padding: 20px;">❌ Hata oluştu</p>';
+  }
+}
+
+async function handleUserAction() {
+  if (currentUserMode === 'add') {
+    await handleAddUser();
+  } else if (currentUserMode === 'update') {
+    await handleUpdateUser();
+  } else if (currentUserMode === 'delete') {
+    await handleDeleteUser();
+  }
+}
+
 function openAddUserModal() {
-  document.getElementById('newUsername').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('newGorev').value = '';
-  addUserStatus.style.display = 'none';
+  currentUserMode = 'add';
+  setUserMode('add');
   addUserModal.style.display = 'flex';
 }
 
@@ -2666,6 +2842,7 @@ async function handleAddUser() {
   }
   
   confirmAddUser.disabled = true;
+  const originalText = confirmAddUser.textContent;
   confirmAddUser.textContent = '⏳ Ekleniyor...';
   
   try {
@@ -2693,7 +2870,106 @@ async function handleAddUser() {
     addUserStatus.style.display = 'block';
   } finally {
     confirmAddUser.disabled = false;
-    confirmAddUser.textContent = '✅ Kullanıcı Ekle';
+    confirmAddUser.textContent = originalText;
+  }
+}
+
+async function handleUpdateUser() {
+  const username = existingUserSelect.value;
+  const newGorev = document.getElementById('newGorev').value;
+  
+  if (!username) {
+    addUserStatus.innerHTML = '<span class="error">❌ Kullanıcı seçin</span>';
+    addUserStatus.style.display = 'block';
+    return;
+  }
+  
+  if (!newGorev) {
+    addUserStatus.innerHTML = '<span class="error">❌ Yeni görev seçin</span>';
+    addUserStatus.style.display = 'block';
+    return;
+  }
+  
+  confirmAddUser.disabled = true;
+  const originalText = confirmAddUser.textContent;
+  confirmAddUser.textContent = '⏳ Güncelleniyor...';
+  
+  try {
+    const res = await fetch('/api/update-user-gorev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, newGorev })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Görev güncellenemedi');
+    }
+    
+    addUserStatus.innerHTML = '<span class="success">✅ Kullanıcı görevi başarıyla güncellendi!</span>';
+    addUserStatus.style.display = 'block';
+    
+    setTimeout(() => {
+      closeAddUserModal();
+    }, 1500);
+    
+  } catch (err) {
+    addUserStatus.innerHTML = `<span class="error">❌ ${err.message}</span>`;
+    addUserStatus.style.display = 'block';
+  } finally {
+    confirmAddUser.disabled = false;
+    confirmAddUser.textContent = originalText;
+  }
+}
+
+async function handleDeleteUser() {
+  const username = existingUserSelect.value;
+  
+  if (!username) {
+    addUserStatus.innerHTML = '<span class="error">❌ Kullanıcı seçin</span>';
+    addUserStatus.style.display = 'block';
+    return;
+  }
+  
+  if (!confirm(`"${username}" kullanıcısını silmek istediğinizden emin misiniz?`)) {
+    return;
+  }
+  
+  confirmAddUser.disabled = true;
+  const originalText = confirmAddUser.textContent;
+  confirmAddUser.textContent = '⏳ Siliniyor...';
+  
+  try {
+    const res = await fetch('/api/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Kullanıcı silinemedi');
+    }
+    
+    addUserStatus.innerHTML = '<span class="success">✅ Kullanıcı başarıyla silindi!</span>';
+    addUserStatus.style.display = 'block';
+    
+    // Dropdown'u yenile
+    await loadUserDropdown();
+    
+    setTimeout(() => {
+      addUserStatus.style.display = 'none';
+      existingUserSelect.value = '';
+    }, 1500);
+    
+  } catch (err) {
+    addUserStatus.innerHTML = `<span class="error">❌ ${err.message}</span>`;
+    addUserStatus.style.display = 'block';
+  } finally {
+    confirmAddUser.disabled = false;
+    confirmAddUser.textContent = originalText;
   }
 }
 

@@ -378,13 +378,54 @@
 
 <!-- Add User Modal -->
 <div id="addUserModal" class="modal" style="display: none;">
-  <div class="modal-content" style="max-width: 450px; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+  <div class="modal-content" style="max-width: 550px; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
     <div style="text-align: center; margin-bottom: 25px;">
       <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 28px;">👤</div>
-      <h2 id="addUserModalTitle" style="margin: 0; font-size: 24px; color: #2c3e50;">➕ Kullanıcı Ekle</h2>
-      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Yeni kullanıcı bilgilerini girin</p>
+      <h2 id="addUserModalTitle" style="margin: 0; font-size: 24px; color: #2c3e50;">👥 Kullanıcı Yönetimi</h2>
+      <p style="margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d;">Kullanıcı ekle, sil veya güncelle</p>
     </div>
     
+    <!-- İşlem Seçimi -->
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">⚙️ İşlem Seçin</label>
+      <div style="display: flex; gap: 10px;">
+        <button id="addUserModeBtn" class="btn" style="flex: 1; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold;">➕ Ekle</button>
+        <button id="updateUserModeBtn" class="btn" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold;">✏️ Güncelle</button>
+        <button id="deleteUserModeBtn" class="btn" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold;">🗑️ Sil</button>
+        <button id="listUserModeBtn" class="btn" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold;">📋 Listele</button>
+      </div>
+    </div>
+    
+    <!-- Görev Filtresi (Tüm modlar için) -->
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="filterGorev" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">💼 Görev Filtresi</label>
+      <select id="filterGorev" class="input-field" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
+        <option value="">Tümü</option>
+        <option value="Admin">Admin</option>
+        <option value="Operasyon">Operasyon</option>
+        <option value="Rotasyon">Rotasyon</option>
+        <option value="Depolama">Depolama</option>
+        <option value="Otobüs_Şoförü">Otobüs Şoförü</option>
+        <option value="User">User</option>
+      </select>
+    </div>
+    
+    <!-- Kullanıcı Listesi (Sadece liste modunda görünür) -->
+    <div id="userListContainer" style="display: none; margin-bottom: 20px;">
+      <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+        <div id="userListContent"></div>
+      </div>
+    </div>
+    
+    <!-- Mevcut Kullanıcılar Dropdown (Güncelle/Sil modunda) -->
+    <div id="existingUserDropdown" class="form-group" style="display: none; margin-bottom: 20px;">
+      <label for="existingUserSelect" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">👤 Kullanıcı Seçin</label>
+      <select id="existingUserSelect" class="input-field" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
+        <option value="">-- Kullanıcı Seçin --</option>
+      </select>
+    </div>
+    
+    <div id="addUserFormContainer">
     <div class="form-group" style="margin-bottom: 20px;">
       <label for="newUsername" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">👤 Kullanıcı Adı *</label>
       <input type="text" id="newUsername" class="input-field" placeholder="Kullanıcı adı girin" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e0e0'">
@@ -406,6 +447,7 @@
         <option value="Otobüs_Şoförü">Otobüs Şoförü</option>
         <option value="User">User</option>
       </select>
+    </div>
     </div>
     
     <div id="addUserStatus" class="info" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
