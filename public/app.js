@@ -4021,18 +4021,29 @@ async function handleSistemiGuncelle() {
 
     // 6. Tabloları temizle
     console.log('🧹 Açıklama tabloları temizleniyor...');
-    const clearRes = await fetch('/api/clear-aciklamalar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
+    
+    try {
+      const clearRes = await fetch('/api/clear-aciklamalar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-    const clearResult = await clearRes.json();
+      if (!clearRes.ok) {
+        console.error('❌ Clear API yanıt hatası:', clearRes.status, clearRes.statusText);
+        throw new Error(`API hatası: ${clearRes.status} ${clearRes.statusText}`);
+      }
 
-    if (!clearResult.success) {
-      throw new Error('Tablolar temizlenemedi: ' + clearResult.error);
+      const clearResult = await clearRes.json();
+
+      if (!clearResult.success) {
+        throw new Error('Tablolar temizlenemedi: ' + clearResult.error);
+      }
+
+      console.log('✅ Tablolar temizlendi');
+    } catch (clearErr) {
+      console.error('❌ Tablolar temizlenirken hata:', clearErr);
+      throw new Error('Tablolar temizlenemedi: ' + clearErr.message);
     }
-
-    console.log('✅ Tablolar temizlendi');
 
     // 7. ZIP dosyası oluştur ve indir
     console.log('💾 ZIP dosyası hazırlanıyor...');

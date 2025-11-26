@@ -1,50 +1,40 @@
-import { createClient } from '@supabase/supabase-js';
+import { Pool } from 'pg';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase URL veya Service Key eksik');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 30000,
+  max: 20
+});
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
+  let client;
   try {
     console.log('🧹 Açıklama tabloları temizleniyor...');
 
+    client = await pool.connect();
+
     // 1. Operasyon_Açıklama tablosunu temizle
-    const { error: opError } = await supabase
-      .from('Operasyon_Açıklama')
-      .delete()
-      .neq('id', 0); // Tüm satırları sil
-
-    if (opError) {
-      console.error('Operasyon_Açıklama temizleme hatası:', opError);
-      throw new Error('Operasyon_Açıklama temizlenemedi: ' + opError.message);
-    }
-
+    await client.query('DELETE FROM public."Operasyon_Açıklama"');
     console.log('✅ Operasyon_Açıklama temizlendi');
 
     // 2. Depolama_Açıklama tablosunu temizle
-    const { error: depError } = await supabase
-      .from('Depolama_Açıklama')
-      .delete()
-      .neq('id', 0); // Tüm satırları sil
-
-    if (depError) {
-      console.error('Depolama_Açıklama temizleme hatası:', depError);
-      throw new Error('Depolama_Açıklama temizlenemedi: ' + depError.message);
-    }
-
+    await client.query('DELETE FROM public."Depolama_Açıklama"');
     console.log('✅ Depolama_Açıklama temizlendi');
 
-    // Not: Sequence sıfırlama Supabase'de otomatik yapılır
-    console.log('ℹ️ Sequenceler bir sonraki insert ile otomatik düzenlenecek');
+    // 3. Sequence'leri sıfırla
+    try {
+      await client.query('ALTER SEQUENCE public."Operasyon_Açıklama_id_seq" RESTART WITH 1');
+      await client.query('ALTER SEQUENCE public."Depolama_Açıklama_id_seq" RESTART WITH 1');
+      console.log('✅ Sequenceler sıfırlandı');
+    } catch (seqErr) {
+      console.warn('⚠️ Sequence sıfırlama hatası (kritik değil):', seqErr.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -59,5 +49,9 @@ export default async function handler(req, res) {
       success: false,
       error: err.message || 'Tablolar temizlenemedi'
     });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 }
