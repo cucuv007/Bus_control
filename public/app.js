@@ -3992,17 +3992,17 @@ async function handleSistemiGuncelle() {
     // 4. Timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
 
-    // 5. Mail gönder - Operasyon dosyasını gönder (Depolama eklenmeyecek şimdilik)
+    // 5. Mail gönder - Her iki Excel dosyasını gönder
     console.log('📧 Mailler gönderiliyor...');
     
     try {
-      const emailRes = await fetch('/api/send-refresh-email', {
+      const emailRes = await fetch('/api/send-aciklama-emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipients: usersData.users,
-          excelData: operasyonBase64,
-          screenshotData: null,
+          operasyonExcelData: operasyonBase64,
+          depolamaExcelData: depolamaBase64,
           timestamp
         })
       });

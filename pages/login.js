@@ -38,6 +38,31 @@ export default function Login() {
           loginTime: new Date().toISOString()
         }));
 
+        // Sadece Operasyon veya Depolama kullanıcıları için otomatik güncelleme kontrolü
+        if (data.user.Görev === 'Operasyon' || data.user.Görev === 'Depolama') {
+          try {
+            // Loading mesajını güncelle
+            setLoading(true);
+            setError('Sistem kontrol ediliyor, lütfen bekleyin...');
+            
+            const updateRes = await fetch('/api/auto-update-aciklamalar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+
+            const updateData = await updateRes.json();
+            
+            if (updateData.updated) {
+              console.log('✅ Otomatik güncelleme yapıldı');
+            } else {
+              console.log('ℹ️ Güncelleme gerekmedi');
+            }
+          } catch (updateErr) {
+            console.warn('⚠️ Otomatik güncelleme hatası:', updateErr);
+            // Hata olsa bile giriş yapabilsin
+          }
+        }
+
         // code.html sayfasına yönlendir
         window.location.href = '/code.html';
       }
