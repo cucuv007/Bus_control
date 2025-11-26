@@ -48,18 +48,23 @@ export default function Login() {
           setStatusMessage('🔍 Sistem kontrol ediliyor, lütfen bekleyin...');
           
           try {
+            console.log('📡 API çağrısı yapılıyor: /api/auto-update-aciklamalar');
+            
             const updateRes = await fetch('/api/auto-update-aciklamalar', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
             });
 
+            console.log('📨 API yanıt durumu:', updateRes.status, updateRes.statusText);
+            
             const updateData = await updateRes.json();
+            console.log('📊 API yanıt verisi:', updateData);
             
             if (updateData.updated) {
               console.log('✅ Otomatik güncelleme yapıldı, mail gönderildi');
               setStatusMessage('✅ Sistem güncellendi, yönlendiriliyorsunuz...');
             } else {
-              console.log('ℹ️ Güncelleme gerekmedi');
+              console.log('ℹ️ Güncelleme gerekmedi, sebep:', updateData.message);
               setStatusMessage('✅ Sistem güncel, yönlendiriliyorsunuz...');
             }
             
