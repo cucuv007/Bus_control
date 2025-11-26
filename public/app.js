@@ -272,6 +272,7 @@ const closeAciklamaInceleModal = document.getElementById('closeAciklamaInceleMod
 const closeAciklamaInceleBtn = document.getElementById('closeAciklamaInceleBtn');
 const exportAciklamaExcel = document.getElementById('exportAciklamaExcel');
 const gorevSelectCombo = document.getElementById('gorevSelectCombo');
+const sistemiGuncelleBtn = document.getElementById('sistemiGuncelleBtn');
 
 if (inceleAciklamaBtn) {
   inceleAciklamaBtn.addEventListener('click', openAciklamaInceleModal);
@@ -287,6 +288,9 @@ if (exportAciklamaExcel) {
 }
 if (gorevSelectCombo) {
   gorevSelectCombo.addEventListener('change', () => loadAciklamaData());
+}
+if (sistemiGuncelleBtn) {
+  sistemiGuncelleBtn.addEventListener('click', handleSistemiGuncelle);
 }
 
 closeModal.addEventListener('click', closeUploadModal);
@@ -378,7 +382,16 @@ if (applyHatSelection) {
 
 // refreshHatsBtn başlangıçta gizli olabilir, kontrol et
 if (refreshHatsBtn) {
-  refreshHatsBtn.addEventListener('click', handleRefreshHats);
+  // Sadece Depolama kullanıcıları için aktif
+  const session = getSessionFromLocalStorage();
+  if (session && session.gorev === 'Depolama') {
+    refreshHatsBtn.addEventListener('click', handleRefreshHats);
+  } else {
+    refreshHatsBtn.disabled = true;
+    refreshHatsBtn.style.opacity = '0.5';
+    refreshHatsBtn.style.cursor = 'not-allowed';
+    refreshHatsBtn.title = 'Bu özellik sadece Depolama kullanıcıları için aktiftir';
+  }
 }
 
 // Dinamik takip checkbox'ı değiştiğinde
@@ -3485,7 +3498,7 @@ async function handleRefreshHats() {
     // Seçili hatları kontrol et
     const rows = tbody.querySelectorAll('tr');
     if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('td')?.textContent === 'Henüz veri yok.')) {
-      alert('⚠️ Listelenmiş veri bulunamadı. Önce hatları seçip listeleyin.');
+      alert('⚠️ Veri seçmediniz. Lütfen önce hatları seçip listeleyin.');
       return;
     }
 
@@ -3788,7 +3801,35 @@ async function loadAciklamaData(gorevParam) {
     if (data.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #7f8c8d;">Henüz açıklama eklenmemiş</td></tr>';
       statusEl.style.display = 'none';
+      // Buton gizle
+      if (sistemiGuncelleBtn) {
+        sistemiGuncelleBtn.style.display = 'none';
+      }
       return;
+    }
+    
+    // Eski veri kontrolü - bugünden önceki tarihler var mı?
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let hasOldData = false;
+    data.forEach(row => {
+      if (row.Tarih) {
+        const rowDate = new Date(row.Tarih);
+        rowDate.setHours(0, 0, 0, 0);
+        if (rowDate < today) {
+          hasOldData = true;
+        }
+      }
+    });
+    
+    // Eski veri varsa butonu göster
+    if (sistemiGuncelleBtn) {
+      if (hasOldData) {
+        sistemiGuncelleBtn.style.display = 'inline-block';
+      } else {
+        sistemiGuncelleBtn.style.display = 'none';
+      }
     }
     
     // Tabloyu doldur
