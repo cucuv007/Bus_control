@@ -121,7 +121,6 @@
     <div class="controls" style="display: flex; flex-wrap: wrap; gap: 10px;">
     <button id="uploadBtn" class="btn btn-upload">📤 Yükle</button>
     <button id="refreshBtn" class="btn">🔄 Yenile</button>
-    <button id="aciklamaBtn" class="btn" style="background: #3498db; display: none;">📝 Açıklama Ekle</button>
     <button id="addUserBtn" class="btn" style="background: #27ae60;">➕ Kullanıcı Ekle</button>
     <button id="logoutBtn" class="btn" style="background: #e74c3c;">🚺 Çıkış</button>
     </div>
@@ -208,6 +207,16 @@
         <p id="approvalQuestion" style="text-align: center; color: #7f8c8d; font-size: 14px;">
           Bu çıkışı onaylamak istiyor musunuz?
         </p>
+        
+        <!-- Açıklama Giriş Formu (Gizli) -->
+        <div id="aciklamaFormInline" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; font-size: 14px;">📝 Açıklama *</label>
+            <textarea id="aciklamaTextInline" placeholder="Açıklama yazın..." style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; resize: vertical; font-family: Arial, sans-serif; transition: border-color 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e0e0'"></textarea>
+          </div>
+          <div id="aciklamaStatusInline" style="display: none; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 10px;"></div>
+          <button id="confirmAciklamaInline" class="btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer;">✅ Açıklama Ekle</button>
+        </div>
       </div>
       <div class="modal-footer">
         <button id="cancelApprovalBtn" class="btn btn-secondary">İptal</button>

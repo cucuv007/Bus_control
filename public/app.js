@@ -223,7 +223,6 @@ if (confirmChangePassword) {
 }
 
 // Açıklama Modal
-const aciklamaBtn = document.getElementById('aciklamaBtn');
 const aciklamaModal = document.getElementById('aciklamaModal');
 const cancelAciklama = document.getElementById('cancelAciklama');
 const confirmAciklama = document.getElementById('confirmAciklama');
@@ -232,23 +231,38 @@ const aciklamaEkleFromPopup = document.getElementById('aciklamaEkleFromPopup');
 
 let selectedRowForAciklama = null;
 
-if (aciklamaBtn) {
-  aciklamaBtn.addEventListener('click', openAciklamaModal);
-}
 if (cancelAciklama) {
   cancelAciklama.addEventListener('click', closeAciklamaModal);
 }
 if (confirmAciklama) {
   confirmAciklama.addEventListener('click', handleAddAciklama);
 }
-// Popup içindeki Açıklama Ekle butonu
+// Popup içindeki Açıklama Ekle butonu - Inline formu göster/gizle
 if (aciklamaEkleFromPopup) {
   aciklamaEkleFromPopup.addEventListener('click', () => {
-    // Önce onay popup'ını kapat
-    closeApprovalConfirmation();
-    // Ardından açıklama modalını aç (selectedRowForAciklama zaten dolu)
-    openAciklamaModal();
+    const inlineForm = document.getElementById('aciklamaFormInline');
+    const aciklamaTextInline = document.getElementById('aciklamaTextInline');
+    
+    if (inlineForm.style.display === 'none') {
+      // Formu göster
+      inlineForm.style.display = 'block';
+      aciklamaEkleFromPopup.textContent = '❌ Açıklama Formunu Kapat';
+      aciklamaEkleFromPopup.style.background = '#95a5a6';
+      aciklamaTextInline.value = '';
+      document.getElementById('aciklamaStatusInline').style.display = 'none';
+    } else {
+      // Formu gizle
+      inlineForm.style.display = 'none';
+      aciklamaEkleFromPopup.textContent = '📝 Açıklama Ekle';
+      aciklamaEkleFromPopup.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    }
   });
+}
+
+// Inline Açıklama Ekle butonu
+const confirmAciklamaInline = document.getElementById('confirmAciklamaInline');
+if (confirmAciklamaInline) {
+  confirmAciklamaInline.addEventListener('click', handleAddAciklamaInline);
 }
 
 closeModal.addEventListener('click', closeUploadModal);
@@ -988,6 +1002,17 @@ function openApprovalConfirmation(rowData, tableName) {
 function closeApprovalConfirmation() {
   approvalModal.style.display = 'none';
   pendingApprovalData = null;
+  
+  // Inline açıklama formunu sıfırla
+  const inlineForm = document.getElementById('aciklamaFormInline');
+  const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
+  if (inlineForm) {
+    inlineForm.style.display = 'none';
+  }
+  if (aciklamaBtn) {
+    aciklamaBtn.textContent = '📝 Açıklama Ekle';
+    aciklamaBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+  }
 }
 
 async function handleRowApproval() {
@@ -3132,13 +3157,92 @@ async function handleChangePassword() {
 }
 
 // ==================== AÇIKLAMA EKLEME ====================
-function openAciklamaModal() {
-  // Kullanıcının bir satır seçip seçmediğini kontrol et
-  if (!selectedRowForAciklama) {
-    alert('⚠️ Lütfen önce bir satır seçin!');
+
+// Inline (popup içi) açıklama ekleme
+async function handleAddAciklamaInline() {
+  const aciklamaText = document.getElementById('aciklamaTextInline').value.trim();
+  const statusEl = document.getElementById('aciklamaStatusInline');
+  const confirmBtn = document.getElementById('confirmAciklamaInline');
+  
+  if (!aciklamaText) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Açıklama giriniz</span>';
+    statusEl.style.display = 'block';
     return;
   }
   
+  if (!selectedRowForAciklama) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Satır bilgisi bulunamadı</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  // Session kontrolü - Operasyon mu Depolama mı?
+  const userSession = localStorage.getItem('userSession');
+  if (!userSession) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Oturum bulunamadı</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  const session = JSON.parse(userSession);
+  const gorev = session.gorev;
+  
+  if (gorev !== 'Operasyon' && gorev !== 'Depolama') {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Bu özellik sadece Operasyon ve Depolama kullanıcıları içindir</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = '⏳ Ekleniyor...';
+  
+  try {
+    // API endpoint belirle
+    const endpoint = gorev === 'Operasyon' 
+      ? '/api/add-operasyon-aciklama' 
+      : '/api/add-depolama-aciklama';
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Hat_Adi: selectedRowForAciklama.Hat_Adi,
+        Calisma_Zamani: selectedRowForAciklama['Çalışma_Zamanı'] || selectedRowForAciklama.Calisma_Zamani,
+        Tarife: selectedRowForAciklama.Tarife,
+        Tarife_Saati: selectedRowForAciklama.Tarife_Saati,
+        Plaka: selectedRowForAciklama.Plaka,
+        Aciklama: aciklamaText
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Açıklama eklenemedi');
+    }
+    
+    statusEl.innerHTML = '<span style="color: #27ae60;">✅ Açıklama başarıyla eklendi!</span>';
+    statusEl.style.display = 'block';
+    
+    // 1.5 saniye sonra popup'ı kapat
+    setTimeout(() => {
+      closeApprovalConfirmation();
+      // Satır seçimini temizle
+      document.querySelectorAll('#tbody tr').forEach(tr => {
+        tr.style.backgroundColor = '';
+      });
+      selectedRowForAciklama = null;
+    }, 1500);
+    
+  } catch (err) {
+    statusEl.innerHTML = `<span style="color: #e74c3c;">❌ ${err.message}</span>`;
+    statusEl.style.display = 'block';
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '✅ Açıklama Ekle';
+  }
+}
+
+function openAciklamaModal() {
   // Satır bilgilerini modalda göster
   document.getElementById('aciklamaHatAdi').textContent = selectedRowForAciklama.Hat_Adi || '-';
   document.getElementById('aciklamaCalismaZamani').textContent = selectedRowForAciklama['Çalışma_Zamanı'] || '-';
