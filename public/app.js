@@ -3748,8 +3748,22 @@ async function loadAciklamaData(gorevParam) {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #f0f0f0';
       
+      // Tarih formatla (2025-11-26 14:30:45 formatında)
+      let tarihStr = '-';
+      if (row.Tarih) {
+        const tarihObj = new Date(row.Tarih);
+        const yil = tarihObj.getFullYear();
+        const ay = String(tarihObj.getMonth() + 1).padStart(2, '0');
+        const gun = String(tarihObj.getDate()).padStart(2, '0');
+        const saat = String(tarihObj.getHours()).padStart(2, '0');
+        const dakika = String(tarihObj.getMinutes()).padStart(2, '0');
+        const saniye = String(tarihObj.getSeconds()).padStart(2, '0');
+        tarihStr = `${gun}.${ay}.${yil} ${saat}:${dakika}:${saniye}`;
+      }
+      
       tr.innerHTML = `
         <td style="padding: 10px;">${row.id || '-'}</td>
+        <td style="padding: 10px; white-space: nowrap;">${tarihStr}</td>
         <td style="padding: 10px;">${row.Hat_Adi || '-'}</td>
         <td style="padding: 10px;">${row['Çalışma_Zamanı'] || '-'}</td>
         <td style="padding: 10px;">${row.Tarife || '-'}</td>
@@ -3769,7 +3783,7 @@ async function loadAciklamaData(gorevParam) {
   } catch (err) {
     console.error('Açıklama yükleme hatası:', err);
     statusEl.innerHTML = `<span style="color: #e74c3c;">❌ ${err.message}</span>`;
-    tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #e74c3c;">Veri yüklenemedi</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="8" style="padding: 30px; text-align: center; color: #e74c3c;">Veri yüklenemedi</td></tr>';
   }
 }
 
@@ -3781,15 +3795,31 @@ function exportAciklamaToExcel() {
   
   try {
     // Excel için veri hazırla
-    const excelData = currentAciklamaData.map(row => ({
-      'ID': row.id,
-      'Hat Adı': row.Hat_Adi,
-      'Çalışma Zamanı': row['Çalışma_Zamanı'],
-      'Tarife': row.Tarife,
-      'Tarife Saati': row.Tarife_Saati,
-      'Plaka': row.Plaka,
-      'Açıklama': row.Açıklama
-    }));
+    const excelData = currentAciklamaData.map(row => {
+      // Tarih formatla
+      let tarihStr = '';
+      if (row.Tarih) {
+        const tarihObj = new Date(row.Tarih);
+        const yil = tarihObj.getFullYear();
+        const ay = String(tarihObj.getMonth() + 1).padStart(2, '0');
+        const gun = String(tarihObj.getDate()).padStart(2, '0');
+        const saat = String(tarihObj.getHours()).padStart(2, '0');
+        const dakika = String(tarihObj.getMinutes()).padStart(2, '0');
+        const saniye = String(tarihObj.getSeconds()).padStart(2, '0');
+        tarihStr = `${gun}.${ay}.${yil} ${saat}:${dakika}:${saniye}`;
+      }
+      
+      return {
+        'ID': row.id,
+        'Tarih': tarihStr,
+        'Hat Adı': row.Hat_Adi,
+        'Çalışma Zamanı': row['Çalışma_Zamanı'],
+        'Tarife': row.Tarife,
+        'Tarife Saati': row.Tarife_Saati,
+        'Plaka': row.Plaka,
+        'Açıklama': row.Açıklama
+      };
+    });
     
     // Worksheet oluştur
     const ws = XLSX.utils.json_to_sheet(excelData);
@@ -3797,6 +3827,7 @@ function exportAciklamaToExcel() {
     // Sütun genişlikleri
     ws['!cols'] = [
       { wch: 8 },   // ID
+      { wch: 20 },  // Tarih
       { wch: 15 },  // Hat Adı
       { wch: 15 },  // Çalışma Zamanı
       { wch: 10 },  // Tarife

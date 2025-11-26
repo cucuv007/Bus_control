@@ -24,6 +24,9 @@ export default async function handler(req, res) {
 
     console.log('📝 Operasyon açıklaması ekleniyor:', Hat_Adi, Tarife);
 
+    // Şu anki tarih ve saat (Supabase otomatik ekleyecek ama biz de gönderebiliriz)
+    const now = new Date();
+
     // Açıklama ekle
     const { data, error } = await supabase
       .from('Operasyon_Açıklama')
@@ -33,7 +36,8 @@ export default async function handler(req, res) {
         Tarife: Tarife,
         Tarife_Saati: Tarife_Saati,
         Plaka: Plaka,
-        Açıklama: Aciklama
+        Açıklama: Aciklama,
+        Tarih: now.toISOString()  // ISO format: 2025-11-26T14:30:00.000Z
       }])
       .select();
 

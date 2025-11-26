@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS public."Depolama_Açıklama" (
   "Tarife" TEXT,
   "Tarife_Saati" TIME,
   "Plaka" TEXT,
-  "Açıklama" TEXT
+  "Açıklama" TEXT,
+  "Tarih" TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- RLS (Row Level Security) kapat
