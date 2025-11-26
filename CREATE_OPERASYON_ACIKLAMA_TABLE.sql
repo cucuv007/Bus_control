@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS public."Operasyon_Açıklama" (
   "id" SERIAL PRIMARY KEY,
   "Hat_Adi" TEXT,
-  "Çalışma_Zamanı" TIME,
+  "Çalışma_Zamanı" TEXT,
   "Tarife" TEXT,
   "Tarife_Saati" TIME,
   "Plaka" TEXT,
