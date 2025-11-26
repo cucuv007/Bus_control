@@ -3201,6 +3201,16 @@ async function handleAddAciklamaInline() {
   confirmBtn.disabled = true;
   confirmBtn.textContent = '⏳ Ekleniyor...';
   
+  console.log('📦 Gönderilecek veri:', {
+    Hat_Adi: rowData.Hat_Adi,
+    Calisma_Zamani: rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || null,
+    Tarife: rowData.Tarife,
+    Tarife_Saati: rowData.Tarife_Saati,
+    Plaka: rowData.Plaka || null,
+    Aciklama: aciklamaText,
+    Endpoint: gorev === 'Operasyon' ? '/api/add-operasyon-aciklama' : '/api/add-depolama-aciklama'
+  });
+  
   try {
     // API endpoint belirle
     const endpoint = gorev === 'Operasyon' 
@@ -3220,7 +3230,9 @@ async function handleAddAciklamaInline() {
       })
     });
     
+    console.log('📤 API yanıtı:', response.status);
     const result = await response.json();
+    console.log('📊 API result:', result);
     
     if (!response.ok) {
       throw new Error(result.error || 'Açıklama eklenemedi');

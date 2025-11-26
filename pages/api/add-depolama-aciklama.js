@@ -13,12 +13,12 @@ export default async function handler(req, res) {
   try {
     const { Hat_Adi, Calisma_Zamani, Tarife, Tarife_Saati, Plaka, Aciklama } = req.body;
 
-    // Validation
-    if (!Hat_Adi || !Calisma_Zamani || !Tarife || !Tarife_Saati || !Plaka || !Aciklama) {
-      console.log('❌ Eksik alanlar');
+    // Validation - Sadece Hat_Adi, Tarife, Tarife_Saati ve Aciklama zorunlu
+    if (!Hat_Adi || !Tarife || !Tarife_Saati || !Aciklama) {
+      console.log('❌ Eksik alanlar:', { Hat_Adi, Tarife, Tarife_Saati, Aciklama });
       return res.status(400).json({ 
         success: false, 
-        message: 'Tüm alanlar gereklidir' 
+        message: 'Hat_Adi, Tarife, Tarife_Saati ve Açıklama alanları gereklidir' 
       });
     }
 
