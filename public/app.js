@@ -286,7 +286,7 @@ if (exportAciklamaExcel) {
   exportAciklamaExcel.addEventListener('click', exportAciklamaToExcel);
 }
 if (gorevSelectCombo) {
-  gorevSelectCombo.addEventListener('change', loadAciklamaData);
+  gorevSelectCombo.addEventListener('change', () => loadAciklamaData());
 }
 
 closeModal.addEventListener('click', closeUploadModal);
@@ -3698,6 +3698,8 @@ async function loadAciklamaData(gorevParam) {
     selectedGorev = document.getElementById('gorevSelectCombo').value;
   }
   
+  console.log('🔍 loadAciklamaData çağrıldı:', { gorevParam, selectedGorev });
+  
   if (!selectedGorev) {
     statusEl.innerHTML = '<span style="color: #e74c3c;">⚠️ Lütfen bir seçim yapın</span>';
     statusEl.style.display = 'block';
@@ -3707,6 +3709,8 @@ async function loadAciklamaData(gorevParam) {
   statusEl.innerHTML = '<span style="color: #3498db;">⏳ Yükleniyor...</span>';
   statusEl.style.display = 'block';
   tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center;">⏳ Veriler yükleniyor...</td></tr>';
+  
+  console.log('📤 API\'ye gönderilecek görev:', selectedGorev);
   
   try {
     // Yeni API endpoint kullan
