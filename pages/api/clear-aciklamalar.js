@@ -1,40 +1,49 @@
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  connectionTimeoutMillis: 30000,
-  idleTimeoutMillis: 30000,
-  max: 20
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  let client;
   try {
     console.log('🧹 Açıklama tabloları temizleniyor...');
 
-    client = await pool.connect();
+    // 1. Operasyon_Açıklama tablosunu temizle - tüm satırları sil
+    const { error: opError } = await supabase
+      .from('Operasyon_Açıklama')
+      .delete()
+      .gte('id', 0); // id >= 0 olan tüm satırlar (yani hepsi)
 
-    // 1. Operasyon_Açıklama tablosunu temizle
-    await client.query('DELETE FROM public."Operasyon_Açıklama"');
+    if (opError) {
+      console.error('Operasyon_Açıklama temizleme hatası:', opError);
+      return res.status(500).json({
+        success: false,
+        error: 'Operasyon_Açıklama temizlenemedi: ' + opError.message
+      });
+    }
+
     console.log('✅ Operasyon_Açıklama temizlendi');
 
-    // 2. Depolama_Açıklama tablosunu temizle
-    await client.query('DELETE FROM public."Depolama_Açıklama"');
-    console.log('✅ Depolama_Açıklama temizlendi');
+    // 2. Depolama_Açıklama tablosunu temizle - tüm satırları sil
+    const { error: depError } = await supabase
+      .from('Depolama_Açıklama')
+      .delete()
+      .gte('id', 0); // id >= 0 olan tüm satırlar (yani hepsi)
 
-    // 3. Sequence'leri sıfırla
-    try {
-      await client.query('ALTER SEQUENCE public."Operasyon_Açıklama_id_seq" RESTART WITH 1');
-      await client.query('ALTER SEQUENCE public."Depolama_Açıklama_id_seq" RESTART WITH 1');
-      console.log('✅ Sequenceler sıfırlandı');
-    } catch (seqErr) {
-      console.warn('⚠️ Sequence sıfırlama hatası (kritik değil):', seqErr.message);
+    if (depError) {
+      console.error('Depolama_Açıklama temizleme hatası:', depError);
+      return res.status(500).json({
+        success: false,
+        error: 'Depolama_Açıklama temizlenemedi: ' + depError.message
+      });
     }
+
+    console.log('✅ Depolama_Açıklama temizlendi');
 
     return res.status(200).json({
       success: true,
@@ -49,9 +58,5 @@ export default async function handler(req, res) {
       success: false,
       error: err.message || 'Tablolar temizlenemedi'
     });
-  } finally {
-    if (client) {
-      client.release();
-    }
   }
 }
