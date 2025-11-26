@@ -2362,12 +2362,28 @@ async function handleApplyHatSelection() {
         tr.appendChild(td);
       });
       
-      // Satıra tıklanınca onay popup'ı aç (orijinal tablo adını kullan)
+      // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
       const originalTableName = row._Hat || selectedHats[0];
-      tr.style.cursor = 'pointer';
-      tr.addEventListener('click', () => {
-        openApprovalConfirmation(row, originalTableName);
-      });
+      
+      const userSession = localStorage.getItem('userSession');
+      if (userSession) {
+        const session = JSON.parse(userSession);
+        
+        if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
+          tr.style.cursor = 'pointer';
+          tr.addEventListener('click', () => {
+            openApprovalConfirmation(row, originalTableName);
+          });
+        } else {
+          tr.style.cursor = 'default';
+          tr.addEventListener('mouseenter', () => {
+            tr.style.backgroundColor = '#f5f5f5';
+          });
+          tr.addEventListener('mouseleave', () => {
+            tr.style.backgroundColor = '';
+          });
+        }
+      }
       
       // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
       if (row.Onaylanan && row.Tarife_Saati) {
@@ -2508,12 +2524,28 @@ async function refreshTableData(hatList, hareket) {
         tr.appendChild(td);
       });
       
-      // Satıra tıklanınca onay popup'ı aç (orijinal tablo adını kullan)
+      // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
       const originalTableName = row._Hat || hatList[0];
-      tr.style.cursor = 'pointer';
-      tr.addEventListener('click', () => {
-        openApprovalConfirmation(row, originalTableName);
-      });
+      
+      const userSession = localStorage.getItem('userSession');
+      if (userSession) {
+        const session = JSON.parse(userSession);
+        
+        if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
+          tr.style.cursor = 'pointer';
+          tr.addEventListener('click', () => {
+            openApprovalConfirmation(row, originalTableName);
+          });
+        } else {
+          tr.style.cursor = 'default';
+          tr.addEventListener('mouseenter', () => {
+            tr.style.backgroundColor = '#f5f5f5';
+          });
+          tr.addEventListener('mouseleave', () => {
+            tr.style.backgroundColor = '';
+          });
+        }
+      }
       
       // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
       if (row.Onaylanan && row.Tarife_Saati) {
