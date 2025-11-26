@@ -56,30 +56,49 @@ export default async function handler(req, res) {
     // 3. Eski veri kontrolü - O günün herhangi bir saatinden eski kayıt var mı?
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+    
+    console.log(`📅 Bugünün başlangıcı: ${todayStart.toISOString()} (${todayStart.toLocaleDateString('tr-TR')})`);
 
     let hasOldData = false;
     let oldestDate = null;
 
-    const checkOldData = (data) => {
-      if (!data || data.length === 0) return false;
+    const checkOldData = (data, tableName) => {
+      if (!data || data.length === 0) {
+        console.log(`ℹ️ ${tableName}: Veri yok`);
+        return false;
+      }
       
-      return data.some(row => {
+      console.log(`🔍 ${tableName}: ${data.length} kayıt kontrol ediliyor...`);
+      
+      let foundOld = false;
+      data.forEach((row, index) => {
         if (row.Tarih) {
           const rowDate = new Date(row.Tarih);
-          rowDate.setHours(0, 0, 0, 0);
+          const rowDateOnly = new Date(rowDate);
+          rowDateOnly.setHours(0, 0, 0, 0);
           
-          if (rowDate < todayStart) {
-            if (!oldestDate || rowDate < oldestDate) {
-              oldestDate = rowDate;
+          const isOld = rowDateOnly < todayStart;
+          
+          if (index < 3 || isOld) { // İlk 3 kaydı veya eski olanları logla
+            console.log(`  - Kayıt ${index + 1}: ${rowDate.toLocaleString('tr-TR')} ${isOld ? '⚠️ ESKİ' : '✅ GÜNCEL'}`);
+          }
+          
+          if (isOld) {
+            foundOld = true;
+            if (!oldestDate || rowDateOnly < oldestDate) {
+              oldestDate = rowDateOnly;
             }
-            return true;
           }
         }
-        return false;
       });
+      
+      return foundOld;
     };
 
-    hasOldData = checkOldData(operasyonData) || checkOldData(depolamaData);
+    const operasyonHasOld = checkOldData(operasyonData, 'Operasyon_Açıklama');
+    const depolamaHasOld = checkOldData(depolamaData, 'Depolama_Açıklama');
+    
+    hasOldData = operasyonHasOld || depolamaHasOld;
 
     // Eski veri yoksa işlem yapma
     if (!hasOldData) {
