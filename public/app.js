@@ -951,8 +951,10 @@ function openApprovalConfirmation(rowData, tableName) {
   
   // Modal içeriğini doldur
   approvalHat.textContent = rowData.Hat_Adi;
+  document.getElementById('approvalCalismaZamani').textContent = rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || '-';
   approvalTarife.textContent = rowData.Tarife;
   approvalTime.textContent = rowData.Tarife_Saati;
+  document.getElementById('approvalPlaka').textContent = rowData.Plaka || '-';
   
   // Modal başlığı ve soruyu moda göre değiştir
   if (currentMode === 'operasyon') {
@@ -3170,11 +3172,14 @@ async function handleAddAciklamaInline() {
     return;
   }
   
-  if (!selectedRowForAciklama) {
+  // pendingApprovalData'dan bilgileri al (popup açıldığında dolu)
+  if (!pendingApprovalData || !pendingApprovalData.rowData) {
     statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Satır bilgisi bulunamadı</span>';
     statusEl.style.display = 'block';
     return;
   }
+  
+  const rowData = pendingApprovalData.rowData;
   
   // Session kontrolü - Operasyon mu Depolama mı?
   const userSession = localStorage.getItem('userSession');
@@ -3206,11 +3211,11 @@ async function handleAddAciklamaInline() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        Hat_Adi: selectedRowForAciklama.Hat_Adi,
-        Calisma_Zamani: selectedRowForAciklama['Çalışma_Zamanı'] || selectedRowForAciklama.Calisma_Zamani,
-        Tarife: selectedRowForAciklama.Tarife,
-        Tarife_Saati: selectedRowForAciklama.Tarife_Saati,
-        Plaka: selectedRowForAciklama.Plaka,
+        Hat_Adi: rowData.Hat_Adi,
+        Calisma_Zamani: rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || null,
+        Tarife: rowData.Tarife,
+        Tarife_Saati: rowData.Tarife_Saati,
+        Plaka: rowData.Plaka || null,
         Aciklama: aciklamaText
       })
     });
