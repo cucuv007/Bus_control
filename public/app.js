@@ -36,9 +36,27 @@ const approvalQuestion = document.getElementById('approvalQuestion');
 const cancelApprovalBtn = document.getElementById('cancelApprovalBtn');
 const confirmApprovalBtn = document.getElementById('confirmApprovalBtn');
 
-// Mode switch
+// Mode switch - now controlled by user's Görev from session
 const modeSwitch = document.getElementById('modeSwitch');
-let currentMode = 'depolama'; // 'depolama' or 'operasyon'
+let currentMode = 'depolama'; // Will be set from session
+
+// Get current mode from user session
+function getCurrentModeFromSession() {
+  const userSession = localStorage.getItem('userSession');
+  if (userSession) {
+    const session = JSON.parse(userSession);
+    if (session.gorev === 'Operasyon') {
+      return 'operasyon';
+    } else if (session.gorev === 'Depolama') {
+      return 'depolama';
+    }
+  }
+  return 'depolama'; // Default
+}
+
+// Set initial mode from session
+currentMode = getCurrentModeFromSession();
+console.log('🎯 Kullanıcı görevine göre mod ayarlandı:', currentMode);
 
 // Modal elements
 const uploadModal = document.getElementById('uploadModal');
@@ -210,6 +228,7 @@ const aciklamaModal = document.getElementById('aciklamaModal');
 const cancelAciklama = document.getElementById('cancelAciklama');
 const confirmAciklama = document.getElementById('confirmAciklama');
 const aciklamaStatus = document.getElementById('aciklamaStatus');
+const aciklamaEkleFromPopup = document.getElementById('aciklamaEkleFromPopup');
 
 let selectedRowForAciklama = null;
 
@@ -221,6 +240,15 @@ if (cancelAciklama) {
 }
 if (confirmAciklama) {
   confirmAciklama.addEventListener('click', handleAddAciklama);
+}
+// Popup içindeki Açıklama Ekle butonu
+if (aciklamaEkleFromPopup) {
+  aciklamaEkleFromPopup.addEventListener('click', () => {
+    // Önce onay popup'ını kapat
+    closeApprovalConfirmation();
+    // Ardından açıklama modalını aç (selectedRowForAciklama zaten dolu)
+    openAciklamaModal();
+  });
 }
 
 closeModal.addEventListener('click', closeUploadModal);
@@ -237,11 +265,11 @@ closeApprovalModal.addEventListener('click', closeApprovalConfirmation);
 cancelApprovalBtn.addEventListener('click', closeApprovalConfirmation);
 confirmApprovalBtn.addEventListener('click', handleRowApproval);
 
-// Mode switch listener
-modeSwitch.addEventListener('change', function() {
-  currentMode = this.checked ? 'operasyon' : 'depolama';
-  console.log('🔄 Mod değişti:', currentMode);
-});
+// Mode switch listener - DISABLED: Mode is now controlled by user's Görev
+// modeSwitch.addEventListener('change', function() {
+//   currentMode = this.checked ? 'operasyon' : 'depolama';
+//   console.log('🔄 Mod değişti:', currentMode);
+// });
 
 // Global close timer handler (HTML onclick için)
 window.handleCloseTimer = function(e) {
@@ -890,6 +918,9 @@ function openApprovalConfirmation(rowData, tableName) {
     return;
   }
   
+  // Session'dan güncel modu al
+  currentMode = getCurrentModeFromSession();
+  
   // Veriyi sakla
   pendingApprovalData = {
     tableName,
@@ -934,6 +965,20 @@ function openApprovalConfirmation(rowData, tableName) {
     approvalQuestion.textContent = 'Bu çıkışı onaylamak istiyor musunuz?';
     confirmApprovalBtn.style.background = '#27ae60';
     confirmApprovalBtn.innerHTML = '✅ Onayla';
+  }
+  
+  // Açıklama Ekle butonunu göster/gizle (sadece Operasyon ve Depolama için)
+  const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
+  const userSession = localStorage.getItem('userSession');
+  if (userSession) {
+    const session = JSON.parse(userSession);
+    if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
+      aciklamaBtn.style.display = 'inline-block';
+    } else {
+      aciklamaBtn.style.display = 'none';
+    }
+  } else {
+    aciklamaBtn.style.display = 'none';
   }
   
   // Modal'ı aç
@@ -1322,30 +1367,18 @@ async function loadTableData() {
         tr.appendChild(td);
       });
       
-      // Satıra tıklanınca onay popup'ı aç veya satırı seç (Operasyon/Depolama için)
+      // Satıra tıklanınca onay popup'ı aç (tüm kullanıcılar için)
       tr.style.cursor = 'pointer';
       tr.addEventListener('click', (e) => {
-        // Session kontrolü
-        const userSession = localStorage.getItem('userSession');
-        if (userSession) {
-          const session = JSON.parse(userSession);
-          
-          // Operasyon veya Depolama ise satır seçimi yap
-          if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
-            // Önceki seçimi temizle
-            document.querySelectorAll('#tbody tr').forEach(tr => {
-              tr.style.backgroundColor = '';
-            });
-            // Yeni satırı seç
-            tr.style.backgroundColor = '#e3f2fd';
-            selectedRowForAciklama = row;
-          } else {
-            // Diğer kullanıcılar için onay popup'ı
-            openApprovalConfirmation(row, currentTable);
-          }
-        } else {
-          openApprovalConfirmation(row, currentTable);
-        }
+        // Satırı seç ve vurgula
+        document.querySelectorAll('#tbody tr').forEach(tr => {
+          tr.style.backgroundColor = '';
+        });
+        tr.style.backgroundColor = '#e3f2fd';
+        selectedRowForAciklama = row;
+        
+        // Popup'ı aç (mod otomatik session'dan alınacak)
+        openApprovalConfirmation(row, currentTable);
       });
       
       // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
