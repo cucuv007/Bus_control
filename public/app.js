@@ -3709,19 +3709,18 @@ async function loadAciklamaData(gorevParam) {
   tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center;">⏳ Veriler yükleniyor...</td></tr>';
   
   try {
-    const tableName = selectedGorev === 'Operasyon' ? 'Operasyon_Açıklama' : 'Depolama_Açıklama';
-    
-    // Supabase'den veri çek
-    const response = await fetch('/api/supabase', {
+    // Yeni API endpoint kullan
+    const response = await fetch('/api/get-aciklamalar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'select',
-        table: tableName
+        gorev: selectedGorev
       })
     });
     
     const result = await response.json();
+    
+    console.log('📊 API Yanıtı:', result);
     
     if (!result.success) {
       throw new Error(result.error || 'Veri yüklenemedi');
