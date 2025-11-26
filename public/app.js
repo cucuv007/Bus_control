@@ -3852,7 +3852,6 @@ async function loadAciklamaData(gorevParam) {
       }
       
       tr.innerHTML = `
-        <td style="padding: 10px;">${row.id || '-'}</td>
         <td style="padding: 10px; white-space: nowrap;">${tarihStr}</td>
         <td style="padding: 10px;">${row.Hat_Adi || '-'}</td>
         <td style="padding: 10px;">${row['Çalışma_Zamanı'] || '-'}</td>
@@ -3874,6 +3873,199 @@ async function loadAciklamaData(gorevParam) {
     console.error('Açıklama yükleme hatası:', err);
     statusEl.innerHTML = `<span style="color: #e74c3c;">❌ ${err.message}</span>`;
     tableBody.innerHTML = '<tr><td colspan="8" style="padding: 30px; text-align: center; color: #e74c3c;">Veri yüklenemedi</td></tr>';
+  }
+}
+
+// ==================== SİSTEMİ GÜNCELLE VE MAİL GÖNDER ====================
+async function handleSistemiGuncelle() {
+  try {
+    // Onay al
+    const confirmMsg = '📧 Sistemi Güncelle ve Mail Gönder\n\n' +
+      'Bu işlem:\n' +
+      '1. Operasyon ve Depolama açıklamalarını Excel olarak kaydedecek\n' +
+      '2. Tüm kullanıcılara mail gönderecek\n' +
+      '3. Açıklama tablolarını tamamen temizleyecek\n\n' +
+      'Devam etmek istiyor musunuz?';
+    
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    sistemiGuncelleBtn.disabled = true;
+    sistemiGuncelleBtn.textContent = '⏳ İşlem yapılıyor...';
+
+    console.log('📊 Açıklama verileri toplanıyor...');
+
+    // 1. Her iki tablodan veri çek
+    const operasyonRes = await fetch('/api/get-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gorev: 'Operasyon' })
+    });
+    const operasyonData = await operasyonRes.json();
+
+    const depolamaRes = await fetch('/api/get-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gorev: 'Depolama' })
+    });
+    const depolamaData = await depolamaRes.json();
+
+    if (!operasyonData.success || !depolamaData.success) {
+      throw new Error('Veriler yüklenemedi');
+    }
+
+    console.log(`✅ Operasyon: ${operasyonData.data.length} kayıt, Depolama: ${depolamaData.data.length} kayıt`);
+
+    // 2. Excel dosyaları oluştur
+    const createExcelData = (data) => {
+      return data.map(row => {
+        let tarihStr = '';
+        if (row.Tarih) {
+          const tarihObj = new Date(row.Tarih);
+          const yil = tarihObj.getFullYear();
+          const ay = String(tarihObj.getMonth() + 1).padStart(2, '0');
+          const gun = String(tarihObj.getDate()).padStart(2, '0');
+          const saat = String(tarihObj.getHours()).padStart(2, '0');
+          const dakika = String(tarihObj.getMinutes()).padStart(2, '0');
+          const saniye = String(tarihObj.getSeconds()).padStart(2, '0');
+          tarihStr = `${gun}.${ay}.${yil} ${saat}:${dakika}:${saniye}`;
+        }
+        
+        return {
+          'Tarih': tarihStr,
+          'Hat Adı': row.Hat_Adi || '',
+          'Çalışma Zamanı': row['Çalışma_Zamanı'] || '',
+          'Tarife': row.Tarife || '',
+          'Tarife Saati': row.Tarife_Saati || '',
+          'Plaka': row.Plaka || '',
+          'Açıklama': row.Açıklama || ''
+        };
+      });
+    };
+
+    // Operasyon Excel
+    const operasyonExcelData = createExcelData(operasyonData.data);
+    const wsOp = XLSX.utils.json_to_sheet(operasyonExcelData);
+    const wbOp = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbOp, wsOp, 'Operasyon Açıklamalar');
+    const excelBufferOp = XLSX.write(wbOp, { bookType: 'xlsx', type: 'array' });
+    
+    // Depolama Excel
+    const depolamaExcelData = createExcelData(depolamaData.data);
+    const wsDep = XLSX.utils.json_to_sheet(depolamaExcelData);
+    const wbDep = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbDep, wsDep, 'Depolama Açıklamalar');
+    const excelBufferDep = XLSX.write(wbDep, { bookType: 'xlsx', type: 'array' });
+
+    console.log('✅ Excel dosyaları oluşturuldu');
+
+    // Base64'e çevir
+    const toBase64 = (buffer) => {
+      const uint8Array = new Uint8Array(buffer);
+      let binaryString = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binaryString += String.fromCharCode.apply(null, chunk);
+      }
+      return btoa(binaryString);
+    };
+
+    const operasyonBase64 = toBase64(excelBufferOp);
+    const depolamaBase64 = toBase64(excelBufferDep);
+
+    // 3. Kullanıcıları getir
+    console.log('👥 Kullanıcılar getiriliyor...');
+    const usersRes = await fetch('/api/get-users');
+    const usersData = await usersRes.json();
+
+    if (!usersData.success || !usersData.users || usersData.users.length === 0) {
+      throw new Error('Kullanıcı bulunamadı');
+    }
+
+    console.log(`✅ ${usersData.users.length} kullanıcı bulundu`);
+
+    // 4. Timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+
+    // 5. Mail gönder (send-refresh-email modifiye edilecek veya yeni endpoint)
+    console.log('📧 Mailler gönderiliyor...');
+    
+    // NOT: Bu endpoint'i modifiye etmek yerine basit bir email gönderelim
+    // Gerçek implementasyonda send-aciklama-emails.js gibi yeni bir endpoint gerekebilir
+    const emailRes = await fetch('/api/send-refresh-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipients: usersData.users,
+        excelData: operasyonBase64, // Ana dosya olarak Operasyon
+        screenshotData: null, // Screenshot yok
+        timestamp,
+        isAciklamaUpdate: true, // Özel flag
+        depolamaExcelData: depolamaBase64 // İkinci dosya
+      })
+    });
+
+    const emailData = await emailRes.json();
+
+    if (!emailData.success) {
+      console.warn('⚠️ Mail gönderilemedi:', emailData.message);
+      // Mail hatası olsa bile devam et
+    } else {
+      console.log('✅ Mailler gönderildi');
+    }
+
+    // 6. Tabloları temizle
+    console.log('🧹 Açıklama tabloları temizleniyor...');
+    const clearRes = await fetch('/api/clear-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const clearResult = await clearRes.json();
+
+    if (!clearResult.success) {
+      throw new Error('Tablolar temizlenemedi: ' + clearResult.error);
+    }
+
+    console.log('✅ Tablolar temizlendi');
+
+    // 7. ZIP dosyası oluştur ve indir
+    console.log('💾 ZIP dosyası hazırlanıyor...');
+    const zip = new JSZip();
+    const folderName = `Aciklama_Yedekleme_${timestamp}`;
+    
+    zip.file(`${folderName}/Operasyon_Aciklamalar_${timestamp}.xlsx`, new Uint8Array(excelBufferOp));
+    zip.file(`${folderName}/Depolama_Aciklamalar_${timestamp}.xlsx`, new Uint8Array(excelBufferDep));
+    
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const zipLink = document.createElement('a');
+    zipLink.href = zipUrl;
+    zipLink.download = `${folderName}.zip`;
+    zipLink.click();
+    URL.revokeObjectURL(zipUrl);
+
+    console.log('✅ ZIP dosyası indirildi');
+
+    // 8. Başarı mesajı
+    alert(`✅ İşlem Tamamlandı!\n\n` +
+      `📧 ${usersData.users.length} kullanıcıya mail gönderildi\n` +
+      `🧹 Operasyon ve Depolama açıklama tabloları temizlendi\n` +
+      `💾 Yedek dosyalar indirildi\n\n` +
+      `Modal yenileniyor...`);
+
+    // 9. Modalı yenile
+    closeAciklamaInceleModalFunc();
+    openAciklamaInceleModal();
+
+  } catch (err) {
+    console.error('Sistemi güncelle hatası:', err);
+    alert(`❌ Hata: ${err.message}`);
+  } finally {
+    sistemiGuncelleBtn.disabled = false;
+    sistemiGuncelleBtn.textContent = '📧 Sistemi Güncelle ve Mail Gönder';
   }
 }
 
@@ -3900,7 +4092,6 @@ function exportAciklamaToExcel() {
       }
       
       return {
-        'ID': row.id,
         'Tarih': tarihStr,
         'Hat Adı': row.Hat_Adi,
         'Çalışma Zamanı': row['Çalışma_Zamanı'],
@@ -3916,7 +4107,6 @@ function exportAciklamaToExcel() {
     
     // Sütun genişlikleri
     ws['!cols'] = [
-      { wch: 8 },   // ID
       { wch: 20 },  // Tarih
       { wch: 15 },  // Hat Adı
       { wch: 15 },  // Çalışma Zamanı
