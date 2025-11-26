@@ -3992,31 +3992,31 @@ async function handleSistemiGuncelle() {
     // 4. Timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
 
-    // 5. Mail gönder (send-refresh-email modifiye edilecek veya yeni endpoint)
+    // 5. Mail gönder - Operasyon dosyasını gönder (Depolama eklenmeyecek şimdilik)
     console.log('📧 Mailler gönderiliyor...');
     
-    // NOT: Bu endpoint'i modifiye etmek yerine basit bir email gönderelim
-    // Gerçek implementasyonda send-aciklama-emails.js gibi yeni bir endpoint gerekebilir
-    const emailRes = await fetch('/api/send-refresh-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipients: usersData.users,
-        excelData: operasyonBase64, // Ana dosya olarak Operasyon
-        screenshotData: null, // Screenshot yok
-        timestamp,
-        isAciklamaUpdate: true, // Özel flag
-        depolamaExcelData: depolamaBase64 // İkinci dosya
-      })
-    });
+    try {
+      const emailRes = await fetch('/api/send-refresh-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: usersData.users,
+          excelData: operasyonBase64,
+          screenshotData: null,
+          timestamp
+        })
+      });
 
-    const emailData = await emailRes.json();
+      const emailData = await emailRes.json();
 
-    if (!emailData.success) {
-      console.warn('⚠️ Mail gönderilemedi:', emailData.message);
+      if (!emailData.success) {
+        console.warn('⚠️ Mail gönderilemedi:', emailData.message);
+      } else {
+        console.log('✅ Mailler gönderildi');
+      }
+    } catch (emailErr) {
+      console.warn('⚠️ Mail gönderme hatası:', emailErr.message);
       // Mail hatası olsa bile devam et
-    } else {
-      console.log('✅ Mailler gönderildi');
     }
 
     // 6. Tabloları temizle

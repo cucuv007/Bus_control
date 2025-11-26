@@ -43,28 +43,8 @@ export default async function handler(req, res) {
 
     console.log('✅ Depolama_Açıklama temizlendi');
 
-    // 3. Sequence'leri sıfırla (SQL kullanarak)
-    const { error: seqOpError } = await supabase.rpc('exec_sql', {
-      sql_query: 'ALTER SEQUENCE "Operasyon_Açıklama_id_seq" RESTART WITH 1;'
-    });
-
-    if (seqOpError) {
-      console.warn('⚠️ Operasyon_Açıklama sequence sıfırlanamadı:', seqOpError.message);
-      // Hata olsa bile devam et, kritik değil
-    } else {
-      console.log('✅ Operasyon_Açıklama sequence sıfırlandı');
-    }
-
-    const { error: seqDepError } = await supabase.rpc('exec_sql', {
-      sql_query: 'ALTER SEQUENCE "Depolama_Açıklama_id_seq" RESTART WITH 1;'
-    });
-
-    if (seqDepError) {
-      console.warn('⚠️ Depolama_Açıklama sequence sıfırlanamadı:', seqDepError.message);
-      // Hata olsa bile devam et, kritik değil
-    } else {
-      console.log('✅ Depolama_Açıklama sequence sıfırlandı');
-    }
+    // Not: Sequence sıfırlama Supabase'de otomatik yapılır
+    console.log('ℹ️ Sequenceler bir sonraki insert ile otomatik düzenlenecek');
 
     return res.status(200).json({
       success: true,
