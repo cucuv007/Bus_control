@@ -265,6 +265,30 @@ if (confirmAciklamaInline) {
   confirmAciklamaInline.addEventListener('click', handleAddAciklamaInline);
 }
 
+// Açıklama İnceleme Modal
+const inceleAciklamaBtn = document.getElementById('inceleAciklamaBtn');
+const aciklamaInceleModal = document.getElementById('aciklamaInceleModal');
+const closeAciklamaInceleModal = document.getElementById('closeAciklamaInceleModal');
+const closeAciklamaInceleBtn = document.getElementById('closeAciklamaInceleBtn');
+const exportAciklamaExcel = document.getElementById('exportAciklamaExcel');
+const gorevSelectCombo = document.getElementById('gorevSelectCombo');
+
+if (inceleAciklamaBtn) {
+  inceleAciklamaBtn.addEventListener('click', openAciklamaInceleModal);
+}
+if (closeAciklamaInceleModal) {
+  closeAciklamaInceleModal.addEventListener('click', closeAciklamaInceleModalFunc);
+}
+if (closeAciklamaInceleBtn) {
+  closeAciklamaInceleBtn.addEventListener('click', closeAciklamaInceleModalFunc);
+}
+if (exportAciklamaExcel) {
+  exportAciklamaExcel.addEventListener('click', exportAciklamaToExcel);
+}
+if (gorevSelectCombo) {
+  gorevSelectCombo.addEventListener('change', loadAciklamaData);
+}
+
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
 
@@ -3623,6 +3647,182 @@ async function handleRefreshHats() {
   } finally {
     refreshHatsBtn.disabled = false;
     refreshHatsBtn.textContent = '🔄 Hatları Yenile';
+  }
+}
+
+// ==================== AÇIKLAMA İNCELEME ====================
+let currentAciklamaData = []; // Excel export için
+
+function openAciklamaInceleModal() {
+  // Session kontrolü
+  const userSession = localStorage.getItem('userSession');
+  if (!userSession) {
+    alert('⚠️ Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+    return;
+  }
+  
+  const session = JSON.parse(userSession);
+  const gorev = session.gorev;
+  
+  // Görev seçim div'ini göster/gizle
+  const gorevSelectionDiv = document.getElementById('gorevSelectionDiv');
+  const gorevCombo = document.getElementById('gorevSelectCombo');
+  
+  if (gorev === 'Operasyon' || gorev === 'Depolama') {
+    // Operasyon veya Depolama ise direkt yükle
+    gorevSelectionDiv.style.display = 'none';
+    aciklamaInceleModal.style.display = 'flex';
+    loadAciklamaData(gorev);
+  } else {
+    // Diğerleri için combobox göster
+    gorevSelectionDiv.style.display = 'block';
+    gorevCombo.value = '';
+    aciklamaInceleModal.style.display = 'flex';
+    // Tablo boş
+    document.getElementById('aciklamaTableBody').innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #7f8c8d;">Lütfen yukarıdan bir seçim yapın</td></tr>';
+  }
+}
+
+function closeAciklamaInceleModalFunc() {
+  aciklamaInceleModal.style.display = 'none';
+  currentAciklamaData = [];
+}
+
+async function loadAciklamaData(gorevParam) {
+  const statusEl = document.getElementById('aciklamaInceleStatus');
+  const tableBody = document.getElementById('aciklamaTableBody');
+  
+  // Görev belirle
+  let selectedGorev = gorevParam;
+  if (!selectedGorev) {
+    selectedGorev = document.getElementById('gorevSelectCombo').value;
+  }
+  
+  if (!selectedGorev) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">⚠️ Lütfen bir seçim yapın</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  statusEl.innerHTML = '<span style="color: #3498db;">⏳ Yükleniyor...</span>';
+  statusEl.style.display = 'block';
+  tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center;">⏳ Veriler yükleniyor...</td></tr>';
+  
+  try {
+    const tableName = selectedGorev === 'Operasyon' ? 'Operasyon_Açıklama' : 'Depolama_Açıklama';
+    
+    // Supabase'den veri çek
+    const response = await fetch('/api/supabase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'select',
+        table: tableName
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Veri yüklenemedi');
+    }
+    
+    const data = result.data || [];
+    currentAciklamaData = data;
+    
+    // Başlık güncelle
+    document.getElementById('aciklamaInceleTitle').textContent = `📝 ${selectedGorev} Açıklamaları (${data.length})`;
+    
+    if (data.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #7f8c8d;">Henüz açıklama eklenmemiş</td></tr>';
+      statusEl.style.display = 'none';
+      return;
+    }
+    
+    // Tabloyu doldur
+    tableBody.innerHTML = '';
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f0f0f0';
+      
+      tr.innerHTML = `
+        <td style="padding: 10px;">${row.id || '-'}</td>
+        <td style="padding: 10px;">${row.Hat_Adi || '-'}</td>
+        <td style="padding: 10px;">${row['Çalışma_Zamanı'] || '-'}</td>
+        <td style="padding: 10px;">${row.Tarife || '-'}</td>
+        <td style="padding: 10px;">${row.Tarife_Saati || '-'}</td>
+        <td style="padding: 10px;">${row.Plaka || '-'}</td>
+        <td style="padding: 10px; max-width: 300px; word-wrap: break-word;">${row.Açıklama || '-'}</td>
+      `;
+      
+      tableBody.appendChild(tr);
+    });
+    
+    statusEl.innerHTML = `<span style="color: #27ae60;">✅ ${data.length} kayıt yüklendi</span>`;
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 2000);
+    
+  } catch (err) {
+    console.error('Açıklama yükleme hatası:', err);
+    statusEl.innerHTML = `<span style="color: #e74c3c;">❌ ${err.message}</span>`;
+    tableBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #e74c3c;">Veri yüklenemedi</td></tr>';
+  }
+}
+
+function exportAciklamaToExcel() {
+  if (!currentAciklamaData || currentAciklamaData.length === 0) {
+    alert('⚠️ Dışa aktarılacak veri yok!');
+    return;
+  }
+  
+  try {
+    // Excel için veri hazırla
+    const excelData = currentAciklamaData.map(row => ({
+      'ID': row.id,
+      'Hat Adı': row.Hat_Adi,
+      'Çalışma Zamanı': row['Çalışma_Zamanı'],
+      'Tarife': row.Tarife,
+      'Tarife Saati': row.Tarife_Saati,
+      'Plaka': row.Plaka,
+      'Açıklama': row.Açıklama
+    }));
+    
+    // Worksheet oluştur
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    
+    // Sütun genişlikleri
+    ws['!cols'] = [
+      { wch: 8 },   // ID
+      { wch: 15 },  // Hat Adı
+      { wch: 15 },  // Çalışma Zamanı
+      { wch: 10 },  // Tarife
+      { wch: 12 },  // Tarife Saati
+      { wch: 20 },  // Plaka
+      { wch: 50 }   // Açıklama
+    ];
+    
+    // Workbook oluştur
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Açıklamalar');
+    
+    // Dosya adı
+    const userSession = localStorage.getItem('userSession');
+    const session = JSON.parse(userSession);
+    const gorev = session.gorev === 'Operasyon' || session.gorev === 'Depolama' 
+      ? session.gorev 
+      : document.getElementById('gorevSelectCombo').value;
+    
+    const fileName = `${gorev}_Aciklamalar_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // İndir
+    XLSX.writeFile(wb, fileName);
+    
+    console.log('✅ Excel dosyası indirildi:', fileName);
+    
+  } catch (err) {
+    console.error('Excel export hatası:', err);
+    alert('❌ Excel dosyası oluşturulamadı: ' + err.message);
   }
 }
 

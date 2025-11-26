@@ -232,6 +232,55 @@
     </div>
   </div>
 
+  <!-- Açıklama İnceleme Modal -->
+  <div id="aciklamaInceleModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px; width: 90%;">
+      <div class="modal-header">
+        <h2 id="aciklamaInceleTitle">📝 Açıklamaları İncele</h2>
+        <button id="closeAciklamaInceleModal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Görev Seçimi (Sadece Admin ve diğerleri için görünür) -->
+        <div id="gorevSelectionDiv" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+          <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50;">📋 Hangi açıklamaları görmek istersiniz?</label>
+          <select id="gorevSelectCombo" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+            <option value="">-- Seçiniz --</option>
+            <option value="Operasyon">Operasyon Açıklamaları</option>
+            <option value="Depolama">Depolama Açıklamaları</option>
+          </select>
+        </div>
+        
+        <div id="aciklamaInceleStatus" class="info" style="display: none; margin-bottom: 15px;"></div>
+        
+        <!-- Tablo -->
+        <div style="overflow-x: auto; max-height: 500px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <table id="aciklamaTable" style="width: 100%; border-collapse: collapse;">
+            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+              <tr id="aciklamaTableHead">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">ID</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">Hat Adı</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">Çalışma Zamanı</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">Tarife</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">Tarife Saati</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">Plaka</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0; min-width: 200px;">Açıklama</th>
+              </tr>
+            </thead>
+            <tbody id="aciklamaTableBody">
+              <tr>
+                <td colspan="7" style="padding: 30px; text-align: center; color: #7f8c8d;">Veri yüklenecek...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeAciklamaInceleBtn" class="btn btn-secondary">İptal</button>
+        <button id="exportAciklamaExcel" class="btn" style="background: #27ae60;">📄 Excel Olarak İndir</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Modal -->
   <div id="uploadModal" class="modal" style="display: none;">
     <div class="modal-content">
@@ -366,6 +415,7 @@
       </div>
       <button id="applyHatSelection" class="btn" style="margin-top: 10px; width: 100%;">⏱️ Seçili Hatları Takip Et</button>
       <button id="refreshHatsBtn" class="btn" style="margin-top: 10px; width: 100%; background: #e74c3c;">🔄 Hatları Yenile</button>
+      <button id="inceleAciklamaBtn" class="btn" style="margin-top: 10px; width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📝 Açıklamaları İncele</button>
     </div>
     </div>
 
