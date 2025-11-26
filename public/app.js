@@ -1418,19 +1418,36 @@ async function loadTableData() {
         tr.appendChild(td);
       });
       
-      // Satıra tıklanınca onay popup'ı aç (tüm kullanıcılar için)
-      tr.style.cursor = 'pointer';
-      tr.addEventListener('click', (e) => {
-        // Satırı seç ve vurgula
-        document.querySelectorAll('#tbody tr').forEach(tr => {
-          tr.style.backgroundColor = '';
-        });
-        tr.style.backgroundColor = '#e3f2fd';
-        selectedRowForAciklama = row;
+      // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
+      const userSession = localStorage.getItem('userSession');
+      if (userSession) {
+        const session = JSON.parse(userSession);
         
-        // Popup'ı aç (mod otomatik session'dan alınacak)
-        openApprovalConfirmation(row, currentTable);
-      });
+        // Sadece Operasyon veya Depolama ise tıklanabilir yap
+        if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
+          tr.style.cursor = 'pointer';
+          tr.addEventListener('click', (e) => {
+            // Satırı seç ve vurgula
+            document.querySelectorAll('#tbody tr').forEach(tr => {
+              tr.style.backgroundColor = '';
+            });
+            tr.style.backgroundColor = '#e3f2fd';
+            selectedRowForAciklama = row;
+            
+            // Popup'ı aç (mod otomatik session'dan alınacak)
+            openApprovalConfirmation(row, currentTable);
+          });
+        } else {
+          // Diğer kullanıcılar için sadece görüntüleme (hover efekti)
+          tr.style.cursor = 'default';
+          tr.addEventListener('mouseenter', () => {
+            tr.style.backgroundColor = '#f5f5f5';
+          });
+          tr.addEventListener('mouseleave', () => {
+            tr.style.backgroundColor = '';
+          });
+        }
+      }
       
       // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
       if (row.Onaylanan && row.Tarife_Saati) {
