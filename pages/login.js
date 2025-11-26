@@ -9,10 +9,12 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setStatusMessage('');
     setLoading(true);
 
     try {
@@ -31,6 +33,8 @@ export default function Login() {
       }
 
       if (data.success) {
+        console.log('✅ Login başarılı, Görev:', data.user.Görev);
+        
         // Session bilgisini localStorage'a kaydet
         localStorage.setItem('userSession', JSON.stringify({
           username: data.user.Kullanıcı,
@@ -40,11 +44,10 @@ export default function Login() {
 
         // Sadece Operasyon veya Depolama kullanıcıları için otomatik güncelleme kontrolü
         if (data.user.Görev === 'Operasyon' || data.user.Görev === 'Depolama') {
+          console.log('🔍 Otomatik güncelleme kontrolü başlatılıyor...');
+          setStatusMessage('🔍 Sistem kontrol ediliyor, lütfen bekleyin...');
+          
           try {
-            // Loading mesajını güncelle
-            setLoading(true);
-            setError('Sistem kontrol ediliyor, lütfen bekleyin...');
-            
             const updateRes = await fetch('/api/auto-update-aciklamalar', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
@@ -53,10 +56,15 @@ export default function Login() {
             const updateData = await updateRes.json();
             
             if (updateData.updated) {
-              console.log('✅ Otomatik güncelleme yapıldı');
+              console.log('✅ Otomatik güncelleme yapıldı, mail gönderildi');
+              setStatusMessage('✅ Sistem güncellendi, yönlendiriliyorsunuz...');
             } else {
               console.log('ℹ️ Güncelleme gerekmedi');
+              setStatusMessage('✅ Sistem güncel, yönlendiriliyorsunuz...');
             }
+            
+            // Kısa bir bekleme ile mesajı göster
+            await new Promise(resolve => setTimeout(resolve, 1500));
           } catch (updateErr) {
             console.warn('⚠️ Otomatik güncelleme hatası:', updateErr);
             // Hata olsa bile giriş yapabilsin
@@ -69,6 +77,7 @@ export default function Login() {
     } catch (err) {
       setError('Bağlantı hatası: ' + err.message);
       setLoading(false);
+      setStatusMessage('');
     }
   };
 
@@ -120,6 +129,12 @@ export default function Login() {
             {error && (
               <div style={styles.error}>
                 ❌ {error}
+              </div>
+            )}
+
+            {statusMessage && (
+              <div style={styles.statusMessage}>
+                {statusMessage}
               </div>
             )}
 
@@ -218,6 +233,15 @@ const styles = {
     borderRadius: '6px',
     fontSize: '14px',
     textAlign: 'center'
+  },
+  statusMessage: {
+    padding: '12px',
+    background: '#e3f2fd',
+    color: '#1976d2',
+    borderRadius: '6px',
+    fontSize: '14px',
+    textAlign: 'center',
+    fontWeight: 'bold'
   },
   eyeIcon: {
     position: 'absolute',
