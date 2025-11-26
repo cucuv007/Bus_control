@@ -39,9 +39,11 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('❌ Ekleme hatası:', error);
+      console.error('❌ Hata detayları:', JSON.stringify(error, null, 2));
       return res.status(500).json({ 
         success: false, 
-        message: 'Açıklama eklenirken hata oluştu: ' + error.message 
+        error: 'Açıklama eklenirken hata oluştu: ' + error.message,
+        details: error
       });
     }
 
