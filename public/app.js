@@ -4156,5 +4156,62 @@ function exportAciklamaToExcel() {
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', () => {
+  // Otomatik güncelleme kontrolü (Operasyon ve Depolama için)
+  checkAutoUpdateAciklamalar();
+  
   handleRefresh();
 });
+
+// ==================== OTOMATIK GÜNCELLEME KONTROLÜ ====================
+async function checkAutoUpdateAciklamalar() {
+  try {
+    const userSession = localStorage.getItem('userSession');
+    if (!userSession) return;
+    
+    const session = JSON.parse(userSession);
+    
+    // Sadece Operasyon veya Depolama kullanıcıları için
+    if (session.gorev !== 'Operasyon' && session.gorev !== 'Depolama') {
+      console.log('ℹ️ Kullanıcı Operasyon/Depolama değil, otomatik güncelleme atlanıyor');
+      return;
+    }
+    
+    console.log('🔍 Otomatik güncelleme kontrolü başlatılıyor...');
+    console.log('👤 Kullanıcı Görevi:', session.gorev);
+    
+    const updateRes = await fetch('/api/auto-update-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    console.log('📨 API yanıt durumu:', updateRes.status, updateRes.statusText);
+    
+    if (!updateRes.ok) {
+      console.error('❌ API hatası:', updateRes.status);
+      return;
+    }
+    
+    const updateData = await updateRes.json();
+    console.log('📊 API yanıt verisi:', updateData);
+    
+    if (updateData.updated) {
+      console.log('✅ Otomatik güncelleme yapıldı!');
+      console.log(`📧 ${updateData.emailCount} kullanıcıya mail gönderildi`);
+      console.log(`📊 Operasyon: ${updateData.operasyonCount} kayıt`);
+      console.log(`📊 Depolama: ${updateData.depolamaCount} kayıt`);
+      console.log('🧹 Tablolar temizlendi');
+      
+      alert(`✅ Sistem Güncellendi!\n\n` +
+            `Eski tarihli açıklama kayıtları temizlendi.\n\n` +
+            `📊 Operasyon: ${updateData.operasyonCount} kayıt\n` +
+            `📊 Depolama: ${updateData.depolamaCount} kayıt\n\n` +
+            `📧 ${updateData.emailCount} kullanıcıya mail gönderildi.`);
+    } else {
+      console.log('ℹ️ Güncelleme gerekmedi');
+      console.log('📝 Sebep:', updateData.message);
+    }
+    
+  } catch (err) {
+    console.error('❌ Otomatik güncelleme hatası:', err);
+  }
+}

@@ -42,41 +42,7 @@ export default function Login() {
           loginTime: new Date().toISOString()
         }));
 
-        // Sadece Operasyon veya Depolama kullanıcıları için otomatik güncelleme kontrolü
-        if (data.user.Görev === 'Operasyon' || data.user.Görev === 'Depolama') {
-          console.log('🔍 Otomatik güncelleme kontrolü başlatılıyor...');
-          setStatusMessage('🔍 Sistem kontrol ediliyor, lütfen bekleyin...');
-          
-          try {
-            console.log('📡 API çağrısı yapılıyor: /api/auto-update-aciklamalar');
-            
-            const updateRes = await fetch('/api/auto-update-aciklamalar', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-
-            console.log('📨 API yanıt durumu:', updateRes.status, updateRes.statusText);
-            
-            const updateData = await updateRes.json();
-            console.log('📊 API yanıt verisi:', updateData);
-            
-            if (updateData.updated) {
-              console.log('✅ Otomatik güncelleme yapıldı, mail gönderildi');
-              setStatusMessage('✅ Sistem güncellendi, yönlendiriliyorsunuz...');
-            } else {
-              console.log('ℹ️ Güncelleme gerekmedi, sebep:', updateData.message);
-              setStatusMessage('✅ Sistem güncel, yönlendiriliyorsunuz...');
-            }
-            
-            // Kısa bir bekleme ile mesajı göster
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          } catch (updateErr) {
-            console.warn('⚠️ Otomatik güncelleme hatası:', updateErr);
-            // Hata olsa bile giriş yapabilsin
-          }
-        }
-
-        // code.html sayfasına yönlendir
+        // code.html sayfasına yönlendir (otomatik güncelleme orada yapılacak)
         window.location.href = '/code.html';
       }
     } catch (err) {
