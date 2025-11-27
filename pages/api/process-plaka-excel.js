@@ -94,8 +94,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Belediye dosyası kontrolü
-    const isBelediyeFile = fileName.toUpperCase().includes('BELEDİYE');
+    // Belediye dosyası kontrolü (büyük/küçük harf duyarsız, Türkçe karakter desteği)
+    const fileNameUpper = fileName.toUpperCase();
+    const isBelediyeFile = fileNameUpper.includes('BELEDİYE') || fileNameUpper.includes('BELEDIYE');
     console.log(`\n=== 📊 Plaka Excel Dosyası: ${fileName} ===`);
     console.log(`=== 📋 Dosya Tipi: ${isBelediyeFile ? '🏛️ BELEDİYE (Ekleme Modu)' : '🔄 NORMAL (Silip Yükleme Modu)'} ===\n`);
 
