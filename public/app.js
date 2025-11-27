@@ -3330,14 +3330,18 @@ async function handleAddAciklamaInline() {
     statusEl.innerHTML = '<span style="color: #27ae60;">✅ Açıklama başarıyla eklendi!</span>';
     statusEl.style.display = 'block';
     
-    // 1.5 saniye sonra popup'ı kapat
+    // Formu temizle ve butonu yeniden aktif et
+    document.getElementById('aciklamaTextInline').value = '';
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '✅ Açıklama Ekle';
+    
+    // Açıklama formunu gizle
+    document.getElementById('aciklamaFormInline').style.display = 'none';
+    
+    // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
-      closeApprovalConfirmation();
-      // Satır seçimini temizle
-      document.querySelectorAll('#tbody tr').forEach(tr => {
-        tr.style.backgroundColor = '';
-      });
-      selectedRowForAciklama = null;
+      statusEl.style.display = 'none';
+      statusEl.innerHTML = '';
     }, 1500);
     
   } catch (err) {
