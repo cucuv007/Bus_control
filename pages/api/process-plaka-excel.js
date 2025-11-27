@@ -111,6 +111,10 @@ export default async function handler(req, res) {
     if (isBelediyeFile) {
       console.log('🔍 Belediye dosyası algılandı, "Düzenle" sayfası aranıyor...');
       
+      // Tüm sayfa isimlerini logla
+      const sheetNames = workbook.worksheets.map(ws => ws.name);
+      console.log('📋 Dosyadaki sayfalar:', sheetNames);
+      
       const duzenleSheet = workbook.worksheets.find(ws => 
         ws.name.toUpperCase().trim() === 'DÜZENLE'
       );
@@ -118,7 +122,7 @@ export default async function handler(req, res) {
       if (!duzenleSheet) {
         return res.status(400).json({
           success: false,
-          error: 'Belediye dosyasında "Düzenle" sayfası bulunamadı'
+          error: `Belediye dosyasında "Düzenle" sayfası bulunamadı. Mevcut sayfalar: ${sheetNames.join(', ')}`
         });
       }
       
