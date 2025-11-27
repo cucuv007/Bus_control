@@ -43,15 +43,29 @@ export default async function handler(req, res) {
     console.log(`✅ Saat kontrolü geçildi: ${currentHour}:${currentMinute}:${currentSecond}`);
 
     // 2. Her iki tablodan veri çek
-    const { data: operasyonData } = await supabase
+    console.log('📊 Tablolardan veri çekiliyor...');
+    
+    const { data: operasyonData, error: opError } = await supabase
       .from('Operasyon_Açıklama')
       .select('*')
       .order('id', { ascending: false });
 
-    const { data: depolamaData } = await supabase
+    if (opError) {
+      console.error('❌ Operasyon_Açıklama sorgu hatası:', opError);
+      throw new Error('Operasyon_Açıklama verisi çekilemedi: ' + opError.message);
+    }
+
+    const { data: depolamaData, error: depError } = await supabase
       .from('Depolama_Açıklama')
       .select('*')
       .order('id', { ascending: false });
+
+    if (depError) {
+      console.error('❌ Depolama_Açıklama sorgu hatası:', depError);
+      throw new Error('Depolama_Açıklama verisi çekilemedi: ' + depError.message);
+    }
+
+    console.log(`📊 Veriler çekildi - Operasyon: ${operasyonData?.length || 0}, Depolama: ${depolamaData?.length || 0}`);
 
     // 3. Eski veri kontrolü - O günün herhangi bir saatinden eski kayıt var mı?
     const todayStart = new Date();
@@ -117,7 +131,7 @@ export default async function handler(req, res) {
     console.log('👥 Kullanıcılar getiriliyor...');
     
     const { data: users, error: usersError } = await supabase
-      .from('Kullanıcı_Verileri')
+      .from('Kullanıcılar')
       .select('Kullanıcı, mail');
 
     if (usersError) {
@@ -288,10 +302,12 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('Auto update error:', err);
+    console.error('❌ Auto update error:', err);
+    console.error('📍 Error stack:', err.stack);
     return res.status(500).json({ 
       success: false,
-      error: err.message 
+      error: err.message || 'Bilinmeyen hata',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 }

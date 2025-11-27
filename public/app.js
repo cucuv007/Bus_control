@@ -4187,7 +4187,9 @@ async function checkAutoUpdateAciklamalar() {
     console.log('📨 API yanıt durumu:', updateRes.status, updateRes.statusText);
     
     if (!updateRes.ok) {
+      const errorText = await updateRes.text();
       console.error('❌ API hatası:', updateRes.status);
+      console.error('📄 Hata detayı:', errorText);
       return;
     }
     
