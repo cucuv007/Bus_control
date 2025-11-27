@@ -114,19 +114,29 @@ export default async function handler(req, res) {
     console.log(`⚠️ Eski veri tespit edildi! En eski kayıt: ${oldestDateStr}, güncelleme başlıyor...`);
 
     // 4. Kullanıcıları getir
-    const { data: users } = await supabase
+    console.log('👥 Kullanıcılar getiriliyor...');
+    
+    const { data: users, error: usersError } = await supabase
       .from('Kullanıcı_Verileri')
       .select('Kullanıcı, mail');
 
+    if (usersError) {
+      console.error('❌ Kullanıcı sorgusu hatası:', usersError);
+      return res.status(500).json({
+        success: false,
+        error: 'Kullanıcı sorgusu hatası: ' + usersError.message
+      });
+    }
+
     if (!users || users.length === 0) {
-      console.log('⚠️ Kullanıcı bulunamadı');
+      console.log('⚠️ Kullanıcı bulunamadı (tablo boş)');
       return res.status(200).json({
         success: false,
         error: 'Kullanıcı bulunamadı'
       });
     }
 
-    console.log(`👥 ${users.length} kullanıcı bulundu`);
+    console.log(`✅ ${users.length} kullanıcı bulundu:`, users.map(u => u.Kullanıcı).join(', '));
 
     // 5. Excel dosyaları oluştur - Her iki tablonun TÜM verilerini gönder
     let operasyonBase64 = null;
