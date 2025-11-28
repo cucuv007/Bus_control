@@ -346,9 +346,35 @@ if (arizaliFilterCheckbox) {
   arizaliFilterCheckbox.addEventListener('change', (e) => {
     showOnlyArizali = e.target.checked;
     console.log('🔧 Arızalı filtresi:', showOnlyArizali ? 'Aktif' : 'Pasif');
-    // Tabloyu yeniden filtrele
+    // Sadece tabloyu yeniden filtrele (timer etkilenmesin)
     if (selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      refreshTableData(selectedHatsForTracking, selectedHareketForTracking);
+      applyTableFilter();
+    }
+  });
+}
+
+// Tabloyu filtreleme fonksiyonu (timer yenileme kullanmadan)
+function applyTableFilter() {
+  const allRows = tbody.querySelectorAll('tr');
+  
+  allRows.forEach(row => {
+    if (showOnlyArizali) {
+      // Durum sütununu bul
+      const cells = row.querySelectorAll('td');
+      let hasDurum = false;
+      
+      cells.forEach(cell => {
+        const text = cell.textContent || '';
+        if (text.toLowerCase().includes('arızalı')) {
+          hasDurum = true;
+        }
+      });
+      
+      // Arızalı varsa göster, yoksa gizle
+      row.style.display = hasDurum ? '' : 'none';
+    } else {
+      // Filtre kapalıysa tüm satırları göster
+      row.style.display = '';
     }
   });
 }
@@ -2462,22 +2488,6 @@ async function handleApplyHatSelection() {
       return;
     }
     
-    // Arızalı filtresi aktifse sadece Durum sütunu "Arızalı" olanları göster
-    if (showOnlyArizali) {
-      allData = allData.filter(row => {
-        const durum = row.Durum || '';
-        return durum.toString().toLowerCase().includes('arızalı');
-      });
-      
-      if (allData.length === 0) {
-        statusEl.innerHTML = `<span class="small">⚠️ Arızalı araç bulunamadı</span>`;
-        theadRow.innerHTML = "<th>Boş</th>";
-        tbody.innerHTML = `<tr><td class="small">Seçilen hatlarda arızalı araç yok.</td></tr>`;
-        applyHatSelection.disabled = false;
-        return;
-      }
-    }
-    
     // Tarife_Saati'ne göre sırala (küçükten büyüğe)
     allData.sort((a, b) => {
       const timeA = a.Tarife_Saati || '';
@@ -2627,6 +2637,11 @@ async function handleApplyHatSelection() {
       updateReopenTimerIcon();
     }
     
+    // Arızalı filtresi aktifse uygula
+    if (showOnlyArizali) {
+      applyTableFilter();
+    }
+    
   } catch (err) {
     console.error('Hat selection error:', err);
     statusEl.innerHTML = `<span class="error">❌ Hata: ${err.message}</span>`;
@@ -2698,29 +2713,15 @@ async function refreshTableData(hatList, hareket) {
     
     if (allData.length === 0) return;
     
-    // Arızalı filtresi aktifse sadece Durum sütunu "Arızalı" olanları göster
-    let filteredData = allData;
-    if (showOnlyArizali) {
-      filteredData = allData.filter(row => {
-        const durum = row.Durum || '';
-        return durum.toString().toLowerCase().includes('arızalı');
-      });
-      
-      if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="20" style="text-align: center; padding: 20px; color: #999;">Arızalı araç bulunamadı</td></tr>`;
-        return;
-      }
-    }
-    
     // Tarife_Saati'ne göre sırala
-    filteredData.sort((a, b) => {
+    allData.sort((a, b) => {
       const timeA = a.Tarife_Saati || '';
       const timeB = b.Tarife_Saati || '';
       return timeA.localeCompare(timeB);
     });
     
     // Sadece tbody'yi güncelle (başlıklar değişmesin)
-    const firstRow = filteredData[0];
+    const firstRow = allData[0];
     const allKeys = Object.keys(firstRow);
     const hatIndex = allKeys.indexOf('_Hat');
     if (hatIndex > -1) {
@@ -2741,7 +2742,7 @@ async function refreshTableData(hatList, hareket) {
     }
     
     tbody.innerHTML = '';
-    filteredData.forEach(row => {
+    allData.forEach(row => {
       const tr = document.createElement('tr');
       allKeys.forEach(k => {
         const td = document.createElement('td');
@@ -2824,6 +2825,11 @@ async function refreshTableData(hatList, hareket) {
     });
     
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
+    
+    // Arızalı filtresini uygula (eğer aktifse)
+    if (showOnlyArizali) {
+      applyTableFilter();
+    }
     
   } catch (err) {
     console.error('⚠️ Tablo yenileme hatası:', err.message);
