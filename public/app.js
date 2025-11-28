@@ -1109,6 +1109,8 @@ function openApprovalConfirmation(rowData, tableName) {
   document.getElementById('approvalPlaka').textContent = rowData.Plaka || '-';
   
   // Modal başlığı ve soruyu moda göre değiştir
+  const arizaliAciklamaForm = document.getElementById('arizaliAciklamaForm');
+  
   if (currentMode === 'operasyon') {
     // Eğer zaten Arızalı ise, kaldırma sorusu sor
     const currentDurum = rowData.Durum || '';
@@ -1121,18 +1123,27 @@ function openApprovalConfirmation(rowData, tableName) {
       confirmApprovalBtn.innerHTML = '✅ Arızalı Bilgisini Kaldır';
       // Flag ekle: Kaldırma işlemi
       pendingApprovalData.removeArizali = true;
+      // Açıklama formunu gizle (kaldırma için açıklama gerekmez)
+      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
     } else {
       approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
-      approvalQuestion.textContent = 'Bu araç için arızalı kaydı oluşturmak istiyor musunuz?';
+      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
       confirmApprovalBtn.style.background = '#e74c3c';
       confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
       pendingApprovalData.removeArizali = false;
+      // Açıklama formunu göster (arızalı işaretleme için zorunlu)
+      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'block';
+      // Açıklama alanını temizle
+      const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
+      if (arizaliAciklamaText) arizaliAciklamaText.value = '';
     }
   } else {
     approvalModalTitle.textContent = '🚌 Çıkış Onayı';
     approvalQuestion.textContent = 'Bu çıkışı onaylamak istiyor musunuz?';
     confirmApprovalBtn.style.background = '#27ae60';
     confirmApprovalBtn.innerHTML = '✅ Onayla';
+    // Depolama modunda arızalı formu gizle
+    if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
   }
   
   // Açıklama Ekle ve Araç Değiştir butonlarını göster/gizle (sadece Operasyon ve Depolama için)
@@ -1164,6 +1175,7 @@ function closeApprovalConfirmation() {
   // Inline formları sıfırla
   const aciklamaInlineForm = document.getElementById('aciklamaFormInline');
   const aracDegistirInlineForm = document.getElementById('aracDegistirFormInline');
+  const arizaliAciklamaForm = document.getElementById('arizaliAciklamaForm');
   const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
   const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
   
@@ -1172,6 +1184,11 @@ function closeApprovalConfirmation() {
   }
   if (aracDegistirInlineForm) {
     aracDegistirInlineForm.style.display = 'none';
+  }
+  if (arizaliAciklamaForm) {
+    arizaliAciklamaForm.style.display = 'none';
+    const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
+    if (arizaliAciklamaText) arizaliAciklamaText.value = '';
   }
   if (aciklamaBtn) {
     aciklamaBtn.textContent = '📝 Açıklama Ekle';
@@ -1186,6 +1203,21 @@ function closeApprovalConfirmation() {
 async function handleRowApproval() {
   if (!pendingApprovalData) {
     return;
+  }
+  
+  // Operasyon modunda arızalı işaretleme için açıklama kontrolü
+  if (currentMode === 'operasyon' && !pendingApprovalData.removeArizali) {
+    const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
+    const aciklama = arizaliAciklamaText ? arizaliAciklamaText.value.trim() : '';
+    
+    if (!aciklama) {
+      alert('⚠️ Arıza açıklaması zorunludur!');
+      if (arizaliAciklamaText) arizaliAciklamaText.focus();
+      return;
+    }
+    
+    // Açıklamayı pendingApprovalData'ya ekle
+    pendingApprovalData.aciklama = aciklama;
   }
   
   confirmApprovalBtn.disabled = true;
@@ -1213,6 +1245,11 @@ async function handleRowApproval() {
       
       console.log(isRemoving ? '✅ Arızalı bilgisi kaldırıldı:' : '✅ Arızalı olarak işaretlendi:', result);
       
+      // Eğer arızalı işaretleme yapıldıysa açıklamayı da kaydet
+      if (!isRemoving && pendingApprovalData.aciklama) {
+        await saveArizaliAciklama(pendingApprovalData);
+      }
+      
       // Veriyi sakla (modal kapatılmadan önce)
       const savedData = { ...pendingApprovalData };
       
@@ -1222,7 +1259,7 @@ async function handleRowApproval() {
       // Satırı tabloda hızlıca güncelle
       updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
-      alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi!');
+      alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi ve açıklama kaydedildi!');
       
     } else {
       // Depolama modu: Onaylanan sütununa saat yaz
@@ -3768,6 +3805,65 @@ async function handleAracDegistir() {
     statusEl.style.display = 'block';
     confirmBtn.disabled = false;
     confirmBtn.textContent = '🚗 Araç Değiştir';
+  }
+}
+
+// Arızalı işaretleme için açıklama kaydetme fonksiyonu
+async function saveArizaliAciklama(rowData) {
+  try {
+    const userSession = localStorage.getItem('userSession');
+    if (!userSession) {
+      throw new Error('Oturum bilgisi bulunamadı');
+    }
+    
+    const session = JSON.parse(userSession);
+    const gorev = session.gorev;
+    
+    // Görev tipine göre tablo seç
+    let aciklamaTable = '';
+    if (gorev === 'Operasyon') {
+      aciklamaTable = 'Operasyon_Açıklama';
+    } else if (gorev === 'Depolama') {
+      aciklamaTable = 'Depolama_Açıklama';
+    } else {
+      throw new Error('Geçersiz görev tipi');
+    }
+    
+    const payload = {
+      table: aciklamaTable,
+      hatAdi: rowData.tableName || rowData.Hat_Adi,
+      tarife: rowData.tarife,
+      tarifeSaati: rowData.tarifeSaati,
+      aciklama: `⚠️ ARIZALI: ${rowData.aciklama}`,
+      kullanici: session.kullanici_adi || 'Bilinmiyor'
+    };
+    
+    console.log('📝 Arızalı açıklaması kaydediliyor:', payload);
+    
+    const res = await fetch('/api/add-operasyon-aciklama', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(result.error || 'Açıklama kaydetme hatası');
+    }
+    
+    console.log('✅ Arızalı açıklaması kaydedildi:', result);
+    
+    // İlgili satırın açıklama ikonunu güncelle
+    await updateAciklamaIconsForRow(
+      rowData.tableName || rowData.Hat_Adi,
+      rowData.tarife,
+      rowData.tarifeSaati
+    );
+    
+  } catch (err) {
+    console.error('❌ Açıklama kaydetme hatası:', err);
+    // Hata sessizce loglansın, kullanıcıya ana işlem başarılı gösterildi
   }
 }
 
