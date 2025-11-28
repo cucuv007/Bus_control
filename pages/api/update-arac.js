@@ -86,7 +86,8 @@ export default async function handler(req, res) {
         Tarife,
         Tarife_Saati,
         Plaka,
-        'Açıklama': `🚗 Araç değiştirildi: "${Plaka}" → "${Yeni_Plaka}". ${Aciklama}`
+        'Açıklama': `🚗 Araç değiştirildi: "${Plaka}" → "${Yeni_Plaka}". ${Aciklama}`,
+        Tarih: new Date().toISOString()
       });
 
     if (aciklamaError) {
