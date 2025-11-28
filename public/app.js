@@ -324,6 +324,18 @@ if (sistemiGuncelleBtn) {
   sistemiGuncelleBtn.addEventListener('click', handleSistemiGuncelle);
 }
 
+// Satır Açıklama Modal
+const rowAciklamaModal = document.getElementById('rowAciklamaModal');
+const closeRowAciklamaModal = document.getElementById('closeRowAciklamaModal');
+const closeRowAciklamaBtn = document.getElementById('closeRowAciklamaBtn');
+
+if (closeRowAciklamaModal) {
+  closeRowAciklamaModal.addEventListener('click', closeRowAciklamaModalFunc);
+}
+if (closeRowAciklamaBtn) {
+  closeRowAciklamaBtn.addEventListener('click', closeRowAciklamaModalFunc);
+}
+
 closeModal.addEventListener('click', closeUploadModal);
 cancelBtn.addEventListener('click', closeUploadModal);
 
@@ -1474,6 +1486,13 @@ async function loadTableData() {
       theadRow.appendChild(th);
     });
     
+    // Açıklama ikonu için başlık ekle
+    const thAciklama = document.createElement('th');
+    thAciklama.textContent = '💬';
+    thAciklama.style.textAlign = 'center';
+    thAciklama.style.width = '50px';
+    theadRow.appendChild(thAciklama);
+    
     // Tablo verilerini oluştur
     tbody.innerHTML = '';
     data.forEach(row => {
@@ -1497,6 +1516,19 @@ async function loadTableData() {
         
         tr.appendChild(td);
       });
+      
+      // Açıklama ikonu sütunu ekle
+      const tdAciklama = document.createElement('td');
+      tdAciklama.style.textAlign = 'center';
+      tdAciklama.style.cursor = 'pointer';
+      tdAciklama.style.fontSize = '18px';
+      tdAciklama.textContent = '💬';
+      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+      tdAciklama.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openRowAciklamaModal(row);
+      });
+      tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
       const userSession = localStorage.getItem('userSession');
@@ -2428,6 +2460,13 @@ async function handleApplyHatSelection() {
       theadRow.appendChild(th);
     });
     
+    // Açıklama ikonu için başlık ekle
+    const thAciklama = document.createElement('th');
+    thAciklama.textContent = '💬';
+    thAciklama.style.textAlign = 'center';
+    thAciklama.style.width = '50px';
+    theadRow.appendChild(thAciklama);
+    
     // Tablo verilerini oluştur
     tbody.innerHTML = '';
     allData.forEach(row => {
@@ -2452,6 +2491,19 @@ async function handleApplyHatSelection() {
         
         tr.appendChild(td);
       });
+      
+      // Açıklama ikonu sütunu ekle
+      const tdAciklama = document.createElement('td');
+      tdAciklama.style.textAlign = 'center';
+      tdAciklama.style.cursor = 'pointer';
+      tdAciklama.style.fontSize = '18px';
+      tdAciklama.textContent = '💬';
+      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+      tdAciklama.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openRowAciklamaModal(row);
+      });
+      tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
       const originalTableName = row._Hat || selectedHats[0];
@@ -2626,6 +2678,19 @@ async function refreshTableData(hatList, hareket) {
         
         tr.appendChild(td);
       });
+      
+      // Açıklama ikonu sütunu ekle
+      const tdAciklama = document.createElement('td');
+      tdAciklama.style.textAlign = 'center';
+      tdAciklama.style.cursor = 'pointer';
+      tdAciklama.style.fontSize = '18px';
+      tdAciklama.textContent = '💬';
+      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+      tdAciklama.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openRowAciklamaModal(row);
+      });
+      tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
       const originalTableName = row._Hat || hatList[0];
@@ -4416,5 +4481,112 @@ async function checkAutoUpdateAciklamalar() {
     
   } catch (err) {
     console.error('❌ Otomatik güncelleme hatası:', err);
+  }
+}
+
+// ==================== SATIR AÇIKLAMA MODAL ====================
+function closeRowAciklamaModalFunc() {
+  rowAciklamaModal.style.display = 'none';
+}
+
+async function openRowAciklamaModal(rowData) {
+  console.log('💬 Açıklama mesajları açılıyor:', rowData);
+  
+  // Satır bilgilerini göster
+  const detailsDiv = document.getElementById('rowAciklamaDetails');
+  detailsDiv.innerHTML = `
+    <div><strong>Hat:</strong> ${rowData.Hat_Adi || '-'}</div>
+    <div><strong>Tarife:</strong> ${rowData.Tarife || '-'}</div>
+    <div><strong>Tarife Saati:</strong> ${rowData.Tarife_Saati || '-'}</div>
+  `;
+  
+  // Modal'ı göster
+  rowAciklamaModal.style.display = 'flex';
+  
+  // Tablo body'yi temizle ve yükleniyor göster
+  const tbody = document.getElementById('rowAciklamaTableBody');
+  tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">Yükleniyor...</td></tr>';
+  
+  try {
+    // API'den açıklamaları al
+    const response = await fetch('/api/get-row-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Hat_Adi: rowData.Hat_Adi,
+        Tarife: rowData.Tarife,
+        Tarife_Saati: rowData.Tarife_Saati
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Açıklamalar alınamadı');
+    }
+    
+    if (!result.success || !result.data || result.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">Bu satır için açıklama bulunamadı.</td></tr>';
+      return;
+    }
+    
+    // Açıklamaları listele
+    tbody.innerHTML = '';
+    result.data.forEach(aciklama => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #e0e0e0';
+      
+      // Tarih
+      const tdTarih = document.createElement('td');
+      tdTarih.style.padding = '10px';
+      tdTarih.style.fontSize = '13px';
+      const tarih = new Date(aciklama.Tarih);
+      tdTarih.textContent = tarih.toLocaleString('tr-TR');
+      tr.appendChild(tdTarih);
+      
+      // Kaynak
+      const tdKaynak = document.createElement('td');
+      tdKaynak.style.padding = '10px';
+      tdKaynak.style.fontSize = '13px';
+      tdKaynak.style.fontWeight = 'bold';
+      tdKaynak.style.color = aciklama._Kaynak === 'Operasyon' ? '#3498db' : '#e67e22';
+      tdKaynak.textContent = aciklama._Kaynak;
+      tr.appendChild(tdKaynak);
+      
+      // Açıklama
+      const tdAciklama = document.createElement('td');
+      tdAciklama.style.padding = '10px';
+      tdAciklama.style.fontSize = '13px';
+      tdAciklama.textContent = aciklama.Açıklama || '-';
+      tr.appendChild(tdAciklama);
+      
+      tbody.appendChild(tr);
+    });
+    
+    console.log(`✅ ${result.data.length} açıklama gösterildi`);
+    
+  } catch (err) {
+    console.error('Açıklama yükleme hatası:', err);
+    tbody.innerHTML = `<tr><td colspan="3" style="padding: 20px; text-align: center; color: #e74c3c;">❌ Hata: ${err.message}</td></tr>`;
+  }
+}
+
+async function checkRowHasAciklama(rowData) {
+  try {
+    const response = await fetch('/api/get-row-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Hat_Adi: rowData.Hat_Adi,
+        Tarife: rowData.Tarife,
+        Tarife_Saati: rowData.Tarife_Saati
+      })
+    });
+    
+    const result = await response.json();
+    return result.success && result.data && result.data.length > 0;
+  } catch (err) {
+    console.error('Açıklama kontrol hatası:', err);
+    return false;
   }
 }

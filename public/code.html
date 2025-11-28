@@ -297,6 +297,40 @@
     </div>
   </div>
 
+  <!-- Satır Açıklama Mesajları Popup -->
+  <div id="rowAciklamaModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px; width: 90%;">
+      <div class="modal-header">
+        <h2>💬 Açıklama Mesajları</h2>
+        <button id="closeRowAciklamaModal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="rowAciklamaInfo" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+          <strong>Satır Bilgileri:</strong>
+          <div id="rowAciklamaDetails" style="margin-top: 5px; font-size: 14px; color: #555;"></div>
+        </div>
+        
+        <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+              <tr>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Tarih</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Kaynak</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Açıklama</th>
+              </tr>
+            </thead>
+            <tbody id="rowAciklamaTableBody">
+              <tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeRowAciklamaBtn" class="btn btn-secondary">Kapat</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Modal -->
   <div id="uploadModal" class="modal" style="display: none;">
     <div class="modal-content">
