@@ -2424,12 +2424,6 @@ function updateSelectAllHats() {
 }
 
 async function handleApplyHatSelection() {
-  // Timer açıksa önce kapat
-  if (timerContainer.style.display === 'block') {
-    console.log('🔄 Timer açık - kapatılıyor...');
-    closeTimer();
-  }
-  
   const checkboxes = document.querySelectorAll('.hat-checkbox:checked');
   selectedHats = Array.from(checkboxes).map(cb => cb.value);
   
