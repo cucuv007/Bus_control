@@ -3896,23 +3896,16 @@ function openAciklamaInceleModal() {
   const session = JSON.parse(userSession);
   const gorev = session.gorev;
   
-  // Görev seçim div'ini göster/gizle
+  // Görev seçim div'ini her zaman göster
   const gorevSelectionDiv = document.getElementById('gorevSelectionDiv');
   const gorevCombo = document.getElementById('gorevSelectCombo');
   
-  if (gorev === 'Operasyon' || gorev === 'Depolama') {
-    // Operasyon veya Depolama ise direkt yükle
-    gorevSelectionDiv.style.display = 'none';
-    aciklamaInceleModal.style.display = 'flex';
-    loadAciklamaData(gorev);
-  } else {
-    // Diğerleri için combobox göster
-    gorevSelectionDiv.style.display = 'block';
-    gorevCombo.value = '';
-    aciklamaInceleModal.style.display = 'flex';
-    // Tablo boş
-    document.getElementById('aciklamaTableBody').innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #7f8c8d;">Lütfen yukarıdan bir seçim yapın</td></tr>';
-  }
+  gorevSelectionDiv.style.display = 'block';
+  gorevCombo.value = '';
+  aciklamaInceleModal.style.display = 'flex';
+  
+  // Tablo boş
+  document.getElementById('aciklamaTableBody').innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #7f8c8d;">Lütfen yukarıdan bir seçim yapın</td></tr>';
 }
 
 function closeAciklamaInceleModalFunc() {
