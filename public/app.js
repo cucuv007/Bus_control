@@ -2902,19 +2902,6 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     let closestBuses = allBusesList.filter(bus => bus.remainingSeconds === minRemaining);
     
     // Arızalı filtresi aktifse sadece durumu "Arızalı" olanları göster
-    if (showOnlyArizali) {
-      closestBuses = closestBuses.filter(bus => {
-        const durum = bus.durum || '';
-        return durum.toString().toLowerCase().includes('arızalı');
-      });
-      
-      // Arızalı araç yoksa timer'ı gizle
-      if (closestBuses.length === 0) {
-        timerContainer.style.display = 'none';
-        return;
-      }
-    }
-    
     console.log('🚌 Çoklu hat timer güncelleme: Araç sayısı =', closestBuses.length);
     
     if (closestBuses.length > 0) {
