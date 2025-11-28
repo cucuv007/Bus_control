@@ -2516,25 +2516,21 @@ async function handleApplyHatSelection() {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (async check ile)
+      // Açıklama ikonu sütunu ekle (başlangıçta boş, tıklanınca kontrol edilir)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
-      
-      // Açıklamaları kontrol et ve ikonu göster
-      (async () => {
-        const hasAciklama = await checkRowHasAciklama(row);
-        if (hasAciklama) {
-          tdAciklama.textContent = '💬';
-          tdAciklama.style.cursor = 'pointer';
-          tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-          tdAciklama.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openRowAciklamaModal(row);
-          });
-        }
-      })();
-      
+      tdAciklama.style.cursor = 'pointer';
+      tdAciklama.textContent = '💬';
+      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+      tdAciklama.className = 'aciklama-icon-cell';
+      tdAciklama.dataset.hatAdi = row.Hat_Adi || '';
+      tdAciklama.dataset.tarife = row.Tarife || '';
+      tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
+      tdAciklama.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openRowAciklamaModal(row);
+      });
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
@@ -2721,25 +2717,21 @@ async function refreshTableData(hatList, hareket) {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (async check ile)
+      // Açıklama ikonu sütunu ekle (başlangıçta boş, tıklanınca kontrol edilir)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
-      
-      // Açıklamaları kontrol et ve ikonu göster
-      (async () => {
-        const hasAciklama = await checkRowHasAciklama(row);
-        if (hasAciklama) {
-          tdAciklama.textContent = '💬';
-          tdAciklama.style.cursor = 'pointer';
-          tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-          tdAciklama.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openRowAciklamaModal(row);
-          });
-        }
-      })();
-      
+      tdAciklama.style.cursor = 'pointer';
+      tdAciklama.textContent = '💬';
+      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+      tdAciklama.className = 'aciklama-icon-cell';
+      tdAciklama.dataset.hatAdi = row.Hat_Adi || '';
+      tdAciklama.dataset.tarife = row.Tarife || '';
+      tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
+      tdAciklama.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openRowAciklamaModal(row);
+      });
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
@@ -3550,6 +3542,13 @@ async function handleAddAciklamaInline() {
     // Açıklama formunu gizle
     document.getElementById('aciklamaFormInline').style.display = 'none';
     
+    // ⚡ İlgili satırın açıklama ikonunu güncelle
+    await updateAciklamaIconsForRow(
+      rowData.Hat_Adi,
+      rowData.Tarife,
+      rowData.Tarife_Saati
+    );
+    
     // ⚡ Eğer timer aktifse tabloyu otomatik yenile
     if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
       console.log('🔄 Tablo otomatik yenileniyor...');
@@ -3663,6 +3662,13 @@ async function handleAracDegistir() {
     
     // Araç değiştir formunu gizle
     document.getElementById('aracDegistirFormInline').style.display = 'none';
+    
+    // ⚡ İlgili satırın açıklama ikonunu güncelle
+    await updateAciklamaIconsForRow(
+      rowData.Hat_Adi,
+      rowData.Tarife,
+      rowData.Tarife_Saati
+    );
     
     // ⚡ Eğer timer aktifse tabloyu otomatik yenile
     if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
@@ -4635,22 +4641,40 @@ async function openRowAciklamaModal(rowData) {
   }
 }
 
-async function checkRowHasAciklama(rowData) {
+async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
+  // Bu satır için açıklama var mı kontrol et
   try {
     const response = await fetch('/api/get-row-aciklamalar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        Hat_Adi: rowData.Hat_Adi,
-        Tarife: rowData.Tarife,
-        Tarife_Saati: rowData.Tarife_Saati
+        Hat_Adi: hatAdi,
+        Tarife: tarife,
+        Tarife_Saati: tarifeSaati
       })
     });
     
     const result = await response.json();
-    return result.success && result.data && result.data.length > 0;
+    const hasAciklama = result.success && result.data && result.data.length > 0;
+    
+    // Tablodaki ilgili ikonları bul ve görünürlüğünü ayarla
+    const allIconCells = document.querySelectorAll('.aciklama-icon-cell');
+    allIconCells.forEach(cell => {
+      if (cell.dataset.hatAdi === hatAdi && 
+          cell.dataset.tarife === tarife && 
+          cell.dataset.tarifeSaati === tarifeSaati) {
+        if (hasAciklama) {
+          cell.style.opacity = '1';
+          cell.style.visibility = 'visible';
+        } else {
+          cell.style.opacity = '0.2';
+          cell.style.visibility = 'visible';
+        }
+      }
+    });
+    
+    console.log(`💬 İkon güncellendi: ${hatAdi} ${tarife} ${tarifeSaati} - ${hasAciklama ? 'Var' : 'Yok'}`);
   } catch (err) {
-    console.error('Açıklama kontrol hatası:', err);
-    return false;
+    console.error('İkon güncelleme hatası:', err);
   }
 }
