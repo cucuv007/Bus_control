@@ -2385,9 +2385,7 @@ async function handleApplyHatSelection() {
       return timeA.localeCompare(timeB);
     });
     
-    console.log(`✅ Toplam ${allData.length} kayıt birleştirildi ve sıralandı`);
-    
-    // Tablo başlıklarını oluştur (_Hat sütununu ilk sıraya koy)
+    // Tablo başlıklarını oluştur (_Hat sütununu ilk sıraya koy, _IsYeniPlaka'yı gizle)
     const firstRow = allData[0];
     const allKeys = Object.keys(firstRow);
     
@@ -2396,6 +2394,12 @@ async function handleApplyHatSelection() {
     if (hatIndex > -1) {
       allKeys.splice(hatIndex, 1);
       allKeys.unshift('_Hat');
+    }
+    
+    // _IsYeniPlaka'yı gizle (sadece renklendirme için kullanılacak)
+    const isYeniPlakaIndex = allKeys.indexOf('_IsYeniPlaka');
+    if (isYeniPlakaIndex > -1) {
+      allKeys.splice(isYeniPlakaIndex, 1);
     }
     
     theadRow.innerHTML = '';
@@ -2414,6 +2418,12 @@ async function handleApplyHatSelection() {
         const value = row[k];
         
         td.textContent = value !== null && value !== undefined ? value : '';
+        
+        // Plaka sütunu: Yeni_Plaka'dan geliyorsa kırmızı yap
+        if (k === 'Plaka' && row._IsYeniPlaka) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
         
         // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
         if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {

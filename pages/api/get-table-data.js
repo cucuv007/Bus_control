@@ -51,14 +51,18 @@ async function getPlakaForTarife(hatAdi, tarife, todayTable) {
       .single();
     
     if (error || !data) {
-      return null;
+      return { plaka: null, isYeniPlaka: false };
     }
     
     // Yeni_Plaka varsa ve boş değilse onu döndür, yoksa Plaka'yı döndür
-    return data.Yeni_Plaka && data.Yeni_Plaka.trim() !== '' ? data.Yeni_Plaka : data.Plaka;
+    const hasYeniPlaka = data.Yeni_Plaka && data.Yeni_Plaka.trim() !== '';
+    return {
+      plaka: hasYeniPlaka ? data.Yeni_Plaka : data.Plaka,
+      isYeniPlaka: hasYeniPlaka
+    };
   } catch (err) {
     console.error(`Plaka bulunamadı (${todayTable}, ${hatAdi}, ${tarife}):`, err);
-    return null;
+    return { plaka: null, isYeniPlaka: false };
   }
 }
 
@@ -119,15 +123,17 @@ export default async function handler(req, res) {
     // Her kayıt için plaka bilgisini ekle
     const dataWithPlaka = await Promise.all(data.map(async (row) => {
       if (row.Tarife && row.Hat_Adi) {
-        const plaka = await getPlakaForTarife(row.Hat_Adi, row.Tarife, todayTable);
+        const plakaData = await getPlakaForTarife(row.Hat_Adi, row.Tarife, todayTable);
         return {
           ...row,
-          Plaka: plaka || 'Belediye Aracı' // Yeni_Plaka varsa onu, yoksa Plaka'yı döndürür
+          Plaka: plakaData.plaka || 'Belediye Aracı',
+          _IsYeniPlaka: plakaData.isYeniPlaka // Yeni plaka mı kontrol flag'i
         };
       }
       return {
         ...row,
-        Plaka: row.Plaka || 'Belediye Aracı'
+        Plaka: row.Plaka || 'Belediye Aracı',
+        _IsYeniPlaka: false
       };
     }));
 
