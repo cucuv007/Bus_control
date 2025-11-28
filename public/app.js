@@ -2728,20 +2728,22 @@ async function refreshTableData(hatList, hareket) {
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
       // Timer yenilemede var olan ikonu koru (yeniden kontrol etme)
-      const existingCell = document.querySelector(
-        `.aciklama-icon-cell[data-hat-adi="${row.Hat_Adi}"][data-tarife="${row.Tarife}"][data-tarife-saati="${row.Tarife_Saati}"]`
+      const existingCell = Array.from(document.querySelectorAll('.aciklama-icon-cell')).find(cell =>
+        cell.dataset.hatAdi === (row.Hat_Adi || '') &&
+        cell.dataset.tarife === (row.Tarife || '') &&
+        cell.dataset.tarifeSaati === (row.Tarife_Saati || '')
       );
       
       if (existingCell && existingCell.textContent) {
         tdAciklama.textContent = existingCell.textContent;
         tdAciklama.style.cursor = 'pointer';
         tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+        tdAciklama.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openRowAciklamaModal(row);
+        });
       }
       
-      tdAciklama.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openRowAciklamaModal(row);
-      });
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
