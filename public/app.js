@@ -2721,6 +2721,16 @@ async function updateMultipleHatsTimer(hatList, hareket) {
       // Timer bilgilerini güncelle (eski yapı ile uyumluluk için)
       timerHatAdi.textContent = currentBus.hatAdi || '-';
       timerPlaka.textContent = currentBus.plaka || '-';
+      
+      // Plaka rengini ayarla (_IsYeniPlaka varsa kırmızı)
+      if (currentBus.isYeniPlaka) {
+        timerPlaka.style.color = '#e74c3c';
+        timerPlaka.style.fontWeight = 'bold';
+      } else {
+        timerPlaka.style.color = '#2c3e50';
+        timerPlaka.style.fontWeight = 'normal';
+      }
+      
       timerTarife.textContent = currentBus.tarife || '-';
       timerHareket.textContent = currentBus.hareket || '-';
       

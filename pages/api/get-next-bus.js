@@ -40,24 +40,29 @@ function getTodayTableName() {
   return gunler[dayOfWeek];
 }
 
-// Bugünün gün tablosundan plaka bilgisini al
+// Bugünün gün tablosundan plaka bilgisini al (Yeni_Plaka varsa onu, yoksa Plaka'yı)
 async function getPlakaForTarife(hatAdi, tarife, todayTable) {
   try {
     const { data, error } = await supabase
       .from(todayTable)
-      .select('Plaka')
+      .select('Plaka, Yeni_Plaka')
       .eq('Hat_Adi', hatAdi)
       .eq('Tarife', tarife)
       .single();
     
     if (error || !data) {
-      return null;
+      return { plaka: null, isYeniPlaka: false };
     }
     
-    return data.Plaka;
+    // Yeni_Plaka varsa ve boş değilse onu döndür, yoksa Plaka'yı döndür
+    const hasYeniPlaka = data.Yeni_Plaka && data.Yeni_Plaka.trim() !== '';
+    return {
+      plaka: hasYeniPlaka ? data.Yeni_Plaka : data.Plaka,
+      isYeniPlaka: hasYeniPlaka
+    };
   } catch (err) {
     console.error(`Plaka bulunamadı (${todayTable}, ${hatAdi}, ${tarife}):`, err);
-    return null;
+    return { plaka: null, isYeniPlaka: false };
   }
 }
 
@@ -166,10 +171,12 @@ export default async function handler(req, res) {
         if (remainingSeconds === minDifference) {
           // Plaka bilgisini bugünün gün tablosundan al
           let plaka = 'Belediye Aracı';
+          let isYeniPlaka = false;
           if (row.Tarife) {
-            const plakaFromToday = await getPlakaForTarife(tableName, row.Tarife, todayTable);
-            if (plakaFromToday) {
-              plaka = plakaFromToday;
+            const plakaData = await getPlakaForTarife(tableName, row.Tarife, todayTable);
+            if (plakaData.plaka) {
+              plaka = plakaData.plaka;
+              isYeniPlaka = plakaData.isYeniPlaka;
             }
           }
           
@@ -177,6 +184,7 @@ export default async function handler(req, res) {
             tableName: tableName,
             hatAdi: row.Hat_Adi || '-',
             plaka: plaka,
+            isYeniPlaka: isYeniPlaka, // Yeni plaka flag'i
             tarife: row.Tarife || '-',
             hareket: row.Hareket || '-',
             calismaZamani: row.Çalışma_Zamanı || null,
