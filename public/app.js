@@ -2578,10 +2578,10 @@ async function handleApplyHatSelection() {
       return;
     }
     
-    // Tarife_Saati'ne göre sırala (küçükten büyüğe)
+    // Tarife_Saati'ne göre sırala (normalize edilmiş saatlerle)
     allData.sort((a, b) => {
-      const timeA = a.Tarife_Saati || '';
-      const timeB = b.Tarife_Saati || '';
+      const timeA = normalizeSaat(a.Tarife_Saati || '');
+      const timeB = normalizeSaat(b.Tarife_Saati || '');
       return timeA.localeCompare(timeB);
     });
     
@@ -2803,10 +2803,10 @@ async function refreshTableData(hatList, hareket) {
     
     if (allData.length === 0) return;
     
-    // Tarife_Saati'ne göre sırala
+    // Tarife_Saati'ne göre sırala (normalize edilmiş saatlerle)
     allData.sort((a, b) => {
-      const timeA = a.Tarife_Saati || '';
-      const timeB = b.Tarife_Saati || '';
+      const timeA = normalizeSaat(a.Tarife_Saati || '');
+      const timeB = normalizeSaat(b.Tarife_Saati || '');
       return timeA.localeCompare(timeB);
     });
     
@@ -4948,6 +4948,25 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
 
 // ==================== BOŞ/DOLU POPUP FONKSİYONLARI ====================
 
+// Saat karşılaştırma fonksiyonu: 00:00:00 - 05:30:00 arası değerleri ertesi gün olarak oku
+function normalizeSaat(saat) {
+  if (!saat) return '00:00:00';
+  
+  const [hour, minute, second] = saat.split(':').map(s => parseInt(s));
+  
+  // 00:00:00 - 05:29:59 arası ise, 24 saat ekle (ertesi gün)
+  if (hour >= 0 && hour < 5) {
+    return `${(hour + 24).toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+  }
+  
+  // 05:30:00 ise tam 05:30 kontrolü
+  if (hour === 5 && minute < 30) {
+    return `${(hour + 24).toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+  }
+  
+  return saat;
+}
+
 function closeBosDoluPopup() {
   if (bosDoluContainer) {
     bosDoluContainer.style.display = 'none';
@@ -5019,19 +5038,22 @@ function findAndShowBosAraclar() {
     
     donusRows.forEach(donusRow => {
       const donusSaati = donusRow.tarifeSaati;
+      const donusSaatiNormalized = normalizeSaat(donusSaati);
       
       // Bu dönüşten ÖNCE (daha küçük saatte) kalkış var mı?
-      const oncekiKalkis = rows.find(r => 
-        r.hareket === 'Kalkış' && 
-        r.tarifeSaati < donusSaati
-      );
+      // Normalize edilmiş saatleri karşılaştır
+      const oncekiKalkis = rows.find(r => {
+        if (r.hareket !== 'Kalkış') return false;
+        const kalkisSaatiNormalized = normalizeSaat(r.tarifeSaati);
+        return kalkisSaatiNormalized < donusSaatiNormalized;
+      });
       
       if (!oncekiKalkis) {
         // Önceki kalkış yok, bu araç boş
-        console.log(`✅ Boş araç bulundu: ${hatAdi} - ${tarife} - Dönüş ${donusSaati}`);
+        console.log(`✅ Boş araç bulundu: ${hatAdi} - ${tarife} - Dönüş ${donusSaati} (Normalized: ${donusSaatiNormalized})`);
         bosAraclar.push(donusRow);
       } else {
-        console.log(`❌ Dolu araç: ${hatAdi} - ${tarife} - Dönüş ${donusSaati}, Önceki Kalkış: ${oncekiKalkis.tarifeSaati}`);
+        console.log(`❌ Dolu araç: ${hatAdi} - ${tarife} - Dönüş ${donusSaati} (${donusSaatiNormalized}), Önceki Kalkış: ${oncekiKalkis.tarifeSaati} (${normalizeSaat(oncekiKalkis.tarifeSaati)})`);
       }
     });
   });
