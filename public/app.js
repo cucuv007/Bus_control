@@ -228,6 +228,7 @@ const cancelAciklama = document.getElementById('cancelAciklama');
 const confirmAciklama = document.getElementById('confirmAciklama');
 const aciklamaStatus = document.getElementById('aciklamaStatus');
 const aciklamaEkleFromPopup = document.getElementById('aciklamaEkleFromPopup');
+const aracDegistirFromPopup = document.getElementById('aracDegistirFromPopup');
 
 let selectedRowForAciklama = null;
 
@@ -259,10 +260,40 @@ if (aciklamaEkleFromPopup) {
   });
 }
 
+// Popup içindeki Araç Değiştir butonu - Inline formu göster/gizle
+if (aracDegistirFromPopup) {
+  aracDegistirFromPopup.addEventListener('click', () => {
+    const inlineForm = document.getElementById('aracDegistirFormInline');
+    const yeniPlakaInput = document.getElementById('yeniPlakaInput');
+    const aracDegistirAciklama = document.getElementById('aracDegistirAciklama');
+    
+    if (inlineForm.style.display === 'none') {
+      // Formu göster
+      inlineForm.style.display = 'block';
+      aracDegistirFromPopup.textContent = '❌ Formu Kapat';
+      aracDegistirFromPopup.style.background = '#95a5a6';
+      yeniPlakaInput.value = '';
+      aracDegistirAciklama.value = '';
+      document.getElementById('aracDegistirStatus').style.display = 'none';
+    } else {
+      // Formu gizle
+      inlineForm.style.display = 'none';
+      aracDegistirFromPopup.textContent = '🚗 Araç Değiştir';
+      aracDegistirFromPopup.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+    }
+  });
+}
+
 // Inline Açıklama Ekle butonu
 const confirmAciklamaInline = document.getElementById('confirmAciklamaInline');
 if (confirmAciklamaInline) {
   confirmAciklamaInline.addEventListener('click', handleAddAciklamaInline);
+}
+
+// Inline Araç Değiştir butonu
+const confirmAracDegistir = document.getElementById('confirmAracDegistir');
+if (confirmAracDegistir) {
+  confirmAracDegistir.addEventListener('click', handleAracDegistir);
 }
 
 // Açıklama İnceleme Modal
@@ -1023,18 +1054,22 @@ function openApprovalConfirmation(rowData, tableName) {
     confirmApprovalBtn.innerHTML = '✅ Onayla';
   }
   
-  // Açıklama Ekle butonunu göster/gizle (sadece Operasyon ve Depolama için)
+  // Açıklama Ekle ve Araç Değiştir butonlarını göster/gizle (sadece Operasyon ve Depolama için)
   const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
+  const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
   const userSession = localStorage.getItem('userSession');
   if (userSession) {
     const session = JSON.parse(userSession);
     if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
       aciklamaBtn.style.display = 'inline-block';
+      aracDegistirBtn.style.display = 'inline-block';
     } else {
       aciklamaBtn.style.display = 'none';
+      aracDegistirBtn.style.display = 'none';
     }
   } else {
     aciklamaBtn.style.display = 'none';
+    aracDegistirBtn.style.display = 'none';
   }
   
   // Modal'ı aç
@@ -1045,15 +1080,25 @@ function closeApprovalConfirmation() {
   approvalModal.style.display = 'none';
   pendingApprovalData = null;
   
-  // Inline açıklama formunu sıfırla
-  const inlineForm = document.getElementById('aciklamaFormInline');
+  // Inline formları sıfırla
+  const aciklamaInlineForm = document.getElementById('aciklamaFormInline');
+  const aracDegistirInlineForm = document.getElementById('aracDegistirFormInline');
   const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
-  if (inlineForm) {
-    inlineForm.style.display = 'none';
+  const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
+  
+  if (aciklamaInlineForm) {
+    aciklamaInlineForm.style.display = 'none';
+  }
+  if (aracDegistirInlineForm) {
+    aracDegistirInlineForm.style.display = 'none';
   }
   if (aciklamaBtn) {
     aciklamaBtn.textContent = '📝 Açıklama Ekle';
     aciklamaBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+  }
+  if (aracDegistirBtn) {
+    aracDegistirBtn.textContent = '🚗 Araç Değiştir';
+    aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
   }
 }
 
@@ -3349,6 +3394,111 @@ async function handleAddAciklamaInline() {
     statusEl.style.display = 'block';
     confirmBtn.disabled = false;
     confirmBtn.textContent = '✅ Açıklama Ekle';
+  }
+}
+
+async function handleAracDegistir() {
+  const yeniPlakaInput = document.getElementById('yeniPlakaInput').value.trim();
+  const aciklamaText = document.getElementById('aracDegistirAciklama').value.trim();
+  const statusEl = document.getElementById('aracDegistirStatus');
+  const confirmBtn = document.getElementById('confirmAracDegistir');
+  
+  if (!yeniPlakaInput) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Yeni plaka giriniz</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  if (!aciklamaText) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Açıklama zorunludur</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  // pendingApprovalData'dan bilgileri al (popup açıldığında dolu)
+  if (!pendingApprovalData || !pendingApprovalData.rowData) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Satır bilgisi bulunamadı</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  const rowData = pendingApprovalData.rowData;
+  
+  // Session kontrolü
+  const userSession = localStorage.getItem('userSession');
+  if (!userSession) {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Oturum bulunamadı</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  const session = JSON.parse(userSession);
+  const gorev = session.gorev;
+  
+  if (gorev !== 'Operasyon' && gorev !== 'Depolama') {
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ Bu özellik sadece Operasyon ve Depolama kullanıcıları içindir</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = '⏳ Güncelleniyor...';
+  
+  console.log('🚗 Araç değiştirme isteği:', {
+    Hat_Adi: rowData.Hat_Adi,
+    Plaka: rowData.Plaka,
+    Tarife: rowData.Tarife,
+    Yeni_Plaka: yeniPlakaInput,
+    Aciklama: aciklamaText.substring(0, 50) + '...'
+  });
+  
+  try {
+    const response = await fetch('/api/update-arac', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'user-session': JSON.stringify(session)
+      },
+      body: JSON.stringify({
+        Hat_Adi: rowData.Hat_Adi,
+        Plaka: rowData.Plaka,
+        Tarife: rowData.Tarife,
+        Yeni_Plaka: yeniPlakaInput,
+        Aciklama: aciklamaText
+      })
+    });
+    
+    console.log('📤 API yanıtı:', response.status);
+    const result = await response.json();
+    console.log('📊 API result:', result);
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Araç güncellenemedi');
+    }
+    
+    statusEl.innerHTML = '<span style="color: #27ae60;">✅ Araç başarıyla güncellendi!</span>';
+    statusEl.style.display = 'block';
+    
+    // Formu temizle ve butonu yeniden aktif et
+    document.getElementById('yeniPlakaInput').value = '';
+    document.getElementById('aracDegistirAciklama').value = '';
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '🚗 Araç Değiştir';
+    
+    // Araç değiştir formunu gizle
+    document.getElementById('aracDegistirFormInline').style.display = 'none';
+    
+    // 1.5 saniye sonra durum mesajını temizle
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+      statusEl.innerHTML = '';
+    }, 1500);
+    
+  } catch (err) {
+    statusEl.innerHTML = `<span style="color: #e74c3c;">❌ ${err.message}</span>`;
+    statusEl.style.display = 'block';
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '🚗 Araç Değiştir';
   }
 }
 
