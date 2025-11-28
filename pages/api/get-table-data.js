@@ -40,12 +40,12 @@ function getTodayTableName() {
   return gunler[dayOfWeek];
 }
 
-// Bugünün gün tablosundan plaka bilgisini al
+// Bugünün gün tablosundan plaka bilgisini al (Yeni_Plaka varsa onu, yoksa Plaka'yı)
 async function getPlakaForTarife(hatAdi, tarife, todayTable) {
   try {
     const { data, error } = await supabase
       .from(todayTable)
-      .select('Plaka')
+      .select('Plaka, Yeni_Plaka')
       .eq('Hat_Adi', hatAdi)
       .eq('Tarife', tarife)
       .single();
@@ -54,7 +54,8 @@ async function getPlakaForTarife(hatAdi, tarife, todayTable) {
       return null;
     }
     
-    return data.Plaka;
+    // Yeni_Plaka varsa ve boş değilse onu döndür, yoksa Plaka'yı döndür
+    return data.Yeni_Plaka && data.Yeni_Plaka.trim() !== '' ? data.Yeni_Plaka : data.Plaka;
   } catch (err) {
     console.error(`Plaka bulunamadı (${todayTable}, ${hatAdi}, ${tarife}):`, err);
     return null;
