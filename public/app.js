@@ -2516,17 +2516,18 @@ async function handleApplyHatSelection() {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (başlangıçta boş, tıklanınca kontrol edilir)
+      // Açıklama ikonu sütunu ekle (ilk yüklemede kontrol et)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
-      tdAciklama.style.cursor = 'pointer';
-      tdAciklama.textContent = '💬';
-      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
       tdAciklama.className = 'aciklama-icon-cell';
       tdAciklama.dataset.hatAdi = row.Hat_Adi || '';
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
+      
+      // İlk yüklemede açıklama var mı kontrol et (sadece bir kez)
+      checkAndSetAciklamaIcon(tdAciklama, row);
+      
       tdAciklama.addEventListener('click', (e) => {
         e.stopPropagation();
         openRowAciklamaModal(row);
@@ -2717,17 +2718,18 @@ async function refreshTableData(hatList, hareket) {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (başlangıçta boş, tıklanınca kontrol edilir)
+      // Açıklama ikonu sütunu ekle (ilk yüklemede kontrol et)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
-      tdAciklama.style.cursor = 'pointer';
-      tdAciklama.textContent = '💬';
-      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
       tdAciklama.className = 'aciklama-icon-cell';
       tdAciklama.dataset.hatAdi = row.Hat_Adi || '';
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
+      
+      // İlk yüklemede açıklama var mı kontrol et (sadece bir kez)
+      checkAndSetAciklamaIcon(tdAciklama, row);
+      
       tdAciklama.addEventListener('click', (e) => {
         e.stopPropagation();
         openRowAciklamaModal(row);
@@ -4641,8 +4643,39 @@ async function openRowAciklamaModal(rowData) {
   }
 }
 
+// İlk yüklemede açıklama kontrolü (sadece bir kez çalışır)
+async function checkAndSetAciklamaIcon(cell, rowData) {
+  try {
+    const response = await fetch('/api/get-row-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Hat_Adi: rowData.Hat_Adi,
+        Tarife: rowData.Tarife,
+        Tarife_Saati: rowData.Tarife_Saati
+      })
+    });
+    
+    const result = await response.json();
+    const hasAciklama = result.success && result.data && result.data.length > 0;
+    
+    if (hasAciklama) {
+      cell.textContent = '💬';
+      cell.style.cursor = 'pointer';
+      cell.title = 'Açıklama mesajlarını görüntüle';
+    } else {
+      cell.textContent = '';
+      cell.style.cursor = 'default';
+      cell.title = '';
+    }
+  } catch (err) {
+    console.error('Açıklama kontrol hatası:', err);
+    cell.textContent = '';
+  }
+}
+
+// Açıklama eklendiğinde sadece o satırın ikonunu güncelle
 async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
-  // Bu satır için açıklama var mı kontrol et
   try {
     const response = await fetch('/api/get-row-aciklamalar', {
       method: 'POST',
@@ -4657,18 +4690,20 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
     const result = await response.json();
     const hasAciklama = result.success && result.data && result.data.length > 0;
     
-    // Tablodaki ilgili ikonları bul ve görünürlüğünü ayarla
+    // Tablodaki ilgili ikonları bul ve güncelle
     const allIconCells = document.querySelectorAll('.aciklama-icon-cell');
     allIconCells.forEach(cell => {
       if (cell.dataset.hatAdi === hatAdi && 
           cell.dataset.tarife === tarife && 
           cell.dataset.tarifeSaati === tarifeSaati) {
         if (hasAciklama) {
-          cell.style.opacity = '1';
-          cell.style.visibility = 'visible';
+          cell.textContent = '💬';
+          cell.style.cursor = 'pointer';
+          cell.title = 'Açıklama mesajlarını görüntüle';
         } else {
-          cell.style.opacity = '0.2';
-          cell.style.visibility = 'visible';
+          cell.textContent = '';
+          cell.style.cursor = 'default';
+          cell.title = '';
         }
       }
     });

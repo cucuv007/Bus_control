@@ -692,13 +692,3 @@ tbody tr:last-child td {
     letter-spacing: 0.5px !important;
   }
 }
-
-/* Açıklama İkonları */
-.aciklama-icon-cell {
-  opacity: 0.2;
-  transition: opacity 0.3s ease;
-}
-
-.aciklama-icon-cell:hover {
-  opacity: 1 !important;
-}
