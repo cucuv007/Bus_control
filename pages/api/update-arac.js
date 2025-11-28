@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { Hat_Adi, Plaka, Tarife, Yeni_Plaka, Aciklama } = req.body;
+    const { Hat_Adi, Plaka, Tarife, Calisma_Zamani, Tarife_Saati, Yeni_Plaka, Aciklama } = req.body;
 
     if (!Hat_Adi || !Plaka || !Tarife || !Yeni_Plaka || !Aciklama) {
       return res.status(400).json({ 
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
       throw new Error('Bu özellik sadece Operasyon ve Depolama kullanıcıları içindir');
     }
 
-    // Açıklamayı ilgili tabloya ekle
+    // Açıklamayı ilgili tabloya ekle - Açıklama Ekle butonunun aynı mantığı
     const aciklamaEndpoint = gorev === 'Operasyon' 
       ? 'Operasyon_Açıklama' 
       : 'Depolama_Açıklama';
@@ -82,12 +82,11 @@ export default async function handler(req, res) {
       .from(aciklamaEndpoint)
       .insert({
         Hat_Adi,
-        Calisma_Zamani: req.body.Calisma_Zamani || null,
+        'Çalışma_Zamanı': Calisma_Zamani,
         Tarife,
-        Tarife_Saati: req.body.Tarife_Saati || null,
+        Tarife_Saati,
         Plaka,
-        Aciklama: `🚗 Araç değiştirildi: "${Plaka}" → "${Yeni_Plaka}". ${Aciklama}`,
-        Tarih: new Date().toISOString()
+        'Açıklama': `🚗 Araç değiştirildi: "${Plaka}" → "${Yeni_Plaka}". ${Aciklama}`
       });
 
     if (aciklamaError) {
