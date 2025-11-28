@@ -21,6 +21,12 @@ const closeTimerBtn = document.getElementById('closeTimerBtn');
 const dynamicTrackingCheckbox = document.getElementById('dynamicTrackingCheckbox');
 const reopenTimerIcon = document.getElementById('reopenTimerIcon');
 
+// Boş/Dolu elements
+const bosDoluContainer = document.getElementById('bosDoluContainer');
+const bosDoluCheckbox = document.getElementById('bosDoluCheckbox');
+const closeBosDoluBtn = document.getElementById('closeBosDoluBtn');
+const bosDoluList = document.getElementById('bosDoluList');
+
 // Scroll buttons
 const scrollToTopBtn = document.getElementById('scrollToTopBtn');
 const scrollToTimerRowBtn = document.getElementById('scrollToTimerRowBtn');
@@ -377,6 +383,32 @@ if (arizaliFilterCheckbox) {
       e.stopPropagation();
     });
   }
+}
+
+// Boş/Dolu checkbox event listener
+if (bosDoluCheckbox) {
+  bosDoluCheckbox.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (e.target.checked) {
+      // Checkbox seçildi, boş araçları bul ve göster
+      findAndShowBosAraclar();
+    } else {
+      // Checkbox kaldırıldı, popup'ı kapat
+      closeBosDoluPopup();
+    }
+  });
+  
+  bosDoluCheckbox.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
+
+// Boş/Dolu popup kapatma butonu
+if (closeBosDoluBtn) {
+  closeBosDoluBtn.addEventListener('click', () => {
+    closeBosDoluPopup();
+    if (bosDoluCheckbox) bosDoluCheckbox.checked = false;
+  });
 }
 
 // Tabloyu filtreleme fonksiyonu (timer yenileme kullanmadan)
@@ -4912,4 +4944,126 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
   } catch (err) {
     console.error('İkon güncelleme hatası:', err);
   }
+}
+
+// ==================== BOŞ/DOLU POPUP FONKSİYONLARI ====================
+
+function closeBosDoluPopup() {
+  if (bosDoluContainer) {
+    bosDoluContainer.style.display = 'none';
+  }
+  if (bosDoluList) {
+    bosDoluList.innerHTML = '';
+  }
+}
+
+function findAndShowBosAraclar() {
+  console.log('🔍 Boş araç arama başladı');
+  
+  // Tablodaki tüm verileri oku
+  const rows = tbody.querySelectorAll('tr');
+  const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent.trim());
+  
+  console.log('📋 Başlıklar:', headers);
+  
+  // Veriyi diziye dönüştür
+  const allData = [];
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length > 0) {
+      const rowData = {};
+      cells.forEach((cell, index) => {
+        const header = headers[index];
+        rowData[header] = cell.textContent.trim();
+      });
+      allData.push(rowData);
+    }
+  });
+  
+  console.log('📊 Toplam satır:', allData.length);
+  
+  // Hat_Adi ve Tarife'ye göre grupla
+  const grouped = {};
+  allData.forEach(row => {
+    const hatAdi = row.Hat_Adi || row._Hat || '';
+    const tarife = row.Tarife || '';
+    const tarifeSaati = row.Tarife_Saati || '';
+    const hareket = row.Hareket || '';
+    
+    if (!hatAdi || !tarife || !tarifeSaati || !hareket) return;
+    
+    const key = `${hatAdi}|${tarife}`;
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+    grouped[key].push({
+      hatAdi,
+      tarife,
+      tarifeSaati,
+      hareket,
+      fullRow: row
+    });
+  });
+  
+  console.log('📦 Gruplandırılmış veriler:', grouped);
+  
+  // Boş araçları bul
+  const bosAraclar = [];
+  
+  Object.keys(grouped).forEach(key => {
+    const [hatAdi, tarife] = key.split('|');
+    const rows = grouped[key];
+    
+    // Dönüş satırlarını bul
+    const donusRows = rows.filter(r => r.hareket === 'Dönüş');
+    
+    donusRows.forEach(donusRow => {
+      const donusSaati = donusRow.tarifeSaati;
+      
+      // Bu dönüşten ÖNCE (daha küçük saatte) kalkış var mı?
+      const oncekiKalkis = rows.find(r => 
+        r.hareket === 'Kalkış' && 
+        r.tarifeSaati < donusSaati
+      );
+      
+      if (!oncekiKalkis) {
+        // Önceki kalkış yok, bu araç boş
+        console.log(`✅ Boş araç bulundu: ${hatAdi} - ${tarife} - Dönüş ${donusSaati}`);
+        bosAraclar.push(donusRow);
+      } else {
+        console.log(`❌ Dolu araç: ${hatAdi} - ${tarife} - Dönüş ${donusSaati}, Önceki Kalkış: ${oncekiKalkis.tarifeSaati}`);
+      }
+    });
+  });
+  
+  console.log('🚌 Toplam boş araç:', bosAraclar.length);
+  
+  // Popup'ı doldur ve göster
+  showBosDoluPopup(bosAraclar);
+}
+
+function showBosDoluPopup(bosAraclar) {
+  if (!bosDoluList || !bosDoluContainer) return;
+  
+  bosDoluList.innerHTML = '';
+  
+  if (bosAraclar.length === 0) {
+    bosDoluList.innerHTML = '<p style="text-align: center; color: #95a5a6; padding: 20px;">Boş araç bulunamadı.</p>';
+  } else {
+    bosAraclar.forEach((arac, index) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'padding: 12px; margin-bottom: 8px; background: #f8f9fa; border-left: 4px solid #3498db; border-radius: 6px;';
+      item.innerHTML = `
+        <div style="font-size: 14px; color: #2c3e50; margin-bottom: 4px;">
+          <strong>${index + 1}. ${arac.hatAdi}</strong> - ${arac.tarife}
+        </div>
+        <div style="font-size: 12px; color: #7f8c8d;">
+          Dönüş: ${arac.tarifeSaati}
+        </div>
+      `;
+      bosDoluList.appendChild(item);
+    });
+  }
+  
+  bosDoluContainer.style.display = 'block';
 }

@@ -182,10 +182,29 @@
         </div>
       </div>
       <div style="padding: 10px 20px; border-top: 1px solid #e0e0e0;">
-        <label style="font-size: 12px; font-weight: normal; display: flex; align-items: center; cursor: pointer;">
+        <label style="font-size: 12px; font-weight: normal; display: flex; align-items: center; cursor: pointer; margin-bottom: 8px;">
           <input type="checkbox" id="arizaliFilterCheckbox" style="margin-right: 6px; cursor: pointer;">
           <span>Sadece Arızalı Araçları Göster</span>
         </label>
+        <label style="font-size: 12px; font-weight: normal; display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="bosDoluCheckbox" style="margin-right: 6px; cursor: pointer;">
+          <span>Boş/Dolu</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boş/Dolu Popup -->
+  <div id="bosDoluContainer" class="timer-container" style="display: none; left: 20px; right: auto;">
+    <div class="timer-card">
+      <div class="timer-header">
+        <h3>🚌 Boş Araçlar</h3>
+        <button id="closeBosDoluBtn" class="close-timer-btn">×</button>
+      </div>
+      <div class="timer-content" style="max-height: 500px; overflow-y: auto;">
+        <div id="bosDoluList" style="padding: 10px;">
+          <!-- Dinamik olarak doldurulacak -->
+        </div>
       </div>
     </div>
   </div>
