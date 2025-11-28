@@ -135,6 +135,7 @@ let pendingApprovalData = null; // Onay bekleyen satır verisi
 let tableRefreshInterval = null; // Tablo otomatik yenileme interval'i
 let selectedHatsForTracking = []; // Timer için seçili hatlar (yenileme için)
 let selectedHareketForTracking = null; // Timer için seçili hareket tipi (yenileme için)
+let aciklamaCache = {}; // Açıklama kontrolü cache'i
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -2516,7 +2517,7 @@ async function handleApplyHatSelection() {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (ilk yüklemede kontrol et)
+      // Açıklama ikonu sütunu ekle
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
@@ -2525,7 +2526,7 @@ async function handleApplyHatSelection() {
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
-      // İlk yüklemede açıklama var mı kontrol et (sadece bir kez)
+      // Her zaman kontrol et (ilk yükleme veya yenileme)
       checkAndSetAciklamaIcon(tdAciklama, row);
       
       tdAciklama.addEventListener('click', (e) => {
@@ -4653,8 +4654,26 @@ async function openRowAciklamaModal(rowData) {
   }
 }
 
-// İlk yüklemede açıklama kontrolü (sadece bir kez çalışır)
+// İlk yüklemede açıklama kontrolü (cache ile)
 async function checkAndSetAciklamaIcon(cell, rowData) {
+  const cacheKey = `${rowData.Hat_Adi}|${rowData.Tarife}|${rowData.Tarife_Saati}`;
+  
+  // Cache'de varsa direkt kullan
+  if (aciklamaCache.hasOwnProperty(cacheKey)) {
+    const hasAciklama = aciklamaCache[cacheKey];
+    if (hasAciklama) {
+      cell.textContent = '💬';
+      cell.style.cursor = 'pointer';
+      cell.title = 'Açıklama mesajlarını görüntüle';
+    } else {
+      cell.textContent = '';
+      cell.style.cursor = 'default';
+      cell.title = '';
+    }
+    return;
+  }
+  
+  // Cache'de yoksa API'den al
   try {
     const response = await fetch('/api/get-row-aciklamalar', {
       method: 'POST',
@@ -4668,6 +4687,9 @@ async function checkAndSetAciklamaIcon(cell, rowData) {
     
     const result = await response.json();
     const hasAciklama = result.success && result.data && result.data.length > 0;
+    
+    // Cache'e kaydet
+    aciklamaCache[cacheKey] = hasAciklama;
     
     if (hasAciklama) {
       cell.textContent = '💬';
@@ -4686,6 +4708,8 @@ async function checkAndSetAciklamaIcon(cell, rowData) {
 
 // Açıklama eklendiğinde sadece o satırın ikonunu güncelle
 async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
+  const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
+  
   try {
     const response = await fetch('/api/get-row-aciklamalar', {
       method: 'POST',
@@ -4699,6 +4723,9 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
     
     const result = await response.json();
     const hasAciklama = result.success && result.data && result.data.length > 0;
+    
+    // Cache'i güncelle
+    aciklamaCache[cacheKey] = hasAciklama;
     
     // Tablodaki ilgili ikonları bul ve güncelle
     const allIconCells = document.querySelectorAll('.aciklama-icon-cell');
