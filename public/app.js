@@ -3463,6 +3463,8 @@ async function handleAracDegistir() {
         Hat_Adi: rowData.Hat_Adi,
         Plaka: rowData.Plaka,
         Tarife: rowData.Tarife,
+        Calisma_Zamani: rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || null,
+        Tarife_Saati: rowData.Tarife_Saati || null,
         Yeni_Plaka: yeniPlakaInput,
         Aciklama: aciklamaText
       })

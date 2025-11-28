@@ -82,9 +82,9 @@ export default async function handler(req, res) {
       .from(aciklamaEndpoint)
       .insert({
         Hat_Adi,
-        Calisma_Zamani: null, // Bu bilgi mevcut değil
+        Calisma_Zamani: req.body.Calisma_Zamani || null,
         Tarife,
-        Tarife_Saati: null, // Bu bilgi mevcut değil
+        Tarife_Saati: req.body.Tarife_Saati || null,
         Plaka,
         Aciklama: `🚗 Araç değiştirildi: "${Plaka}" → "${Yeni_Plaka}". ${Aciklama}`,
         Tarih: new Date().toISOString()
