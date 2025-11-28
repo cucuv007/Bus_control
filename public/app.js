@@ -133,6 +133,8 @@ let isManualHighlight = false; // Scroll butonu ile manuel renklendirme yapıld�
 let isClosingTimer = false; // Timer kapatılıyor mu? (debounce için)
 let pendingApprovalData = null; // Onay bekleyen satır verisi
 let tableRefreshInterval = null; // Tablo otomatik yenileme interval'i
+let selectedHatsForTracking = []; // Timer için seçili hatlar (yenileme için)
+let selectedHareketForTracking = null; // Timer için seçili hareket tipi (yenileme için)
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -1919,6 +1921,8 @@ function closeTimer() {
   currentTimerRow = null;
   currentBusList = [];
   currentBusIndex = 0;
+  selectedHatsForTracking = []; // Takip edilen hatları temizle
+  selectedHareketForTracking = null; // Takip edilen hareket tipini temizle
   
   // TÜM interval'ları ve timeout'ları agresif bir şekilde temizle
   if (timerInterval) {
@@ -2608,6 +2612,10 @@ async function startMultipleHatsTimer(hatList, hareket) {
   timerClosedManually = false; // Timer açılıyor, flagı sıfırla
   updateReopenTimerIcon(); // İkonu pasif yap
   updateScrollButtons(); // Scroll butonlarını güncelle
+  
+  // Seçili hatları ve hareketi sakla (yenileme için)
+  selectedHatsForTracking = hatList;
+  selectedHareketForTracking = hareket;
   
   // Tablo otomatik yenileme başlat (5 saniyede bir)
   if (tableRefreshInterval) {
@@ -3542,6 +3550,13 @@ async function handleAddAciklamaInline() {
     // Açıklama formunu gizle
     document.getElementById('aciklamaFormInline').style.display = 'none';
     
+    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
+    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      console.log('🔄 Tablo otomatik yenileniyor...');
+      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+      await refreshTableData(selectedHatsForTracking, currentHareket);
+    }
+    
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
       statusEl.style.display = 'none';
@@ -3648,6 +3663,13 @@ async function handleAracDegistir() {
     
     // Araç değiştir formunu gizle
     document.getElementById('aracDegistirFormInline').style.display = 'none';
+    
+    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
+    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      console.log('🔄 Tablo otomatik yenileniyor...');
+      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+      await refreshTableData(selectedHatsForTracking, currentHareket);
+    }
     
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
