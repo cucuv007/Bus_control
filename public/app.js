@@ -2387,7 +2387,7 @@ async function handleApplyHatSelection() {
     
     console.log(`✅ Toplam ${allData.length} kayıt birleştirildi ve sıralandı`);
     
-    // Tablo başlıklarını oluştur (_Hat sütununu ilk sıraya koy, Yeni_Plaka'yı gizle)
+    // Tablo başlıklarını oluştur (_Hat sütununu ilk sıraya koy)
     const firstRow = allData[0];
     const allKeys = Object.keys(firstRow);
     
@@ -2396,12 +2396,6 @@ async function handleApplyHatSelection() {
     if (hatIndex > -1) {
       allKeys.splice(hatIndex, 1);
       allKeys.unshift('_Hat');
-    }
-    
-    // Yeni_Plaka sütununu gizle (veri olarak kullanılacak ama başlıkta gösterilmeyecek)
-    const yeniPlakaIndex = allKeys.indexOf('Yeni_Plaka');
-    if (yeniPlakaIndex > -1) {
-      allKeys.splice(yeniPlakaIndex, 1);
     }
     
     theadRow.innerHTML = '';
@@ -2417,12 +2411,7 @@ async function handleApplyHatSelection() {
       const tr = document.createElement('tr');
       allKeys.forEach(k => {
         const td = document.createElement('td');
-        let value = row[k];
-        
-        // Plaka gösterimi: Yeni_Plaka varsa onu göster, yoksa Plaka'yı göster
-        if (k === 'Plaka') {
-          value = row.Yeni_Plaka && row.Yeni_Plaka.trim() !== '' ? row.Yeni_Plaka : row.Plaka;
-        }
+        const value = row[k];
         
         td.textContent = value !== null && value !== undefined ? value : '';
         

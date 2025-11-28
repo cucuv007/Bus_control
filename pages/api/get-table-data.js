@@ -40,7 +40,7 @@ function getTodayTableName() {
   return gunler[dayOfWeek];
 }
 
-// Bugünün gün tablosundan plaka bilgisini al
+// Bugünün gün tablosundan plaka bilgisini al (Yeni_Plaka varsa onu, yoksa Plaka'yı)
 async function getPlakaForTarife(hatAdi, tarife, todayTable) {
   try {
     const { data, error } = await supabase
@@ -51,13 +51,14 @@ async function getPlakaForTarife(hatAdi, tarife, todayTable) {
       .single();
     
     if (error || !data) {
-      return { Plaka: null, Yeni_Plaka: null };
+      return null;
     }
     
-    return { Plaka: data.Plaka, Yeni_Plaka: data.Yeni_Plaka };
+    // Yeni_Plaka varsa ve boş değilse onu döndür, yoksa Plaka'yı döndür
+    return data.Yeni_Plaka && data.Yeni_Plaka.trim() !== '' ? data.Yeni_Plaka : data.Plaka;
   } catch (err) {
     console.error(`Plaka bulunamadı (${todayTable}, ${hatAdi}, ${tarife}):`, err);
-    return { Plaka: null, Yeni_Plaka: null };
+    return null;
   }
 }
 
@@ -118,17 +119,15 @@ export default async function handler(req, res) {
     // Her kayıt için plaka bilgisini ekle
     const dataWithPlaka = await Promise.all(data.map(async (row) => {
       if (row.Tarife && row.Hat_Adi) {
-        const plakaData = await getPlakaForTarife(row.Hat_Adi, row.Tarife, todayTable);
+        const plaka = await getPlakaForTarife(row.Hat_Adi, row.Tarife, todayTable);
         return {
           ...row,
-          Plaka: plakaData.Plaka || 'Belediye Aracı',
-          Yeni_Plaka: plakaData.Yeni_Plaka || null
+          Plaka: plaka || 'Belediye Aracı' // Yeni_Plaka varsa onu, yoksa Plaka'yı döndürür
         };
       }
       return {
         ...row,
-        Plaka: row.Plaka || 'Belediye Aracı',
-        Yeni_Plaka: row.Yeni_Plaka || null
+        Plaka: row.Plaka || 'Belediye Aracı'
       };
     }));
 
