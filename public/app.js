@@ -1469,7 +1469,7 @@ async function loadTableData() {
       return;
     }
     
-    // Tablo başlıklarını oluştur (_IsYeniPlaka'yı gizle)
+    // Tablo başlıklarını oluştur (_IsYeniPlaka ve id'yi gizle)
     const firstRow = data[0];
     const allKeys = Object.keys(firstRow);
     
@@ -1477,6 +1477,12 @@ async function loadTableData() {
     const isYeniPlakaIndex = allKeys.indexOf('_IsYeniPlaka');
     if (isYeniPlakaIndex > -1) {
       allKeys.splice(isYeniPlakaIndex, 1);
+    }
+    
+    // id sütununu gizle
+    const idIndex = allKeys.indexOf('id');
+    if (idIndex > -1) {
+      allKeys.splice(idIndex, 1);
     }
     
     theadRow.innerHTML = '';
@@ -1517,17 +1523,25 @@ async function loadTableData() {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle
+      // Açıklama ikonu sütunu ekle (async check ile)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
-      tdAciklama.style.cursor = 'pointer';
       tdAciklama.style.fontSize = '18px';
-      tdAciklama.textContent = '💬';
-      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-      tdAciklama.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openRowAciklamaModal(row);
-      });
+      
+      // Açıklamaları kontrol et ve ikonu göster
+      (async () => {
+        const hasAciklama = await checkRowHasAciklama(row);
+        if (hasAciklama) {
+          tdAciklama.textContent = '💬';
+          tdAciklama.style.cursor = 'pointer';
+          tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+          tdAciklama.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openRowAciklamaModal(row);
+          });
+        }
+      })();
+      
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
@@ -2453,6 +2467,12 @@ async function handleApplyHatSelection() {
       allKeys.splice(isYeniPlakaIndex, 1);
     }
     
+    // id sütununu gizle
+    const idIndex = allKeys.indexOf('id');
+    if (idIndex > -1) {
+      allKeys.splice(idIndex, 1);
+    }
+    
     theadRow.innerHTML = '';
     allKeys.forEach(k => {
       const th = document.createElement('th');
@@ -2492,17 +2512,25 @@ async function handleApplyHatSelection() {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle
+      // Açıklama ikonu sütunu ekle (async check ile)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
-      tdAciklama.style.cursor = 'pointer';
       tdAciklama.style.fontSize = '18px';
-      tdAciklama.textContent = '💬';
-      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-      tdAciklama.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openRowAciklamaModal(row);
-      });
+      
+      // Açıklamaları kontrol et ve ikonu göster
+      (async () => {
+        const hasAciklama = await checkRowHasAciklama(row);
+        if (hasAciklama) {
+          tdAciklama.textContent = '💬';
+          tdAciklama.style.cursor = 'pointer';
+          tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+          tdAciklama.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openRowAciklamaModal(row);
+          });
+        }
+      })();
+      
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
@@ -2656,6 +2684,12 @@ async function refreshTableData(hatList, hareket) {
       allKeys.splice(isYeniPlakaIndex, 1);
     }
     
+    // id sütununu gizle
+    const idIndex = allKeys.indexOf('id');
+    if (idIndex > -1) {
+      allKeys.splice(idIndex, 1);
+    }
+    
     tbody.innerHTML = '';
     allData.forEach(row => {
       const tr = document.createElement('tr');
@@ -2679,17 +2713,25 @@ async function refreshTableData(hatList, hareket) {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle
+      // Açıklama ikonu sütunu ekle (async check ile)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
-      tdAciklama.style.cursor = 'pointer';
       tdAciklama.style.fontSize = '18px';
-      tdAciklama.textContent = '💬';
-      tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-      tdAciklama.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openRowAciklamaModal(row);
-      });
+      
+      // Açıklamaları kontrol et ve ikonu göster
+      (async () => {
+        const hasAciklama = await checkRowHasAciklama(row);
+        if (hasAciklama) {
+          tdAciklama.textContent = '💬';
+          tdAciklama.style.cursor = 'pointer';
+          tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+          tdAciklama.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openRowAciklamaModal(row);
+          });
+        }
+      })();
+      
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
