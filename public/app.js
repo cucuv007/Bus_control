@@ -1457,9 +1457,15 @@ async function loadTableData() {
       return;
     }
     
-    // Tablo başlıklarını oluştur
+    // Tablo başlıklarını oluştur (_IsYeniPlaka'yı gizle)
     const firstRow = data[0];
     const allKeys = Object.keys(firstRow);
+    
+    // _IsYeniPlaka sütununu gizle
+    const isYeniPlakaIndex = allKeys.indexOf('_IsYeniPlaka');
+    if (isYeniPlakaIndex > -1) {
+      allKeys.splice(isYeniPlakaIndex, 1);
+    }
     
     theadRow.innerHTML = '';
     allKeys.forEach(k => {
@@ -1476,6 +1482,19 @@ async function loadTableData() {
         const td = document.createElement('td');
         const value = row[k];
         td.textContent = value !== null && value !== undefined ? value : '';
+        
+        // Plaka sütunu: Yeni_Plaka'dan geliyorsa kırmızı yap
+        if (k === 'Plaka' && row._IsYeniPlaka) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
+        
+        // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
+        if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
+        
         tr.appendChild(td);
       });
       
@@ -2579,6 +2598,12 @@ async function refreshTableData(hatList, hareket) {
       allKeys.unshift('_Hat');
     }
     
+    // _IsYeniPlaka sütununu gizle
+    const isYeniPlakaIndex = allKeys.indexOf('_IsYeniPlaka');
+    if (isYeniPlakaIndex > -1) {
+      allKeys.splice(isYeniPlakaIndex, 1);
+    }
+    
     tbody.innerHTML = '';
     allData.forEach(row => {
       const tr = document.createElement('tr');
@@ -2586,6 +2611,12 @@ async function refreshTableData(hatList, hareket) {
         const td = document.createElement('td');
         const value = row[k];
         td.textContent = value !== null && value !== undefined ? value : '';
+        
+        // Plaka sütunu: Yeni_Plaka'dan geliyorsa kırmızı yap
+        if (k === 'Plaka' && row._IsYeniPlaka) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
         
         // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
         if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {
