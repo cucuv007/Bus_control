@@ -344,6 +344,7 @@ if (closeRowAciklamaBtn) {
 const arizaliFilterCheckbox = document.getElementById('arizaliFilterCheckbox');
 if (arizaliFilterCheckbox) {
   arizaliFilterCheckbox.addEventListener('change', (e) => {
+    e.stopPropagation(); // Event'in yukarı çıkmasını engelle
     showOnlyArizali = e.target.checked;
     console.log('🔧 Arızalı filtresi:', showOnlyArizali ? 'Aktif' : 'Pasif');
     // Sadece tabloyu yeniden filtrele (timer etkilenmesin)
@@ -351,6 +352,14 @@ if (arizaliFilterCheckbox) {
       applyTableFilter();
     }
   });
+  
+  // Checkbox veya label'a tıklandığında timer kapanmasın
+  const filterContainer = arizaliFilterCheckbox.closest('div');
+  if (filterContainer) {
+    filterContainer.addEventListener('click', (e) => {
+      e.stopPropagation(); // Timer kapatma event'ini engelle
+    });
+  }
 }
 
 // Tabloyu filtreleme fonksiyonu (timer yenileme kullanmadan)
