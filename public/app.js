@@ -343,21 +343,38 @@ if (closeRowAciklamaBtn) {
 // Arızalı Filtresi Checkbox
 const arizaliFilterCheckbox = document.getElementById('arizaliFilterCheckbox');
 if (arizaliFilterCheckbox) {
+  // Checkbox change event'i
   arizaliFilterCheckbox.addEventListener('change', (e) => {
-    e.stopPropagation(); // Event'in yukarı çıkmasını engelle
+    console.log('🔧 Checkbox change event başladı');
+    e.stopPropagation();
+    e.preventDefault();
     showOnlyArizali = e.target.checked;
     console.log('🔧 Arızalı filtresi:', showOnlyArizali ? 'Aktif' : 'Pasif');
-    // Sadece tabloyu yeniden filtrele (timer etkilenmesin)
-    if (selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      applyTableFilter();
-    }
+    console.log('🔧 Timer container display:', timerContainer.style.display);
+    applyTableFilter();
+    console.log('🔧 Checkbox change event bitti, timer display:', timerContainer.style.display);
   });
   
-  // Checkbox veya label'a tıklandığında timer kapanmasın
+  // Checkbox'a tıklandığında event propagation'ı durdur
+  arizaliFilterCheckbox.addEventListener('click', (e) => {
+    console.log('🔧 Checkbox click event');
+    e.stopPropagation();
+  });
+  
+  // Label veya container'a tıklandığında da durdur
+  const filterLabel = arizaliFilterCheckbox.closest('label');
+  if (filterLabel) {
+    filterLabel.addEventListener('click', (e) => {
+      console.log('🔧 Label click event');
+      e.stopPropagation();
+    });
+  }
+  
   const filterContainer = arizaliFilterCheckbox.closest('div');
   if (filterContainer) {
     filterContainer.addEventListener('click', (e) => {
-      e.stopPropagation(); // Timer kapatma event'ini engelle
+      console.log('🔧 Filter container click event');
+      e.stopPropagation();
     });
   }
 }
