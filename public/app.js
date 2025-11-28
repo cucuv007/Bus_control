@@ -2719,7 +2719,7 @@ async function refreshTableData(hatList, hareket) {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (timer yenilemede kontrol yapma)
+      // Açıklama ikonu sütunu ekle (cache kullan)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
@@ -2728,15 +2728,10 @@ async function refreshTableData(hatList, hareket) {
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
-      // Timer yenilemede var olan ikonu koru (yeniden kontrol etme)
-      const existingCell = Array.from(document.querySelectorAll('.aciklama-icon-cell')).find(cell =>
-        cell.dataset.hatAdi === (row.Hat_Adi || '') &&
-        cell.dataset.tarife === (row.Tarife || '') &&
-        cell.dataset.tarifeSaati === (row.Tarife_Saati || '')
-      );
-      
-      if (existingCell && existingCell.textContent) {
-        tdAciklama.textContent = existingCell.textContent;
+      // Cache'den kontrol et (timer yenilemede API çağrısı yapma)
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      if (aciklamaCache.hasOwnProperty(cacheKey) && aciklamaCache[cacheKey]) {
+        tdAciklama.textContent = '💬';
         tdAciklama.style.cursor = 'pointer';
         tdAciklama.title = 'Açıklama mesajlarını görüntüle';
         tdAciklama.addEventListener('click', (e) => {
