@@ -1976,6 +1976,7 @@ function showMultipleBusesList(busList, currentRemainingSeconds) {
 
 function closeTimer() {
   console.log('🗑️ closeTimer() çağrıldı');
+  console.trace('closeTimer stack trace:'); // Kim çağırdı?
   
   // ÖNCE display:none yap - kullanıcıya hemen geri bildirim
   if (timerContainer) {
