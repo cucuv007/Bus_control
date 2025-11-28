@@ -2718,7 +2718,7 @@ async function refreshTableData(hatList, hareket) {
         tr.appendChild(td);
       });
       
-      // Açıklama ikonu sütunu ekle (ilk yüklemede kontrol et)
+      // Açıklama ikonu sütunu ekle (timer yenilemede kontrol yapma)
       const tdAciklama = document.createElement('td');
       tdAciklama.style.textAlign = 'center';
       tdAciklama.style.fontSize = '18px';
@@ -2727,8 +2727,16 @@ async function refreshTableData(hatList, hareket) {
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
-      // İlk yüklemede açıklama var mı kontrol et (sadece bir kez)
-      checkAndSetAciklamaIcon(tdAciklama, row);
+      // Timer yenilemede var olan ikonu koru (yeniden kontrol etme)
+      const existingCell = document.querySelector(
+        `.aciklama-icon-cell[data-hat-adi="${row.Hat_Adi}"][data-tarife="${row.Tarife}"][data-tarife-saati="${row.Tarife_Saati}"]`
+      );
+      
+      if (existingCell && existingCell.textContent) {
+        tdAciklama.textContent = existingCell.textContent;
+        tdAciklama.style.cursor = 'pointer';
+        tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+      }
       
       tdAciklama.addEventListener('click', (e) => {
         e.stopPropagation();
