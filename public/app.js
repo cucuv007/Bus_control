@@ -136,6 +136,7 @@ let tableRefreshInterval = null; // Tablo otomatik yenileme interval'i
 let selectedHatsForTracking = []; // Timer için seçili hatlar (yenileme için)
 let selectedHareketForTracking = null; // Timer için seçili hareket tipi (yenileme için)
 let aciklamaCache = {}; // Açıklama kontrolü cache'i
+let showOnlyArizali = false; // Sadece arızalı göster filtresi
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -337,6 +338,19 @@ if (closeRowAciklamaModal) {
 }
 if (closeRowAciklamaBtn) {
   closeRowAciklamaBtn.addEventListener('click', closeRowAciklamaModalFunc);
+}
+
+// Arızalı Filtresi Checkbox
+const arizaliFilterCheckbox = document.getElementById('arizaliFilterCheckbox');
+if (arizaliFilterCheckbox) {
+  arizaliFilterCheckbox.addEventListener('change', (e) => {
+    showOnlyArizali = e.target.checked;
+    console.log('🔧 Arızalı filtresi:', showOnlyArizali ? 'Aktif' : 'Pasif');
+    // Tabloyu yeniden filtrele
+    if (selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      refreshTableData(selectedHatsForTracking, selectedHareketForTracking);
+    }
+  });
 }
 
 closeModal.addEventListener('click', closeUploadModal);
@@ -2448,6 +2462,22 @@ async function handleApplyHatSelection() {
       return;
     }
     
+    // Arızalı filtresi aktifse sadece Durum sütunu "Arızalı" olanları göster
+    if (showOnlyArizali) {
+      allData = allData.filter(row => {
+        const durum = row.Durum || '';
+        return durum.toString().toLowerCase().includes('arızalı');
+      });
+      
+      if (allData.length === 0) {
+        statusEl.innerHTML = `<span class="small">⚠️ Arızalı araç bulunamadı</span>`;
+        theadRow.innerHTML = "<th>Boş</th>";
+        tbody.innerHTML = `<tr><td class="small">Seçilen hatlarda arızalı araç yok.</td></tr>`;
+        applyHatSelection.disabled = false;
+        return;
+      }
+    }
+    
     // Tarife_Saati'ne göre sırala (küçükten büyüğe)
     allData.sort((a, b) => {
       const timeA = a.Tarife_Saati || '';
@@ -2668,15 +2698,29 @@ async function refreshTableData(hatList, hareket) {
     
     if (allData.length === 0) return;
     
+    // Arızalı filtresi aktifse sadece Durum sütunu "Arızalı" olanları göster
+    let filteredData = allData;
+    if (showOnlyArizali) {
+      filteredData = allData.filter(row => {
+        const durum = row.Durum || '';
+        return durum.toString().toLowerCase().includes('arızalı');
+      });
+      
+      if (filteredData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="20" style="text-align: center; padding: 20px; color: #999;">Arızalı araç bulunamadı</td></tr>`;
+        return;
+      }
+    }
+    
     // Tarife_Saati'ne göre sırala
-    allData.sort((a, b) => {
+    filteredData.sort((a, b) => {
       const timeA = a.Tarife_Saati || '';
       const timeB = b.Tarife_Saati || '';
       return timeA.localeCompare(timeB);
     });
     
     // Sadece tbody'yi güncelle (başlıklar değişmesin)
-    const firstRow = allData[0];
+    const firstRow = filteredData[0];
     const allKeys = Object.keys(firstRow);
     const hatIndex = allKeys.indexOf('_Hat');
     if (hatIndex > -1) {
@@ -2697,7 +2741,7 @@ async function refreshTableData(hatList, hareket) {
     }
     
     tbody.innerHTML = '';
-    allData.forEach(row => {
+    filteredData.forEach(row => {
       const tr = document.createElement('tr');
       allKeys.forEach(k => {
         const td = document.createElement('td');
@@ -2828,7 +2872,21 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     }
     
     // En yakın zamandaki tüm otobüsleri filtrele
-    const closestBuses = allBusesList.filter(bus => bus.remainingSeconds === minRemaining);
+    let closestBuses = allBusesList.filter(bus => bus.remainingSeconds === minRemaining);
+    
+    // Arızalı filtresi aktifse sadece durumu "Arızalı" olanları göster
+    if (showOnlyArizali) {
+      closestBuses = closestBuses.filter(bus => {
+        const durum = bus.durum || '';
+        return durum.toString().toLowerCase().includes('arızalı');
+      });
+      
+      // Arızalı araç yoksa timer'ı gizle
+      if (closestBuses.length === 0) {
+        timerContainer.style.display = 'none';
+        return;
+      }
+    }
     
     console.log('🚌 Çoklu hat timer güncelleme: Araç sayısı =', closestBuses.length);
     

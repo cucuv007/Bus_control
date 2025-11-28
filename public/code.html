@@ -135,10 +135,13 @@
           <input type="checkbox" id="dynamicTrackingCheckbox" style="margin-right: 5px;">
           Dinamik Takip
         </label>
+        <label style="font-size: 12px; font-weight: normal; margin-right: 10px;">
+          <input type="checkbox" id="arizaliFilterCheckbox" style="margin-right: 5px;">
+          Sadece Arızalı
+        </label>
         <button id="closeTimerBtn" class="close-timer-btn" onclick="window.handleCloseTimer(event)">×</button>
       </div>
-      <div class="timer-content">
-        <!-- Çoklu araç listesi (sadece 2dk içinde birden fazla araç varsa göster) -->
+      <div class="timer-content">\n        <!-- Çoklu araç listesi (sadece 2dk içinde birden fazla araç varsa göster) -->
         <div id="timerMultipleBusList" class="timer-multiple-buses" style="display: none;">
           <!-- Dinamik olarak doldurulacak -->
         </div>
