@@ -526,17 +526,17 @@ if (applyHatSelection) {
 
 // refreshHatsBtn başlangıçta gizli olabilir, kontrol et
 if (refreshHatsBtn) {
-  // Sadece Depolama kullanıcıları için aktif
+  // Depolama ve Admin kullanıcıları için aktif
   const userSession = localStorage.getItem('userSession');
   if (userSession) {
     const session = JSON.parse(userSession);
-    if (session.gorev === 'Depolama') {
+    if (session.gorev === 'Depolama' || session.gorev === 'Admin') {
       refreshHatsBtn.addEventListener('click', handleRefreshHats);
     } else {
       refreshHatsBtn.disabled = true;
       refreshHatsBtn.style.opacity = '0.5';
       refreshHatsBtn.style.cursor = 'not-allowed';
-      refreshHatsBtn.title = 'Bu özellik sadece Depolama kullanıcıları için aktiftir';
+      refreshHatsBtn.title = 'Bu özellik sadece Depolama ve Admin kullanıcıları için aktiftir';
     }
   }
 }
