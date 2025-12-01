@@ -977,6 +977,46 @@ async function handleUpload() {
     return;
   }
   
+  // Kullanıcı bilgilerini al
+  const userSession = localStorage.getItem('userSession');
+  let currentGorev = 'User';
+  if (userSession) {
+    const session = JSON.parse(userSession);
+    currentGorev = session.gorev;
+  }
+
+  // Admin için zaman kısıtlaması yok, direkt işleme devam et
+  if (currentGorev !== 'Admin') {
+    // Zaman kısıtlaması kontrolü (sadece Admin olmayan kullanıcılar için)
+    const timeCheckRes = await fetch('/api/check-time-restriction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'yukleme',
+        gorev: currentGorev
+      })
+    });
+
+    const timeCheckData = await timeCheckRes.json();
+    console.log('⏰ Yükleme zaman kontrolü sonucu:', timeCheckData);
+
+    if (!timeCheckData.allowed) {
+      const finishDisplay = timeCheckData.finishDisplay || timeCheckData.finishTime;
+      uploadStatus.innerHTML = `⏸️ Yükleme İşlemi Şu Anda Yapılamaz<br><br>` +
+                               `${timeCheckData.reason}<br><br>` +
+                               `⏰ Şu anki saat: ${timeCheckData.currentTime}<br>` +
+                               `🚫 Yasak saatler: ${timeCheckData.startTime} - ${finishDisplay}<br><br>` +
+                               `Bu işlemi ${finishDisplay} sonrasında yapabilirsiniz.`;
+      uploadStatus.style.display = 'block';
+      uploadStatus.style.color = '#e74c3c';
+      return;
+    }
+
+    console.log('✅ Yükleme zaman kontrolü geçildi');
+  } else {
+    console.log('👑 Admin kullanıcısı - zaman kısıtlaması olmadan yükleme yapılıyor');
+  }
+  
   confirmUploadBtn.disabled = true;
   uploadStatus.style.display = 'none';
   

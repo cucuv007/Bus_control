@@ -19,6 +19,7 @@ function getTurkeyTime() {
 }
 
 // Saat karşılaştırma (HH:MM:SS formatında)
+// Finish 00:00:00 ise bu 24:00:00 (gece yarısı) anlamına gelir
 function isTimeBetween(currentTime, startTime, finishTime) {
   const current = currentTime.split(':').map(Number);
   const start = startTime.split(':').map(Number);
@@ -26,7 +27,18 @@ function isTimeBetween(currentTime, startTime, finishTime) {
   
   const currentSeconds = current[0] * 3600 + current[1] * 60 + current[2];
   const startSeconds = start[0] * 3600 + start[1] * 60 + start[2];
-  const finishSeconds = finish[0] * 3600 + finish[1] * 60 + finish[2];
+  let finishSeconds = finish[0] * 3600 + finish[1] * 60 + finish[2];
+  
+  // Eğer finish 00:00:00 ise, bunu 24:00:00 (86400 saniye) olarak kabul et
+  if (finishSeconds === 0) {
+    finishSeconds = 86400; // 24 * 3600 = 86400 saniye
+  }
+  
+  // Gece yarısını geçen durumları kontrol et
+  if (finishSeconds < startSeconds) {
+    // Örnek: Start 22:00, Finish 02:00 (ertesi gün)
+    return currentSeconds >= startSeconds || currentSeconds <= finishSeconds;
+  }
   
   return currentSeconds >= startSeconds && currentSeconds <= finishSeconds;
 }
@@ -37,7 +49,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, gorev } = req.body; // action: "login" veya "hatlar-yenile"
+    const { action, gorev } = req.body; // action: "login", "hatlar-yenile", "yukleme"
     
     // Admin için her zaman izin ver
     if (gorev === 'Admin') {
@@ -49,11 +61,17 @@ export default async function handler(req, res) {
       });
     }
 
-    // Saat tablosundan "Hatları Yenile" kaydını getir
+    // Action'a göre hangi Name değerini kullanacağımızı belirle
+    let restrictionName = 'Hatları Yenile'; // default
+    if (action === 'yukleme') {
+      restrictionName = 'Yükleme';
+    }
+
+    // Saat tablosundan ilgili kaydı getir
     const { data, error } = await supabase
       .from('Saat')
       .select('Name, Start, Finish')
-      .eq('Name', 'Hatları Yenile')
+      .eq('Name', restrictionName)
       .single();
 
     if (error || !data) {
@@ -73,6 +91,7 @@ export default async function handler(req, res) {
 
     console.log('⏰ Zaman kontrolü:', {
       action,
+      restrictionName,
       gorev,
       currentTime,
       startTime,
@@ -84,13 +103,15 @@ export default async function handler(req, res) {
 
     if (inRestrictedPeriod) {
       // Yasak saatler içinde
+      const finishDisplay = finishTime === '00:00:00' ? '24:00:00 (Gece Yarısı)' : finishTime;
       return res.status(200).json({ 
         success: true, 
         allowed: false,
-        reason: `Bu işlem ${startTime} - ${finishTime} saatleri arasında yapılamaz`,
+        reason: `Bu işlem ${startTime} - ${finishDisplay} saatleri arasında yapılamaz`,
         currentTime,
         startTime,
         finishTime,
+        finishDisplay,
         inRestrictedPeriod: true
       });
     } else {
