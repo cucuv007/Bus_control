@@ -3952,35 +3952,34 @@ async function removeArizaliAciklama(rowData) {
     
     console.log('🗑️ Arızalı açıklaması siliniyor:', { table: aciklamaTable, hatAdi, calismaZamani, tarife, tarifeSaati, plaka });
     
-    // Direkt Supabase ile ara ve sil
-    const searchUrl = `${window.SUPABASE_URL}/rest/v1/${aciklamaTable}?Hat_Adi=eq.${hatAdi}&Tarife=eq.${tarife}&Tarife_Saati=eq.${tarifeSaati}&select=*`;
-    
-    console.log('🔍 Arama URL:', searchUrl);
-    
-    const searchRes = await fetch(searchUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': window.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json'
-      }
+    // get-row-aciklamalar API'sini kullanarak mevcut açıklamaları al
+    const getRes = await fetch('/api/get-row-aciklamalar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Hat_Adi: hatAdi,
+        Tarife: tarife,
+        Tarife_Saati: tarifeSaati
+      })
     });
     
-    if (!searchRes.ok) {
-      console.warn('Açıklama arama hatası');
+    if (!getRes.ok) {
+      console.warn('Açıklama okuma hatası');
       return;
     }
     
-    const aciklamalar = await searchRes.json();
+    const result = await getRes.json();
+    const aciklamalar = result.data || [];
     
     console.log('📋 Alınan açıklamalar:', aciklamalar);
-    console.log('🔍 Görev tipi:', gorev);
+    console.log('🔍 Açıklama tablosu:', aciklamaTable);
     
     // (Arızalı) içeren kayıtları filtrele
     const arizaliKayitlar = aciklamalar.filter(a => {
       const hasAciklama = a.Açıklama && a.Açıklama.includes('(Arızalı)');
-      console.log('  - Kayıt:', { id: a.id, Açıklama: a.Açıklama?.substring(0, 50), hasAciklama });
-      return hasAciklama;
+      const correctSource = a._Kaynak === (gorev === 'Operasyon' ? 'Operasyon' : 'Depolama');
+      console.log('  - Kayıt:', { id: a.id, Açıklama: a.Açıklama?.substring(0, 50), _Kaynak: a._Kaynak, hasAciklama, correctSource });
+      return hasAciklama && correctSource;
     });
     
     if (arizaliKayitlar.length === 0) {
@@ -3990,23 +3989,26 @@ async function removeArizaliAciklama(rowData) {
     
     console.log(`${arizaliKayitlar.length} adet arızalı açıklama bulundu, siliniyor...`);
     
-    // Her kayıt için silme isteği gönder
-    for (const kayit of arizaliKayitlar) {
-      // Supabase REST API ile direkt silme
-      const deleteUrl = `${window.SUPABASE_URL}/rest/v1/${aciklamaTable}?id=eq.${kayit.id}`;
-      
-      await fetch(deleteUrl, {
-        method: 'DELETE',
-        headers: {
-          'apikey': window.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        }
-      });
+    // ID listesini topla
+    const idsToDelete = arizaliKayitlar.map(k => k.id);
+    
+    // Backend API ile sil
+    const deleteRes = await fetch('/api/delete-aciklama-by-ids', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        table: aciklamaTable,
+        ids: idsToDelete
+      })
+    });
+    
+    if (!deleteRes.ok) {
+      console.warn('Silme işlemi başarısız');
+      return;
     }
     
-    console.log('✅ Arızalı açıklamaları silindi');
+    const deleteResult = await deleteRes.json();
+    console.log('✅ Arızalı açıklamaları silindi:', deleteResult);
     
     // İlgili satırın açıklama ikonunu güncelle
     await updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati);
