@@ -377,7 +377,7 @@ tbody tr:last-child td {
   transition: top 0.3s ease, transform 0.3s ease;
 }
 
-/* Boş-Dolu container için özel pozisyon */
+/* Boş-Dolu container için özel pozisyon - Desktop */
 #bosDoluContainer {
   left: 20px;
   right: auto;
@@ -395,19 +395,19 @@ tbody tr:last-child td {
     overflow-y: auto;
   }
   
-  /* Boş-Dolu mobilde timer'ın altına */
+  /* Boş-Dolu mobilde ekran altı ortada */
   #bosDoluContainer {
-    top: auto;
-    bottom: 20px;
-    left: 50%;
-    right: auto;
-    transform: translate(-50%, 0);
+    top: auto !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, 0) !important;
     max-height: 40vh;
   }
   
   /* Timer açıksa boş-dolu daha da alta */
   #timerContainer:not([style*="display: none"]) ~ #bosDoluContainer {
-    bottom: 10px;
+    bottom: 10px !important;
     max-height: 35vh;
   }
 }
@@ -423,11 +423,11 @@ tbody tr:last-child td {
   }
   
   #bosDoluContainer {
-    top: auto;
-    bottom: 10px;
-    left: 50%;
-    right: auto;
-    transform: translate(-50%, 0);
+    top: auto !important;
+    bottom: 10px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, 0) !important;
     width: 90%;
     max-height: 35vh;
   }
