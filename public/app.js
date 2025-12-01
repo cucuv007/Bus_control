@@ -1553,7 +1553,19 @@ async function handleRefresh() {
     }
     
     const result = await res.json();
-    const tables = result.tables || [];
+    let tables = result.tables || [];
+    
+    // Sistem tablolarını filtrele (hat olmayan tablolar)
+    const systemTables = [
+      'Depolama_Açıklama',
+      'Operasyon_Açıklama',
+      'Saat',
+      'Kullanıcı_Verileri',
+      'Kullanıcılar'
+    ];
+    
+    tables = tables.filter(table => !systemTables.includes(table));
+    console.log('🗂️ Sistem tabloları filtrelendi, kalan tablolar:', tables);
     
     if (tables.length === 0) {
       statusEl.innerHTML = '<span class="small">Henüz tablo yok. Yükle butonuna tıklayarak dosya yükleyiniz.</span>';
@@ -2457,6 +2469,19 @@ async function loadFilteredTables() {
     
     const result = await res.json();
     let allTables = result.tables || []; // Tüm gerçek tablolar
+    
+    // Sistem tablolarını filtrele (hat olmayan tablolar)
+    const systemTables = [
+      'Depolama_Açıklama',
+      'Operasyon_Açıklama',
+      'Saat',
+      'Kullanıcı_Verileri',
+      'Kullanıcılar'
+    ];
+    
+    allTables = allTables.filter(table => !systemTables.includes(table));
+    console.log('🗂️ Sistem tabloları filtrelendi, kalan tablolar:', allTables);
+    
     let tables = allTables;
     
     // Depolama filtresi varsa, sadece hem filteredHats'ta hem de gerçek tablolarda olan hatları göster
