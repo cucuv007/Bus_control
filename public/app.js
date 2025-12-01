@@ -1282,6 +1282,11 @@ async function handleRowApproval() {
         await saveArizaliAciklama(pendingApprovalData);
       }
       
+      // Eğer arızalı kaldırma yapıldıysa Operasyon_Açıklama tablosundan da sil
+      if (isRemoving) {
+        await removeArizaliAciklama(pendingApprovalData);
+      }
+      
       // Veriyi sakla (modal kapatılmadan önce)
       const savedData = { ...pendingApprovalData };
       
@@ -3861,12 +3866,17 @@ async function saveArizaliAciklama(rowData) {
       throw new Error('Geçersiz görev tipi');
     }
     
+    // Açıklama formatı: "kullanıcı açıklaması (Arızalı)"
+    const aciklamaWithTag = `${rowData.aciklama} (Arızalı)`;
+    
     const payload = {
       table: aciklamaTable,
       hatAdi: rowData.tableName || rowData.Hat_Adi,
+      calismaZamani: rowData.rowData?.Çalışma_Zamanı || rowData.rowData?.Calisma_Zamani || '',
       tarife: rowData.tarife,
       tarifeSaati: rowData.tarifeSaati,
-      aciklama: `⚠️ ARIZALI: ${rowData.aciklama}`,
+      plaka: rowData.rowData?.Plaka || '',
+      aciklama: aciklamaWithTag,
       kullanici: session.kullanici_adi || 'Bilinmiyor'
     };
     
@@ -3896,6 +3906,69 @@ async function saveArizaliAciklama(rowData) {
   } catch (err) {
     console.error('❌ Açıklama kaydetme hatası:', err);
     // Hata sessizce loglansın, kullanıcıya ana işlem başarılı gösterildi
+  }
+}
+
+// Arızalı kaldırma için Operasyon_Açıklama tablosundan silme fonksiyonu
+async function removeArizaliAciklama(rowData) {
+  try {
+    const userSession = localStorage.getItem('userSession');
+    if (!userSession) {
+      console.warn('Oturum bilgisi bulunamadı');
+      return;
+    }
+    
+    const session = JSON.parse(userSession);
+    const gorev = session.gorev;
+    
+    // Görev tipine göre tablo seç
+    let aciklamaTable = '';
+    if (gorev === 'Operasyon') {
+      aciklamaTable = 'Operasyon_Açıklama';
+    } else if (gorev === 'Depolama') {
+      aciklamaTable = 'Depolama_Açıklama';
+    } else {
+      console.warn('Geçersiz görev tipi');
+      return;
+    }
+    
+    // Arızalı açıklamasını bul ve sil
+    const payload = {
+      table: aciklamaTable,
+      hatAdi: rowData.tableName || rowData.Hat_Adi,
+      calismaZamani: rowData.rowData?.Çalışma_Zamanı || rowData.rowData?.Calisma_Zamani || '',
+      tarife: rowData.tarife,
+      tarifeSaati: rowData.tarifeSaati,
+      plaka: rowData.rowData?.Plaka || '',
+      aciklamaPattern: '(Arızalı)' // Bu pattern'i içeren açıklamaları sil
+    };
+    
+    console.log('🗑️ Arızalı açıklaması siliniyor:', payload);
+    
+    const res = await fetch('/api/delete-arizali-aciklama', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await res.json();
+    
+    if (!res.ok) {
+      console.warn('Açıklama silme hatası:', result.error);
+      return;
+    }
+    
+    console.log('✅ Arızalı açıklaması silindi:', result);
+    
+    // İlgili satırın açıklama ikonunu güncelle
+    await updateAciklamaIconsForRow(
+      rowData.tableName || rowData.Hat_Adi,
+      rowData.tarife,
+      rowData.tarifeSaati
+    );
+    
+  } catch (err) {
+    console.error('❌ Açıklama silme hatası:', err);
   }
 }
 
