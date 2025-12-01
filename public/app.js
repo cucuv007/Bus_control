@@ -5040,13 +5040,18 @@ async function openRowAciklamaModal(rowData) {
       return;
     }
     
-// Açıklamaları listele
+    // Açıklamaları listele
     tbody.innerHTML = '';
-    result.data.forEach(aciklama => {
+    
+    console.log('📋 Listelenen açıklama sayısı:', result.data.length);
+    
+    result.data.forEach((aciklama, index) => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #e0e0e0';
       tr.style.cursor = 'pointer';
       tr.style.transition = 'background-color 0.2s';
+      
+      console.log(`📝 Açıklama ${index + 1} için event listener ekleniyor:`, aciklama);
       
       // Hover efekti
       tr.addEventListener('mouseenter', () => {
@@ -5057,19 +5062,24 @@ async function openRowAciklamaModal(rowData) {
       });
       
       // Tıklandığında ana tabloda o satıra git
-      tr.addEventListener('click', () => {
-        console.log('🖱️ Açıklama satırına tıklandı:', aciklama);
-        scrollToRowInMainTable({
+      tr.addEventListener('click', (e) => {
+        console.log('🖱️ Açıklama satırına tıklandı!', e);
+        console.log('📊 Açıklama verisi:', aciklama);
+        console.log('📊 rowData:', rowData);
+        
+        const targetRow = {
           Hat_Adi: aciklama.Hat_Adi || rowData.Hat_Adi,
           Tarife: aciklama.Tarife || rowData.Tarife,
           Tarife_Saati: aciklama.Tarife_Saati || rowData.Tarife_Saati,
           Plaka: aciklama.Plaka
-        });
+        };
+        
+        console.log('🎯 Hedef satır:', targetRow);
+        
+        scrollToRowInMainTable(targetRow);
         // Modal'ı kapat
         closeRowAciklamaModalFunc();
-      });
-      
-      // Tarih
+      });      // Tarih
       const tdTarih = document.createElement('td');
       tdTarih.style.padding = '10px';
       tdTarih.style.fontSize = '13px';
