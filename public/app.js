@@ -4387,7 +4387,34 @@ async function handleRefreshHats() {
 
     console.log(`✅ ${clearResult.updatedCount} satır temizlendi`);
 
-    // 9. Tabloyu yenile
+    // 9. Seçili hatların Yeni_Plaka sütunlarını temizle (bugünün gün tablosunda)
+    console.log('🧹 Seçili hatların Yeni_Plaka sütunları temizleniyor...');
+    
+    // Seçili hatları bul
+    const selectedHatCheckboxes = document.querySelectorAll('.hat-checkbox:checked');
+    const selectedHatlar = Array.from(selectedHatCheckboxes).map(cb => cb.value);
+    
+    if (selectedHatlar.length > 0) {
+      console.log('🚌 Temizlenecek hatlar:', selectedHatlar);
+      
+      const clearPlakaRes = await fetch('/api/clear-yeni-plaka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hatlar: selectedHatlar })
+      });
+
+      const clearPlakaResult = await clearPlakaRes.json();
+
+      if (clearPlakaResult.success) {
+        console.log(`✅ ${clearPlakaResult.clearedCount} satırın Yeni_Plaka sütunu temizlendi (${clearPlakaResult.tableName} tablosunda)`);
+      } else {
+        console.warn('⚠️ Yeni_Plaka temizleme hatası:', clearPlakaResult.message);
+      }
+    } else {
+      console.log('ℹ️ Seçili hat yok, Yeni_Plaka temizleme atlanıyor');
+    }
+
+    // 10. Tabloyu yenile
     alert(`✅ İşlem Tamamlandı!\n\n` +
       `📧 ${usersData.users.length} kullanıcıya mail gönderildi\n` +
       `🧹 ${clearResult.updatedCount} satır temizlendi\n` +
