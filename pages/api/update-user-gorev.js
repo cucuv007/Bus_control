@@ -63,10 +63,18 @@ export default async function handler(req, res) {
     }
 
     console.log('✅ Kullanıcı görevi başarıyla güncellendi:', username);
+    
+    // Görev değiştiğinde kullanıcıyı logout yap (session invalidation)
+    // Frontend'de bu değişikliği algılamak için timestamp döndür
+    const logoutTimestamp = new Date().toISOString();
+    
     return res.status(200).json({ 
       success: true, 
-      message: 'Kullanıcı görevi başarıyla güncellendi',
-      user: data[0]
+      message: 'Kullanıcı görevi başarıyla güncellendi. Kullanıcı yeniden giriş yapmalıdır.',
+      user: data[0],
+      forceLogout: true,
+      logoutUsername: username,
+      logoutTimestamp
     });
 
   } catch (err) {

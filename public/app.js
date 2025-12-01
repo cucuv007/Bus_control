@@ -3470,6 +3470,19 @@ async function handleUpdateUser() {
     addUserStatus.innerHTML = '<span class="success">✅ Kullanıcı görevi başarıyla güncellendi!</span>';
     addUserStatus.style.display = 'block';
     
+    // Eğer değiştirilen kullanıcı şu an online ise, force logout bilgisini kaydet
+    if (data.forceLogout && data.logoutUsername) {
+      console.log('⚠️ Kullanıcı görevi değiştirildi, force logout sinyali gönderiliyor:', data.logoutUsername);
+      
+      // localStorage'da logout sinyali kaydet
+      const logoutSignal = {
+        username: data.logoutUsername,
+        timestamp: data.logoutTimestamp || new Date().toISOString(),
+        reason: 'Görev değişikliği nedeniyle oturumunuz sonlandırıldı. Lütfen yeniden giriş yapın.'
+      };
+      localStorage.setItem('forceLogout_' + data.logoutUsername, JSON.stringify(logoutSignal));
+    }
+    
     setTimeout(() => {
       closeAddUserModal();
     }, 1500);
@@ -4846,10 +4859,52 @@ function exportAciklamaToExcel() {
   }
 }
 
+// ==================== FORCE LOGOUT CHECK ====================
+// Admin bir kullanıcının görevini değiştirdiğinde, o kullanıcıyı otomatik logout yap
+function startForceLogoutCheck() {
+  // Her 3 saniyede bir kontrol et
+  setInterval(() => {
+    const userSession = localStorage.getItem('userSession');
+    if (!userSession) return;
+    
+    try {
+      const session = JSON.parse(userSession);
+      const username = session.username;
+      
+      // Bu kullanıcı için force logout sinyali var mı?
+      const logoutSignalKey = 'forceLogout_' + username;
+      const logoutSignal = localStorage.getItem(logoutSignalKey);
+      
+      if (logoutSignal) {
+        console.log('⚠️ Force logout sinyali algılandı:', username);
+        
+        const signal = JSON.parse(logoutSignal);
+        
+        // Sinyali temizle
+        localStorage.removeItem(logoutSignalKey);
+        
+        // Session'ı temizle
+        localStorage.removeItem('userSession');
+        
+        // Kullanıcıya bilgi ver
+        alert(signal.reason || 'Görev değişikliği nedeniyle oturumunuz sonlandırıldı. Lütfen yeniden giriş yapın.');
+        
+        // Login sayfasına yönlendir
+        window.location.href = '/login';
+      }
+    } catch (err) {
+      console.error('❌ Force logout kontrolü hatası:', err);
+    }
+  }, 3000); // 3 saniyede bir kontrol
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', () => {
   // Otomatik güncelleme kontrolü (Operasyon ve Depolama için)
   checkAutoUpdateAciklamalar();
+  
+  // Force logout kontrolü başlat (her 3 saniyede bir kontrol)
+  startForceLogoutCheck();
   
   handleRefresh();
 });
