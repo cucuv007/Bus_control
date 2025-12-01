@@ -20,14 +20,24 @@ function getTurkeyDate() {
   return turkeyTime;
 }
 
-// Türkiye saatine göre gün adı (UTC day değil, lokal day)
+// Türkiye saatine göre gün adı (UTC+3)
 function getTurkeyGun() {
   const gunler = ['PAZAR', 'PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ'];
+  
+  // Türkiye saat dilimi ile tarih al
   const now = new Date();
-  // UTC+3 için 3 saat ekle
-  const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-  // UTC günü al (çünkü turkeyTime UTC bazlı bir Date objesi)
-  const dayIndex = turkeyTime.getUTCDay();
+  const options = { timeZone: 'Europe/Istanbul', weekday: 'long' };
+  const formatter = new Intl.DateTimeFormat('tr-TR', options);
+  const gunTR = formatter.format(now).toUpperCase();
+  
+  // Eğer direkt Türkçe gün adı eşleşiyorsa kullan
+  if (gunler.includes(gunTR)) {
+    return gunTR;
+  }
+  
+  // Fallback: Manuel hesaplama
+  const turkeyTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+  const dayIndex = turkeyTime.getDay();
   return gunler[dayIndex];
 }
 
