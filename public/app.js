@@ -3826,9 +3826,19 @@ async function handleAracDegistir() {
     const result = await response.json();
     console.log('📊 API result:', result);
     
+    // Detayları parse et (eğer varsa)
+    if (result.details) {
+      console.log('📋 Detaylar:', result.details);
+    }
+    
     if (!response.ok) {
       console.error('❌ API Hatası:', result);
-      throw new Error(result.error || result.details || 'Araç güncellenemedi');
+      
+      // Hata mesajını kullanıcıya göster
+      const errorMsg = result.error || 'Araç güncellenemedi';
+      const detailMsg = result.debugInfo ? `\n\nDebug: ${JSON.stringify(result.debugInfo, null, 2)}` : '';
+      
+      throw new Error(errorMsg + detailMsg);
     }
     
     statusEl.innerHTML = '<span style="color: #27ae60;">✅ Araç başarıyla güncellendi!</span>';

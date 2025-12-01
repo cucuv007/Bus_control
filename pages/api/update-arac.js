@@ -80,24 +80,14 @@ export default async function handler(req, res) {
       Tarife_Saati
     });
 
-    // Önce değiştirilecek satırı bul (Tarife_Saati'ni almak için)
-    let query = supabase
+    // Gün tablolarında sadece Hat_Adi, Tarife, Plaka sütunları var
+    // Tarife_Saati sütunu YOK! Sadece Hat_Adi + Tarife ile ara
+    const { data: targetRow, error: selectError } = await supabase
       .from(gunAdi)
-      .select('Tarife_Saati, Plaka')
+      .select('Plaka, Yeni_Plaka')
       .eq('Hat_Adi', Hat_Adi)
-      .eq('Tarife', Tarife);
-    
-    // Eğer Tarife_Saati verilmişse onu da kullan (daha spesifik arama)
-    if (Tarife_Saati) {
-      query = query.eq('Tarife_Saati', Tarife_Saati);
-    }
-    
-    // Eğer Plaka verilmişse onu da kullan
-    if (Plaka) {
-      query = query.eq('Plaka', Plaka);
-    }
-    
-    const { data: targetRow, error: selectError } = await query.limit(1);
+      .eq('Tarife', Tarife)
+      .limit(1);
 
     console.log('🔍 Bulunan kayıt:', targetRow);
 
@@ -105,27 +95,37 @@ export default async function handler(req, res) {
       console.error('Hedef kayıt bulunamadı:', selectError);
       
       // Debug: Tabloda ne var görelim
-      const { data: allRows } = await supabase
+      const { data: allRows, error: debugError } = await supabase
         .from(gunAdi)
-        .select('Hat_Adi, Tarife, Tarife_Saati, Plaka')
+        .select('Hat_Adi, Tarife, Plaka, Yeni_Plaka')
         .eq('Hat_Adi', Hat_Adi)
         .limit(5);
       
       console.log('📋 Tablodaki ilk 5 kayıt (Hat_Adi eşleşen):', allRows);
+      console.log('📋 Debug hatası:', debugError);
       
-      throw new Error('Güncellenecek kayıt bulunamadı. Hat, Plaka ve Tarife bilgilerini kontrol edin.');
+      // Frontend'e debug bilgisi gönder
+      return res.status(404).json({
+        success: false,
+        error: 'Güncellenecek kayıt bulunamadı. Hat ve Tarife bilgilerini kontrol edin.',
+        debugInfo: {
+          gunAdi,
+          aramaParametreleri: { Hat_Adi, Tarife },
+          bulunanKayitlar: allRows || [],
+          selectError: selectError?.message
+        }
+      });
     }
 
-    const degisiklikSaati = targetRow[0].Tarife_Saati;
-    console.log(`⏰ Değişiklik saati: ${degisiklikSaati} - Bu saatten sonraki tüm kayıtlar güncellenecek`);
+    console.log(`✅ Kayıt bulundu - Güncelleme yapılacak`);
 
-    // İlgili gün tablosunda aynı Hat_Adi + Tarife olan VE Tarife_Saati >= değişiklik saati olan kayıtları güncelle
+    // Aynı Hat_Adi + Tarife olan TÜM kayıtları güncelle
+    // (Tarife_Saati sütunu olmadığı için saat bazlı filtreleme yapamıyoruz)
     const { data: updateData, error: updateError } = await supabase
       .from(gunAdi)
       .update({ Yeni_Plaka })
       .eq('Hat_Adi', Hat_Adi)
       .eq('Tarife', Tarife)
-      .gte('Tarife_Saati', degisiklikSaati) // Sadece bu saatten sonraki kayıtlar
       .select();
 
     if (updateError) {
