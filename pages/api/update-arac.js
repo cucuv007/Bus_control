@@ -15,9 +15,20 @@ function getGunFromDate(date) {
 // Türkiye saati ile günü al (UTC+3)
 function getTurkeyDate() {
   const now = new Date();
-  // UTC'ye 3 saat ekle
+  // UTC+3 için 3 saat ekle
   const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
   return turkeyTime;
+}
+
+// Türkiye saatine göre gün adı (UTC day değil, lokal day)
+function getTurkeyGun() {
+  const gunler = ['PAZAR', 'PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ'];
+  const now = new Date();
+  // UTC+3 için 3 saat ekle
+  const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+  // UTC günü al (çünkü turkeyTime UTC bazlı bir Date objesi)
+  const dayIndex = turkeyTime.getUTCDay();
+  return gunler[dayIndex];
 }
 
 export default async function handler(req, res) {
@@ -42,11 +53,11 @@ export default async function handler(req, res) {
     });
 
     // Bugünün gününü bul (Türkiye saati ile)
+    const gunAdi = getTurkeyGun();
     const bugun = getTurkeyDate();
-    const gunAdi = getGunFromDate(bugun);
     
     console.log(`📅 Bugünün tarihi (Türkiye): ${bugun.toISOString()}`);
-    console.log(`📅 Bugünün günü: ${gunAdi} (${bugun.getUTCDay()})`);
+    console.log(`📅 Bugünün günü: ${gunAdi}`);
     console.log(`📅 Bakılacak tablo: ${gunAdi}`);
 
     console.log('🔍 Arama parametreleri:', {
