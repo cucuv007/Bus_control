@@ -3952,7 +3952,10 @@ async function removeArizaliAciklama(rowData) {
       return;
     }
     
-    const aciklamalar = await getRes.json();
+    const result = await getRes.json();
+    const aciklamalar = Array.isArray(result) ? result : (result.aciklamalar || []);
+    
+    console.log('📋 Alınan açıklamalar:', aciklamalar);
     
     // (Arızalı) içeren kayıtları filtrele - sadece doğru tablodan
     const arizaliKayitlar = aciklamalar.filter(a => 
