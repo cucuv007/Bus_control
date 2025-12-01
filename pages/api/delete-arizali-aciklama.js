@@ -16,6 +16,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('🔍 Silme parametreleri:', { table, hatAdi, calismaZamani, tarife, tarifeSaati, plaka, aciklamaPattern });
+    
     // Önce eşleşen kayıtları bul
     let query = supabase
       .from(table)
