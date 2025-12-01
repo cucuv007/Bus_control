@@ -49,6 +49,8 @@ export default async function handler(req, res) {
   try {
     const { Hat_Adi, Plaka, Tarife, Calisma_Zamani, Tarife_Saati, Yeni_Plaka, Aciklama } = req.body;
 
+    console.log('📥 İstek alındı:', { Hat_Adi, Plaka, Tarife, Calisma_Zamani, Tarife_Saati, Yeni_Plaka });
+
     if (!Hat_Adi || !Plaka || !Tarife || !Yeni_Plaka || !Aciklama) {
       return res.status(400).json({ 
         error: 'Hat_Adi, Plaka, Tarife, Yeni_Plaka ve Aciklama gerekli' 
@@ -184,10 +186,12 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('Update arac error:', err);
+    console.error('❌ Update arac error:', err);
+    console.error('❌ Error stack:', err.stack);
     return res.status(500).json({ 
       success: false, 
-      error: err.message 
+      error: err.message,
+      details: err.stack?.substring(0, 200) // İlk 200 karakter
     });
   }
 }

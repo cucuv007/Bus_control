@@ -3819,7 +3819,8 @@ async function handleAracDegistir() {
     console.log('📊 API result:', result);
     
     if (!response.ok) {
-      throw new Error(result.error || 'Araç güncellenemedi');
+      console.error('❌ API Hatası:', result);
+      throw new Error(result.error || result.details || 'Araç güncellenemedi');
     }
     
     statusEl.innerHTML = '<span style="color: #27ae60;">✅ Araç başarıyla güncellendi!</span>';
