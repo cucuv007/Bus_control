@@ -39,17 +39,47 @@ export default async function handler(req, res) {
     
     console.log(`📅 Bugünün günü: ${gunAdi}`);
 
+    console.log('🔍 Arama parametreleri:', {
+      Hat_Adi,
+      Plaka,
+      Tarife,
+      Calisma_Zamani,
+      Tarife_Saati
+    });
+
     // Önce değiştirilecek satırı bul (Tarife_Saati'ni almak için)
-    const { data: targetRow, error: selectError } = await supabase
+    let query = supabase
       .from(gunAdi)
-      .select('Tarife_Saati')
+      .select('Tarife_Saati, Plaka')
       .eq('Hat_Adi', Hat_Adi)
-      .eq('Plaka', Plaka)
-      .eq('Tarife', Tarife)
-      .limit(1);
+      .eq('Tarife', Tarife);
+    
+    // Eğer Tarife_Saati verilmişse onu da kullan (daha spesifik arama)
+    if (Tarife_Saati) {
+      query = query.eq('Tarife_Saati', Tarife_Saati);
+    }
+    
+    // Eğer Plaka verilmişse onu da kullan
+    if (Plaka) {
+      query = query.eq('Plaka', Plaka);
+    }
+    
+    const { data: targetRow, error: selectError } = await query.limit(1);
+
+    console.log('🔍 Bulunan kayıt:', targetRow);
 
     if (selectError || !targetRow || targetRow.length === 0) {
       console.error('Hedef kayıt bulunamadı:', selectError);
+      
+      // Debug: Tabloda ne var görelim
+      const { data: allRows } = await supabase
+        .from(gunAdi)
+        .select('Hat_Adi, Tarife, Tarife_Saati, Plaka')
+        .eq('Hat_Adi', Hat_Adi)
+        .limit(5);
+      
+      console.log('📋 Tablodaki ilk 5 kayıt (Hat_Adi eşleşen):', allRows);
+      
       throw new Error('Güncellenecek kayıt bulunamadı. Hat, Plaka ve Tarife bilgilerini kontrol edin.');
     }
 
