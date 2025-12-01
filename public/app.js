@@ -3785,13 +3785,21 @@ async function handleAracDegistir() {
   confirmBtn.disabled = true;
   confirmBtn.textContent = '⏳ Güncelleniyor...';
   
+  // pendingApprovalData'dan normalized değerleri al
+  const hatAdi = pendingApprovalData.hatAdi || pendingApprovalData.tableName;
+  const plaka = rowData.Plaka;
+  const tarife = pendingApprovalData.tarife;
+  const tarifeSaati = pendingApprovalData.tarifeSaati;
+  const calismaZamani = pendingApprovalData.calismaZamani;
+  
   console.log('🚗 Araç değiştirme isteği (rowData):', rowData);
+  console.log('🚗 Araç değiştirme isteği (pendingApprovalData):', pendingApprovalData);
   console.log('🚗 Gönderilecek payload:', {
-    Hat_Adi: rowData.Hat_Adi,
-    Plaka: rowData.Plaka,
-    Tarife: rowData.Tarife,
-    Calisma_Zamani: rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || null,
-    Tarife_Saati: rowData.Tarife_Saati || null,
+    Hat_Adi: hatAdi,
+    Plaka: plaka,
+    Tarife: tarife,
+    Calisma_Zamani: calismaZamani,
+    Tarife_Saati: tarifeSaati,
     Yeni_Plaka: yeniPlakaInput,
     Aciklama: aciklamaText.substring(0, 50) + '...'
   });
@@ -3804,11 +3812,11 @@ async function handleAracDegistir() {
         'user-session': JSON.stringify(session)
       },
       body: JSON.stringify({
-        Hat_Adi: rowData.Hat_Adi,
-        Plaka: rowData.Plaka,
-        Tarife: rowData.Tarife,
-        Calisma_Zamani: rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || null,
-        Tarife_Saati: rowData.Tarife_Saati || null,
+        Hat_Adi: hatAdi,
+        Plaka: plaka,
+        Tarife: tarife,
+        Calisma_Zamani: calismaZamani,
+        Tarife_Saati: tarifeSaati,
         Yeni_Plaka: yeniPlakaInput,
         Aciklama: aciklamaText
       })
@@ -3837,9 +3845,9 @@ async function handleAracDegistir() {
     
     // ⚡ İlgili satırın açıklama ikonunu güncelle
     await updateAciklamaIconsForRow(
-      rowData.Hat_Adi,
-      rowData.Tarife,
-      rowData.Tarife_Saati
+      hatAdi,
+      tarife,
+      tarifeSaati
     );
     
     // ⚡ Eğer timer aktifse tabloyu otomatik yenile
