@@ -1296,9 +1296,6 @@ async function handleRowApproval() {
       // Satırı tabloda hızlıca güncelle
       updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
-      // Tabloyu yenile (arızalı durumunu güncel göstermek için)
-      await refreshTableData();
-      
       alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi ve açıklama kaydedildi!');
       
     } else {
@@ -3975,13 +3972,15 @@ async function removeArizaliAciklama(rowData) {
     const aciklamalar = Array.isArray(result) ? result : (result.aciklamalar || []);
     
     console.log('📋 Alınan açıklamalar:', aciklamalar);
+    console.log('🔍 Görev tipi:', gorev);
     
     // (Arızalı) içeren kayıtları filtrele - sadece doğru tablodan
-    const arizaliKayitlar = aciklamalar.filter(a => 
-      a.Açıklama && 
-      a.Açıklama.includes('(Arızalı)') &&
-      a._Kaynak === gorev // Sadece kendi görev tipimizden
-    );
+    const arizaliKayitlar = aciklamalar.filter(a => {
+      const hasAciklama = a.Açıklama && a.Açıklama.includes('(Arızalı)');
+      const correctSource = a._Kaynak === gorev;
+      console.log('  - Kayıt:', { Açıklama: a.Açıklama?.substring(0, 50), _Kaynak: a._Kaynak, hasAciklama, correctSource });
+      return hasAciklama && correctSource;
+    });
     
     if (arizaliKayitlar.length === 0) {
       console.log('Silinecek arızalı açıklama bulunamadı');
