@@ -6,6 +6,10 @@
 <title>Otobüs Hareket Saati Yönetimi</title>
 <link rel="stylesheet" href="/style.css">
 <script>
+  // Supabase Configuration
+  window.SUPABASE_URL = 'https://vhxjyfappvmtwfdkhkoc.supabase.co';
+  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeGp5ZmFwcHZtdHdmZGtoa29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI1NDI5MjcsImV4cCI6MjA0ODExODkyN30.7wZxT8_L7cN0jCKE9qQvXmJq4qMDqHqYzKqy5qbQZAc';
+  
   // Sayfa yüklendiğinde session kontrolü yap
   (function() {
     const userSession = localStorage.getItem('userSession');

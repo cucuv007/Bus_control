@@ -3930,40 +3930,64 @@ async function removeArizaliAciklama(rowData) {
       return;
     }
     
-    // Arızalı açıklamasını bul ve sil
-    const payload = {
-      table: aciklamaTable,
-      hatAdi: rowData.tableName || rowData.Hat_Adi,
-      calismaZamani: rowData.rowData?.Çalışma_Zamanı || rowData.rowData?.Calisma_Zamani || '',
-      tarife: rowData.tarife,
-      tarifeSaati: rowData.tarifeSaati,
-      plaka: rowData.rowData?.Plaka || '',
-      aciklamaPattern: '(Arızalı)' // Bu pattern'i içeren açıklamaları sil
-    };
+    const hatAdi = rowData.tableName || rowData.Hat_Adi;
+    const tarife = rowData.tarife;
+    const tarifeSaati = rowData.tarifeSaati;
     
-    console.log('🗑️ Arızalı açıklaması siliniyor:', payload);
+    console.log('🗑️ Arızalı açıklaması siliniyor:', { table: aciklamaTable, hatAdi, tarife, tarifeSaati });
     
-    const res = await fetch('/api/delete-arizali-aciklama', {
+    // get-row-aciklamalar API'sini kullanarak mevcut açıklamaları al
+    const getRes = await fetch('/api/get-row-aciklamalar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        Hat_Adi: hatAdi,
+        Tarife: tarife,
+        Tarife_Saati: tarifeSaati
+      })
     });
     
-    const result = await res.json();
-    
-    if (!res.ok) {
-      console.warn('Açıklama silme hatası:', result.error);
+    if (!getRes.ok) {
+      console.warn('Açıklama okuma hatası');
       return;
     }
     
-    console.log('✅ Arızalı açıklaması silindi:', result);
+    const aciklamalar = await getRes.json();
+    
+    // (Arızalı) içeren kayıtları filtrele - sadece doğru tablodan
+    const arizaliKayitlar = aciklamalar.filter(a => 
+      a.Açıklama && 
+      a.Açıklama.includes('(Arızalı)') &&
+      a._Kaynak === gorev // Sadece kendi görev tipimizden
+    );
+    
+    if (arizaliKayitlar.length === 0) {
+      console.log('Silinecek arızalı açıklama bulunamadı');
+      return;
+    }
+    
+    console.log(`${arizaliKayitlar.length} adet arızalı açıklama bulundu, siliniyor...`);
+    
+    // Her kayıt için silme isteği gönder
+    for (const kayit of arizaliKayitlar) {
+      // Supabase REST API ile direkt silme
+      const deleteUrl = `${window.SUPABASE_URL}/rest/v1/${aciklamaTable}?id=eq.${kayit.id}`;
+      
+      await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'apikey': window.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        }
+      });
+    }
+    
+    console.log('✅ Arızalı açıklamaları silindi');
     
     // İlgili satırın açıklama ikonunu güncelle
-    await updateAciklamaIconsForRow(
-      rowData.tableName || rowData.Hat_Adi,
-      rowData.tarife,
-      rowData.tarifeSaati
-    );
+    await updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati);
     
   } catch (err) {
     console.error('❌ Açıklama silme hatası:', err);
