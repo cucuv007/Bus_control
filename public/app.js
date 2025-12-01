@@ -4549,6 +4549,13 @@ async function loadAciklamaData(gorevParam) {
         <td style="padding: 10px; max-width: 300px; word-wrap: break-word;">${row.Açıklama || '-'}</td>
       `;
       
+      // Satıra tıklandığında ana tabloda o satıra git
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', () => {
+        console.log('🖱️ Açıklama satırına tıklandı!', row);
+        scrollToRowInMainTable(row);
+      });
+      
       tableBody.appendChild(tr);
     });
     
