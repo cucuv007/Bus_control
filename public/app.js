@@ -3952,34 +3952,35 @@ async function removeArizaliAciklama(rowData) {
     
     console.log('🗑️ Arızalı açıklaması siliniyor:', { table: aciklamaTable, hatAdi, calismaZamani, tarife, tarifeSaati, plaka });
     
-    // get-row-aciklamalar API'sini kullanarak mevcut açıklamaları al
-    const getRes = await fetch('/api/get-row-aciklamalar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        Hat_Adi: hatAdi,
-        Tarife: tarife,
-        Tarife_Saati: tarifeSaati
-      })
+    // Direkt Supabase ile ara ve sil
+    const searchUrl = `${window.SUPABASE_URL}/rest/v1/${aciklamaTable}?Hat_Adi=eq.${hatAdi}&Tarife=eq.${tarife}&Tarife_Saati=eq.${tarifeSaati}&select=*`;
+    
+    console.log('🔍 Arama URL:', searchUrl);
+    
+    const searchRes = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': window.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
     });
     
-    if (!getRes.ok) {
-      console.warn('Açıklama okuma hatası');
+    if (!searchRes.ok) {
+      console.warn('Açıklama arama hatası');
       return;
     }
     
-    const result = await getRes.json();
-    const aciklamalar = Array.isArray(result) ? result : (result.aciklamalar || []);
+    const aciklamalar = await searchRes.json();
     
     console.log('📋 Alınan açıklamalar:', aciklamalar);
     console.log('🔍 Görev tipi:', gorev);
     
-    // (Arızalı) içeren kayıtları filtrele - sadece doğru tablodan
+    // (Arızalı) içeren kayıtları filtrele
     const arizaliKayitlar = aciklamalar.filter(a => {
       const hasAciklama = a.Açıklama && a.Açıklama.includes('(Arızalı)');
-      const correctSource = a._Kaynak === gorev;
-      console.log('  - Kayıt:', { Açıklama: a.Açıklama?.substring(0, 50), _Kaynak: a._Kaynak, hasAciklama, correctSource });
-      return hasAciklama && correctSource;
+      console.log('  - Kayıt:', { id: a.id, Açıklama: a.Açıklama?.substring(0, 50), hasAciklama });
+      return hasAciklama;
     });
     
     if (arizaliKayitlar.length === 0) {
