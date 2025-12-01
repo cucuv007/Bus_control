@@ -1296,6 +1296,9 @@ async function handleRowApproval() {
       // Satırı tabloda hızlıca güncelle
       updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
+      // Tabloyu yenile (arızalı durumunu güncel göstermek için)
+      await refreshTableData();
+      
       alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi ve açıklama kaydedildi!');
       
     } else {
@@ -1427,11 +1430,25 @@ function updateRowStatus(rowData, status) {
       // "Durum" sütununu bul ve güncelle
       const durumIndex = headers.indexOf('Durum');
       if (durumIndex !== -1 && cells[durumIndex]) {
-        cells[durumIndex].textContent = status;
-        cells[durumIndex].style.color = '#e74c3c';
-        cells[durumIndex].style.fontWeight = 'bold';
+        cells[durumIndex].textContent = status || '';
+        if (status) {
+          cells[durumIndex].style.color = '#e74c3c';
+          cells[durumIndex].style.fontWeight = 'bold';
+        } else {
+          cells[durumIndex].style.color = '';
+          cells[durumIndex].style.fontWeight = '';
+        }
         
-        console.log('✅ Durum sütunu güncellendi:', status);
+        console.log('✅ Durum sütunu güncellendi:', status || '(temizlendi)');
+        
+        // Global selectedRowForAciklama'yı da güncelle (bir sonraki tıklamada doğru veriyi görmek için)
+        if (selectedRowForAciklama && 
+            selectedRowForAciklama.Hat_Adi === rowData.hatAdi &&
+            selectedRowForAciklama.Tarife === rowData.tarife &&
+            selectedRowForAciklama.Tarife_Saati === rowData.tarifeSaati) {
+          selectedRowForAciklama.Durum = status || '';
+          console.log('✅ selectedRowForAciklama.Durum güncellendi:', status || '(temizlendi)');
+        }
       }
     }
   });
@@ -3931,10 +3948,12 @@ async function removeArizaliAciklama(rowData) {
     }
     
     const hatAdi = rowData.tableName || rowData.Hat_Adi;
+    const calismaZamani = rowData.rowData?.Çalışma_Zamanı || rowData.rowData?.Calisma_Zamani || '';
     const tarife = rowData.tarife;
     const tarifeSaati = rowData.tarifeSaati;
+    const plaka = rowData.rowData?.Plaka || '';
     
-    console.log('🗑️ Arızalı açıklaması siliniyor:', { table: aciklamaTable, hatAdi, tarife, tarifeSaati });
+    console.log('🗑️ Arızalı açıklaması siliniyor:', { table: aciklamaTable, hatAdi, calismaZamani, tarife, tarifeSaati, plaka });
     
     // get-row-aciklamalar API'sini kullanarak mevcut açıklamaları al
     const getRes = await fetch('/api/get-row-aciklamalar', {
