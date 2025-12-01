@@ -3785,10 +3785,13 @@ async function handleAracDegistir() {
   confirmBtn.disabled = true;
   confirmBtn.textContent = '⏳ Güncelleniyor...';
   
-  console.log('🚗 Araç değiştirme isteği:', {
+  console.log('🚗 Araç değiştirme isteği (rowData):', rowData);
+  console.log('🚗 Gönderilecek payload:', {
     Hat_Adi: rowData.Hat_Adi,
     Plaka: rowData.Plaka,
     Tarife: rowData.Tarife,
+    Calisma_Zamani: rowData.Çalışma_Zamanı || rowData.Calisma_Zamani || null,
+    Tarife_Saati: rowData.Tarife_Saati || null,
     Yeni_Plaka: yeniPlakaInput,
     Aciklama: aciklamaText.substring(0, 50) + '...'
   });

@@ -12,6 +12,14 @@ function getGunFromDate(date) {
   return gunler[date.getDay()];
 }
 
+// Türkiye saati ile günü al (UTC+3)
+function getTurkeyDate() {
+  const now = new Date();
+  // UTC'ye 3 saat ekle
+  const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+  return turkeyTime;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -33,11 +41,13 @@ export default async function handler(req, res) {
       Yeni_Plaka: Yeni_Plaka.substring(0, 20) + '...' // Güvenlik için kısalt
     });
 
-    // Bugünün gününü bul
-    const bugun = new Date();
+    // Bugünün gününü bul (Türkiye saati ile)
+    const bugun = getTurkeyDate();
     const gunAdi = getGunFromDate(bugun);
     
-    console.log(`📅 Bugünün günü: ${gunAdi}`);
+    console.log(`📅 Bugünün tarihi (Türkiye): ${bugun.toISOString()}`);
+    console.log(`📅 Bugünün günü: ${gunAdi} (${bugun.getUTCDay()})`);
+    console.log(`📅 Bakılacak tablo: ${gunAdi}`);
 
     console.log('🔍 Arama parametreleri:', {
       Hat_Adi,
