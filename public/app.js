@@ -4908,6 +4908,97 @@ function closeRowAciklamaModalFunc() {
   rowAciklamaModal.style.display = 'none';
 }
 
+// Ana tabloda belirtilen satıra scroll yap ve vurgula
+function scrollToRowInMainTable(rowData) {
+  console.log('📍 Ana tabloda satıra scroll yapılıyor:', rowData);
+  
+  // Önce tüm vurguları temizle
+  clearAllHighlights();
+  
+  try {
+    const rows = tbody.querySelectorAll('tr');
+    const headerCells = theadRow.querySelectorAll('th');
+    const headers = Array.from(headerCells).map(th => th.textContent.trim());
+    
+    const hatAdiIndex = headers.indexOf('Hat_Adi');
+    const tarifeIndex = headers.indexOf('Tarife');
+    const tarifeSaatiIndex = headers.indexOf('Tarife_Saati');
+    const plakaIndex = headers.indexOf('Plaka');
+    
+    console.log('🔍 Satır arama parametreleri:', {
+      rowData,
+      hatAdiIndex,
+      tarifeIndex,
+      tarifeSaatiIndex,
+      plakaIndex,
+      totalRows: rows.length
+    });
+    
+    // Tabloda eşleşen satırı bul
+    let foundRow = false;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const cells = row.querySelectorAll('td');
+      
+      if (cells.length === 0) continue;
+      
+      // Hücre değerlerini al
+      const hatAdiCell = hatAdiIndex >= 0 ? cells[hatAdiIndex]?.textContent.trim() : '';
+      const tarifeCell = tarifeIndex >= 0 ? cells[tarifeIndex]?.textContent.trim() : '';
+      const tarifeSaatiCell = tarifeSaatiIndex >= 0 ? cells[tarifeSaatiIndex]?.textContent.trim() : '';
+      const plakaCell = plakaIndex >= 0 ? cells[plakaIndex]?.textContent.trim() : '';
+      
+      // Eşleşme kontrolü
+      const hatAdiMatch = hatAdiCell === rowData.Hat_Adi;
+      const tarifeMatch = tarifeCell === rowData.Tarife;
+      const tarifeSaatiMatch = tarifeSaatiCell === rowData.Tarife_Saati || tarifeSaatiCell === rowData.Tarife_Saati?.substring(0, 5);
+      
+      // Hat_Adi, Tarife ve Tarife_Saati eşleşmeli
+      if (hatAdiMatch && tarifeMatch && tarifeSaatiMatch) {
+        foundRow = true;
+        
+        // Satırı mavi ile vurgula
+        row.style.backgroundColor = '#d4edff';
+        highlightedRows.push(row);
+        
+        console.log('✅ Satır bulundu ve vurgulandı:', {
+          rowIndex: i,
+          hatAdi: hatAdiCell,
+          tarife: tarifeCell,
+          tarifeSaati: tarifeSaatiCell,
+          plaka: plakaCell
+        });
+        
+        // Satırı görünür alana kaydır (ortaya)
+        row.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+        
+        // 3 saniye sonra vurguyu kaldır
+        setTimeout(() => {
+          row.style.backgroundColor = '';
+          const index = highlightedRows.indexOf(row);
+          if (index > -1) {
+            highlightedRows.splice(index, 1);
+          }
+        }, 3000);
+        
+        break;
+      }
+    }
+    
+    if (!foundRow) {
+      console.warn('⚠️ Ana tabloda eşleşen satır bulunamadı');
+      alert('Bu satır şu an tabloda görünmüyor. Farklı bir hat veya hareket seçimi yapılmış olabilir.');
+    }
+    
+  } catch (err) {
+    console.error('❌ Scroll hatası:', err);
+  }
+}
+
 async function openRowAciklamaModal(rowData) {
   console.log('💬 Açıklama mesajları açılıyor:', rowData);
   
@@ -4949,11 +5040,34 @@ async function openRowAciklamaModal(rowData) {
       return;
     }
     
-    // Açıklamaları listele
+// Açıklamaları listele
     tbody.innerHTML = '';
     result.data.forEach(aciklama => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #e0e0e0';
+      tr.style.cursor = 'pointer';
+      tr.style.transition = 'background-color 0.2s';
+      
+      // Hover efekti
+      tr.addEventListener('mouseenter', () => {
+        tr.style.backgroundColor = '#f5f5f5';
+      });
+      tr.addEventListener('mouseleave', () => {
+        tr.style.backgroundColor = '';
+      });
+      
+      // Tıklandığında ana tabloda o satıra git
+      tr.addEventListener('click', () => {
+        console.log('🖱️ Açıklama satırına tıklandı:', aciklama);
+        scrollToRowInMainTable({
+          Hat_Adi: aciklama.Hat_Adi || rowData.Hat_Adi,
+          Tarife: aciklama.Tarife || rowData.Tarife,
+          Tarife_Saati: aciklama.Tarife_Saati || rowData.Tarife_Saati,
+          Plaka: aciklama.Plaka
+        });
+        // Modal'ı kapat
+        closeRowAciklamaModalFunc();
+      });
       
       // Tarih
       const tdTarih = document.createElement('td');
