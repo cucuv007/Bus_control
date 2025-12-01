@@ -3870,14 +3870,12 @@ async function saveArizaliAciklama(rowData) {
     const aciklamaWithTag = `${rowData.aciklama} (Arızalı)`;
     
     const payload = {
-      table: aciklamaTable,
-      hatAdi: rowData.tableName || rowData.Hat_Adi,
-      calismaZamani: rowData.rowData?.Çalışma_Zamanı || rowData.rowData?.Calisma_Zamani || '',
-      tarife: rowData.tarife,
-      tarifeSaati: rowData.tarifeSaati,
-      plaka: rowData.rowData?.Plaka || '',
-      aciklama: aciklamaWithTag,
-      kullanici: session.kullanici_adi || 'Bilinmiyor'
+      Hat_Adi: rowData.tableName || rowData.Hat_Adi,
+      Calisma_Zamani: rowData.rowData?.Çalışma_Zamanı || rowData.rowData?.Calisma_Zamani || '',
+      Tarife: rowData.tarife,
+      Tarife_Saati: rowData.tarifeSaati,
+      Plaka: rowData.rowData?.Plaka || '',
+      Aciklama: aciklamaWithTag
     };
     
     console.log('📝 Arızalı açıklaması kaydediliyor:', payload);
