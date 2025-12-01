@@ -43,13 +43,81 @@
         if (currentUserSpan) currentUserSpan.textContent = '👤 ' + session.username;
         if (currentGorevSpan) currentGorevSpan.textContent = session.gorev;
         
-        // Yükle butonunu User için pasif yap
+        // Buton kontrollerini görev bazlı yap
         const uploadBtn = document.getElementById('uploadBtn');
-        if (uploadBtn && session.gorev === 'User') {
-          uploadBtn.disabled = true;
-          uploadBtn.style.opacity = '0.5';
-          uploadBtn.style.cursor = 'not-allowed';
-          uploadBtn.title = 'User yetkisi ile yükleme yapamazsınız';
+        const methodManualBtn = document.getElementById('methodManualBtn');
+        const methodAutoBtn = document.getElementById('methodAutoBtn');
+        const uploadTypeHatBtn = document.getElementById('uploadTypeHatBtn');
+        const uploadTypePlakaBtn = document.getElementById('uploadTypePlakaBtn');
+        const uploadTypeDepolamaBtn = document.getElementById('uploadTypeDepolamaBtn');
+        
+        // Tüm butonları devre dışı bırak fonksiyonu
+        function disableButton(btn, title) {
+          if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.title = title || 'Bu işlem için yetkiniz yok';
+          }
+        }
+        
+        // Tüm butonları aktif et fonksiyonu
+        function enableButton(btn, title) {
+          if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.title = title || '';
+          }
+        }
+        
+        // Görev bazlı buton kontrolleri
+        const gorev = session.gorev;
+        
+        if (gorev === 'Rotasyon') {
+          // Rotasyon: Tüm butonlar aktif
+          enableButton(uploadBtn);
+          enableButton(methodManualBtn);
+          enableButton(methodAutoBtn);
+          enableButton(uploadTypeHatBtn);
+          enableButton(uploadTypePlakaBtn);
+          enableButton(uploadTypeDepolamaBtn);
+          
+        } else if (gorev === 'Operasyon') {
+          // Operasyon: Upload, Manuel, Plaka aktif - Auto, Hat, Depolama pasif
+          enableButton(uploadBtn);
+          enableButton(methodManualBtn);
+          enableButton(uploadTypePlakaBtn);
+          disableButton(methodAutoBtn, 'Operasyon yetkisi ile otomatik listeleme yapamazsınız');
+          disableButton(uploadTypeHatBtn, 'Operasyon yetkisi ile hat yükleyemezsiniz');
+          disableButton(uploadTypeDepolamaBtn, 'Operasyon yetkisi ile depolama yükleyemezsiniz');
+          
+        } else if (gorev === 'Depolama') {
+          // Depolama: Sadece Upload pasif
+          disableButton(uploadBtn, 'Depolama yetkisi ile yükleme yapamazsınız');
+          enableButton(methodManualBtn);
+          enableButton(methodAutoBtn);
+          enableButton(uploadTypeHatBtn);
+          enableButton(uploadTypePlakaBtn);
+          enableButton(uploadTypeDepolamaBtn);
+          
+        } else if (gorev === 'User') {
+          // User: Sadece Upload pasif
+          disableButton(uploadBtn, 'User yetkisi ile yükleme yapamazsınız');
+          enableButton(methodManualBtn);
+          enableButton(methodAutoBtn);
+          enableButton(uploadTypeHatBtn);
+          enableButton(uploadTypePlakaBtn);
+          enableButton(uploadTypeDepolamaBtn);
+          
+        } else if (gorev === 'Admin') {
+          // Admin: Tüm butonlar aktif
+          enableButton(uploadBtn);
+          enableButton(methodManualBtn);
+          enableButton(methodAutoBtn);
+          enableButton(uploadTypeHatBtn);
+          enableButton(uploadTypePlakaBtn);
+          enableButton(uploadTypeDepolamaBtn);
         }
         
         // Açıklama Ekle butonu - Sadece Operasyon ve Depolama için
