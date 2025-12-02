@@ -116,6 +116,12 @@ export default async function handler(req, res) {
     }
 
     console.log(`✅ ${data.length} kayıt döndürüldü (Çalışma_Zamanı filtresi uygulandı)`);
+    
+    // Debug: İlk birkaç kaydın Çalışma_Zamanı değerlerini göster
+    if (data.length > 0) {
+      const calismaZamaniValues = [...new Set(data.map(r => r['Çalışma_Zamanı']).filter(Boolean))];
+      console.log(`📊 Döndürülen verideki Çalışma_Zamanı değerleri:`, calismaZamaniValues);
+    };
     // Bugünün gün tablosundan plaka bilgilerini al
     const todayTable = getTodayTableName();
     console.log(`📅 Bugünün gün tablosu: ${todayTable}`);
