@@ -93,12 +93,23 @@ export default async function handler(req, res) {
     }
 
     // Çalışma_Zamanı filtresi - bugüne uygun olanlar veya null olanlar
-    // Hem boşluklu ("HI - HS") hem boşluksuz ("HI-HS") formatı destekle
+    // Hem boşluklu ("HI - HS", "HI ") hem boşluksuz ("HI-HS", "HI") formatı destekle
     const calismaZamaniConditions = [];
     
     allowedCalismaZamanlari.forEach(code => {
-      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code}`); // Boşluksuz: HI-HS
-      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code.replace('-', ' - ')}`); // Boşluklu: HI - HS
+      // Boşluksuz format: HI, HI-HS
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code}`);
+      
+      // Tire ile boşluklu format: HI - HS
+      if (code.includes('-')) {
+        calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code.replace('-', ' - ')}`);
+      }
+      
+      // Sonunda boşluk olan format: "HI ", "HS ", "HC "
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code} `);
+      
+      // Başında boşluk olan format: " HI", " HS"
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq. ${code}`);
     });
     
     calismaZamaniConditions.push('Çalışma_Zamanı.is.null');
@@ -106,6 +117,7 @@ export default async function handler(req, res) {
     query = query.or(calismaZamaniConditions.join(','));
     
     console.log(`🔍 Çalışma_Zamanı filtreleri:`, allowedCalismaZamanlari);
+    console.log(`🔍 Toplam ${calismaZamaniConditions.length} koşul oluşturuldu (boşluk varyasyonları dahil)`);
 
     const { data, error } = await query;
 
