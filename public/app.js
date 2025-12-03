@@ -1788,6 +1788,17 @@ async function loadTableData() {
     `;
     theadRow.appendChild(thAciklama);
     
+    // ⚡ Cache'i önceden doldur (tablo oluşturmadan önce)
+    statusEl.textContent = 'Açıklamalar kontrol ediliyor...';
+    const cachePromises = data.map(async row => {
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      if (!aciklamaCache.hasOwnProperty(cacheKey)) {
+        const hasAciklama = await checkRowHasAciklama(row);
+        aciklamaCache[cacheKey] = hasAciklama;
+      }
+    });
+    await Promise.all(cachePromises);
+    
     // Tablo verilerini oluştur
     tbody.innerHTML = '';
     data.forEach(row => {
@@ -1924,6 +1935,9 @@ async function loadTableData() {
     if (refreshAllCheckbox) {
       refreshAllCheckbox.addEventListener('change', async function() {
         if (this.checked) {
+          // Checkbox'ı pasif yap
+          this.disabled = true;
+          
           const rows = tbody.querySelectorAll('tr');
           let processed = 0;
           
@@ -1975,6 +1989,9 @@ async function loadTableData() {
             processed++;
           }
           
+          // İşlem bitti: checkbox'ı aktif yap ve işareti kaldır
+          this.checked = false;
+          this.disabled = false;
           alert(`✅ ${processed} satırın açıklama ikonu yenilendi!`);
         }
       });
@@ -2893,6 +2910,17 @@ async function handleApplyHatSelection() {
     thAciklama.style.width = '50px';
     theadRow.appendChild(thAciklama);
     
+    // ⚡ Cache'i önceden doldur (tablo oluşturmadan önce)
+    statusEl.textContent = 'Açıklamalar kontrol ediliyor...';
+    const cachePromises = allData.map(async row => {
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      if (!aciklamaCache.hasOwnProperty(cacheKey)) {
+        const hasAciklama = await checkRowHasAciklama(row);
+        aciklamaCache[cacheKey] = hasAciklama;
+      }
+    });
+    await Promise.all(cachePromises);
+    
     // Tablo verilerini oluştur
     tbody.innerHTML = '';
     allData.forEach(row => {
@@ -3021,6 +3049,9 @@ async function handleApplyHatSelection() {
     if (refreshAllCheckbox2) {
       refreshAllCheckbox2.addEventListener('change', async function() {
         if (this.checked) {
+          // Checkbox'ı pasif yap
+          this.disabled = true;
+          
           const rows = tbody.querySelectorAll('tr');
           let processed = 0;
           
@@ -3073,6 +3104,9 @@ async function handleApplyHatSelection() {
             processed++;
           }
           
+          // İşlem bitti: checkbox'ı aktif yap ve işareti kaldır
+          this.checked = false;
+          this.disabled = false;
           alert(`✅ ${processed} satırın açıklama ikonu yenilendi!`);
         }
       });
@@ -3207,6 +3241,16 @@ async function refreshTableData(hatList, hareket) {
       allKeys.splice(idIndex, 1);
     }
     
+    // ⚡ Cache'i önceden doldur (tablo yenilemeden önce)
+    const cachePromises = allData.map(async row => {
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      if (!aciklamaCache.hasOwnProperty(cacheKey)) {
+        const hasAciklama = await checkRowHasAciklama(row);
+        aciklamaCache[cacheKey] = hasAciklama;
+      }
+    });
+    await Promise.all(cachePromises);
+    
     tbody.innerHTML = '';
     allData.forEach(row => {
       const tr = document.createElement('tr');
@@ -3328,57 +3372,6 @@ async function refreshTableData(hatList, hareket) {
       
       tbody.appendChild(tr);
     });
-    
-    // ⚡ Tablo oluşturulduktan sonra, cache'de olmayan satırlar için açıklama kontrolü yap
-    const missingCacheRows = allData.filter(row => {
-      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-      return !aciklamaCache.hasOwnProperty(cacheKey);
-    });
-    
-    // Her satır için paralel olarak API çağrısı yap
-    if (missingCacheRows.length > 0) {
-      const promises = missingCacheRows.map(async (row) => {
-        const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-        try {
-          const response = await fetch('/api/get-row-aciklamalar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              Hat_Adi: row.Hat_Adi,
-              Tarife: row.Tarife,
-              Tarife_Saati: row.Tarife_Saati
-            })
-          });
-          
-          const result = await response.json();
-          const hasAciklama = result.success && result.data && result.data.length > 0;
-          aciklamaCache[cacheKey] = hasAciklama;
-          
-          // İkonu güncelle
-          if (hasAciklama) {
-            const iconCells = tbody.querySelectorAll('.aciklama-icon-cell');
-            iconCells.forEach(cell => {
-              if (cell.dataset.hatAdi === row.Hat_Adi && 
-                  cell.dataset.tarife === row.Tarife && 
-                  cell.dataset.tarifeSaati === row.Tarife_Saati) {
-                cell.textContent = '💬';
-                cell.style.cursor = 'pointer';
-                cell.title = 'Açıklama mesajlarını görüntüle';
-                cell.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  openRowAciklamaModal(row);
-                });
-              }
-            });
-          }
-        } catch (err) {
-          console.error('Açıklama kontrol hatası:', err);
-        }
-      });
-      
-      // Tüm API çağrılarını paralel olarak bekle
-      await Promise.all(promises);
-    }
     
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
