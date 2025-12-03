@@ -2217,7 +2217,8 @@ function closeTimer() {
   }
   
   if (tableRefreshInterval) {
-    clearInterval(tableRefreshInterval);
+    clearTimeout(tableRefreshInterval); // setTimeout kullandığımız için clearTimeout
+    clearInterval(tableRefreshInterval); // Hem timeout hem interval temizle (güvenlik)
     tableRefreshInterval = null;
     console.log('  ✔️ tableRefreshInterval temizlendi');
   }
@@ -2914,22 +2915,40 @@ async function startMultipleHatsTimer(hatList, hareket) {
   // Periyodik yenileme sayacını sıfırla
   lastTableRefreshTime = Date.now();
   
-  // Tablo otomatik yenileme başlat (1 saniyede bir - mobil senkronizasyon için)
+  // Önceki interval'ları temizle
   if (tableRefreshInterval) {
     clearInterval(tableRefreshInterval);
+    tableRefreshInterval = null;
   }
   
   // İlk yenileme hemen yapılsın
   console.log('🚀 İlk tablo yenilemesi başlatılıyor...');
   await refreshTableData(hatList, hareket);
   
-  tableRefreshInterval = setInterval(() => {
-    const now = new Date().toLocaleTimeString('tr-TR');
-    console.log(`🔄 [${now}] Periyodik tablo yenileme (tableRefreshInterval)...`);
-    refreshTableData(hatList, hareket).catch(err => {
-      console.error('⚠️ Tablo yenileme hatası (interval):', err);
-    });
-  }, 1000); // 1 saniyede bir yenile (mobil için)
+  // Recursive setTimeout kullan (mobil için daha güvenilir)
+  let refreshCounter = 0;
+  function scheduleNextRefresh() {
+    if (!timerInterval || timerClosedManually) {
+      console.log('⏹️ Timer kapatıldı, tablo yenileme durduruluyor');
+      return;
+    }
+    
+    tableRefreshInterval = setTimeout(async () => {
+      refreshCounter++;
+      const now = new Date().toLocaleTimeString('tr-TR');
+      console.log(`🔄 [${now}] #${refreshCounter} Tablo yenileme (setTimeout)...`);
+      
+      try {
+        await refreshTableData(hatList, hareket);
+        scheduleNextRefresh(); // Bir sonraki yenilemeyi planla
+      } catch (err) {
+        console.error('⚠️ Tablo yenileme hatası:', err);
+        scheduleNextRefresh(); // Hata olsa bile devam et
+      }
+    }, 2000); // 2 saniyede bir
+  }
+  
+  scheduleNextRefresh(); // İlk zamanlamayı başlat
   
   if (timerInterval) {
     clearInterval(timerInterval);
