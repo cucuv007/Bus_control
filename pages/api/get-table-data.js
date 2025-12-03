@@ -43,29 +43,12 @@ function getTodayTableName() {
 // Bugünün gün tablosundan plaka bilgisini al (Yeni_Plaka varsa onu, yoksa Plaka'yı)
 async function getPlakaForTarife(hatAdi, tarife, todayTable) {
   try {
-    // Tarife normalizasyonu - T2 → T02, T3 → T03 gibi
-    const normalizedTarife = tarife.match(/^T\d$/) ? tarife.replace(/^T(\d)$/, 'T0$1') : tarife;
-    
-    // Önce normalize edilmiş tarife ile dene
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from(todayTable)
       .select('Plaka, Yeni_Plaka')
       .eq('Hat_Adi', hatAdi)
-      .eq('Tarife', normalizedTarife)
+      .eq('Tarife', tarife)
       .single();
-    
-    // Bulunamazsa orijinal tarife ile dene
-    if (error && tarife !== normalizedTarife) {
-      const result = await supabase
-        .from(todayTable)
-        .select('Plaka, Yeni_Plaka')
-        .eq('Hat_Adi', hatAdi)
-        .eq('Tarife', tarife)
-        .single();
-      
-      data = result.data;
-      error = result.error;
-    }
     
     if (error || !data) {
       return { plaka: null, isYeniPlaka: false };
@@ -110,23 +93,12 @@ export default async function handler(req, res) {
     }
 
     // Çalışma_Zamanı filtresi - bugüne uygun olanlar veya null olanlar
-    // Hem boşluklu ("HI - HS", "HI ") hem boşluksuz ("HI-HS", "HI") formatı destekle
+    // Hem boşluklu ("HI - HS") hem boşluksuz ("HI-HS") formatı destekle
     const calismaZamaniConditions = [];
     
     allowedCalismaZamanlari.forEach(code => {
-      // Boşluksuz format: HI, HI-HS
-      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code}`);
-      
-      // Tire ile boşluklu format: HI - HS
-      if (code.includes('-')) {
-        calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code.replace('-', ' - ')}`);
-      }
-      
-      // Sonunda boşluk olan format: "HI ", "HS ", "HC "
-      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code} `);
-      
-      // Başında boşluk olan format: " HI", " HS"
-      calismaZamaniConditions.push(`Çalışma_Zamanı.eq. ${code}`);
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code}`); // Boşluksuz: HI-HS
+      calismaZamaniConditions.push(`Çalışma_Zamanı.eq.${code.replace('-', ' - ')}`); // Boşluklu: HI - HS
     });
     
     calismaZamaniConditions.push('Çalışma_Zamanı.is.null');
@@ -134,7 +106,6 @@ export default async function handler(req, res) {
     query = query.or(calismaZamaniConditions.join(','));
     
     console.log(`🔍 Çalışma_Zamanı filtreleri:`, allowedCalismaZamanlari);
-    console.log(`🔍 Toplam ${calismaZamaniConditions.length} koşul oluşturuldu (boşluk varyasyonları dahil)`);
 
     const { data, error } = await query;
 
@@ -145,12 +116,6 @@ export default async function handler(req, res) {
     }
 
     console.log(`✅ ${data.length} kayıt döndürüldü (Çalışma_Zamanı filtresi uygulandı)`);
-    
-    // Debug: İlk birkaç kaydın Çalışma_Zamanı değerlerini göster
-    if (data.length > 0) {
-      const calismaZamaniValues = [...new Set(data.map(r => r['Çalışma_Zamanı']).filter(Boolean))];
-      console.log(`📊 Döndürülen verideki Çalışma_Zamanı değerleri:`, calismaZamaniValues);
-    };
     // Bugünün gün tablosundan plaka bilgilerini al
     const todayTable = getTodayTableName();
     console.log(`📅 Bugünün gün tablosu: ${todayTable}`);
