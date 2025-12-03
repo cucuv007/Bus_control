@@ -3078,17 +3078,6 @@ async function refreshTableData(hatList, hareket) {
       tbody.appendChild(tr);
     });
     
-    // 💬 Açıklama ikonlarını güncelle (cache'i yenile)
-    const uniqueRows = new Set();
-    allData.forEach(row => {
-      const key = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-      if (!uniqueRows.has(key)) {
-        uniqueRows.add(key);
-        // Her benzersiz satır için açıklama kontrolü yap
-        updateAciklamaIconsForRow(row.Hat_Adi, row.Tarife, row.Tarife_Saati);
-      }
-    });
-    
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
     // Arızalı filtresini uygula (eğer aktifse)
