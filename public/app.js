@@ -255,6 +255,28 @@ if (aciklamaEkleFromPopup) {
     const aciklamaTextInline = document.getElementById('aciklamaTextInline');
     
     if (inlineForm.style.display === 'none') {
+      // Arızalı formunu kapat (mutual exclusion)
+      const arizaliForm = document.getElementById('arizaliAciklamaForm');
+      const confirmBtn = document.getElementById('confirmApprovalBtn');
+      const approvalQuestion = document.getElementById('approvalQuestion');
+      if (arizaliForm) arizaliForm.style.display = 'none';
+      if (confirmBtn && currentMode === 'operasyon') {
+        confirmBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+        confirmBtn.style.background = '#e74c3c';
+      }
+      if (approvalQuestion && currentMode === 'operasyon') {
+        approvalQuestion.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
+      }
+      
+      // Araç Değiştir formunu kapat
+      const aracDegistirForm = document.getElementById('aracDegistirFormInline');
+      const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
+      if (aracDegistirForm) aracDegistirForm.style.display = 'none';
+      if (aracDegistirBtn) {
+        aracDegistirBtn.textContent = '🚗 Araç Değiştir';
+        aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+      }
+      
       // Formu göster
       inlineForm.style.display = 'block';
       aciklamaEkleFromPopup.textContent = '❌ Açıklama Formunu Kapat';
@@ -278,6 +300,28 @@ if (aracDegistirFromPopup) {
     const aracDegistirAciklama = document.getElementById('aracDegistirAciklama');
     
     if (inlineForm.style.display === 'none') {
+      // Arızalı formunu kapat (mutual exclusion)
+      const arizaliForm = document.getElementById('arizaliAciklamaForm');
+      const confirmBtn = document.getElementById('confirmApprovalBtn');
+      const approvalQuestion = document.getElementById('approvalQuestion');
+      if (arizaliForm) arizaliForm.style.display = 'none';
+      if (confirmBtn && currentMode === 'operasyon') {
+        confirmBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+        confirmBtn.style.background = '#e74c3c';
+      }
+      if (approvalQuestion && currentMode === 'operasyon') {
+        approvalQuestion.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
+      }
+      
+      // Açıklama Ekle formunu kapat
+      const aciklamaForm = document.getElementById('aciklamaFormInline');
+      const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
+      if (aciklamaForm) aciklamaForm.style.display = 'none';
+      if (aciklamaBtn) {
+        aciklamaBtn.textContent = '📝 Açıklama Ekle';
+        aciklamaBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      }
+      
       // Formu göster
       inlineForm.style.display = 'block';
       aracDegistirFromPopup.textContent = '❌ Formu Kapat';
@@ -1199,12 +1243,12 @@ function openApprovalConfirmation(rowData, tableName) {
       if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
     } else {
       approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
-      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
+      approvalQuestion.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
       confirmApprovalBtn.style.background = '#e74c3c';
       confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
       pendingApprovalData.removeArizali = false;
-      // Açıklama formunu göster (arızalı işaretleme için zorunlu)
-      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'block';
+      // Açıklama formunu başlangıçta gizli tut (butona basınca açılacak)
+      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
       // Açıklama alanını temizle
       const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
       if (arizaliAciklamaText) arizaliAciklamaText.value = '';
@@ -1277,9 +1321,40 @@ async function handleRowApproval() {
     return;
   }
   
-  // Operasyon modunda arızalı işaretleme için açıklama kontrolü
+  // Operasyon modunda arızalı işaretleme için önce form açılmalı
   if (currentMode === 'operasyon' && !pendingApprovalData.removeArizali) {
+    const arizaliAciklamaForm = document.getElementById('arizaliAciklamaForm');
     const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
+    
+    // Eğer form gizliyse, önce formu aç ve işlemi durdur
+    if (arizaliAciklamaForm && arizaliAciklamaForm.style.display === 'none') {
+      // Diğer formları kapat (mutual exclusion)
+      const aciklamaForm = document.getElementById('aciklamaFormInline');
+      const aracDegistirForm = document.getElementById('aracDegistirFormInline');
+      const aciklamaBtn = document.getElementById('aciklamaEkleFromPopup');
+      const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
+      
+      if (aciklamaForm) aciklamaForm.style.display = 'none';
+      if (aciklamaBtn) {
+        aciklamaBtn.textContent = '📝 Açıklama Ekle';
+        aciklamaBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      }
+      
+      if (aracDegistirForm) aracDegistirForm.style.display = 'none';
+      if (aracDegistirBtn) {
+        aracDegistirBtn.textContent = '🚗 Araç Değiştir';
+        aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+      }
+      
+      // Arızalı formunu aç
+      arizaliAciklamaForm.style.display = 'block';
+      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
+      confirmApprovalBtn.innerHTML = '✅ Kaydet ve İşaretle';
+      if (arizaliAciklamaText) arizaliAciklamaText.focus();
+      return;
+    }
+    
+    // Form açıksa, açıklama kontrolü yap
     const aciklama = arizaliAciklamaText ? arizaliAciklamaText.value.trim() : '';
     
     if (!aciklama) {
@@ -2997,6 +3072,57 @@ async function refreshTableData(hatList, hareket) {
       
       tbody.appendChild(tr);
     });
+    
+    // ⚡ Tüm satırların açıklama cache'ini güncelle (cross-device senkronizasyon)
+    for (const row of allData) {
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      
+      // Cache'de yoksa veya güncel değilse API'den al
+      try {
+        const response = await fetch('/api/get-row-aciklamalar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            Hat_Adi: row.Hat_Adi,
+            Tarife: row.Tarife,
+            Tarife_Saati: row.Tarife_Saati
+          })
+        });
+        
+        const result = await response.json();
+        const hasAciklama = result.success && result.data && result.data.length > 0;
+        
+        // Cache'i güncelle
+        const oldValue = aciklamaCache[cacheKey];
+        aciklamaCache[cacheKey] = hasAciklama;
+        
+        // Eğer değişiklik olduysa ikonu güncelle
+        if (oldValue !== hasAciklama) {
+          const iconCells = tbody.querySelectorAll('.aciklama-icon-cell');
+          iconCells.forEach(cell => {
+            if (cell.dataset.hatAdi === row.Hat_Adi && 
+                cell.dataset.tarife === row.Tarife && 
+                cell.dataset.tarifeSaati === row.Tarife_Saati) {
+              if (hasAciklama) {
+                cell.textContent = '💬';
+                cell.style.cursor = 'pointer';
+                cell.title = 'Açıklama mesajlarını görüntüle';
+                cell.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  openRowAciklamaModal(row);
+                });
+              } else {
+                cell.textContent = '';
+                cell.style.cursor = 'default';
+                cell.title = '';
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Cache güncelleme hatası:', err);
+      }
+    }
     
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
