@@ -3022,43 +3022,9 @@ async function refreshTableData(hatList, hareket) {
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
-      // Cache'den kontrol et
+      // Cache'den kontrol et (yoksa sonra yüklenecek)
       const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-      
-      // Cache'de yoksa, arka planda API'den al ve cache'e kaydet
-      if (!aciklamaCache.hasOwnProperty(cacheKey)) {
-        // Önce boş göster
-        tdAciklama.textContent = '';
-        
-        // Arka planda fetch yap (async ama await etme - performans için)
-        fetch('/api/get-row-aciklamalar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            Hat_Adi: row.Hat_Adi,
-            Tarife: row.Tarife,
-            Tarife_Saati: row.Tarife_Saati
-          })
-        })
-        .then(res => res.json())
-        .then(result => {
-          const hasAciklama = result.success && result.data && result.data.length > 0;
-          aciklamaCache[cacheKey] = hasAciklama;
-          
-          // İkonu güncelle
-          if (hasAciklama) {
-            tdAciklama.textContent = '💬';
-            tdAciklama.style.cursor = 'pointer';
-            tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-            tdAciklama.addEventListener('click', (e) => {
-              e.stopPropagation();
-              openRowAciklamaModal(row);
-            });
-          }
-        })
-        .catch(err => console.error('Açıklama yükleme hatası:', err));
-      } else if (aciklamaCache[cacheKey]) {
-        // Cache'de var ve true ise
+      if (aciklamaCache.hasOwnProperty(cacheKey) && aciklamaCache[cacheKey]) {
         tdAciklama.textContent = '💬';
         tdAciklama.style.cursor = 'pointer';
         tdAciklama.title = 'Açıklama mesajlarını görüntüle';
@@ -3106,6 +3072,57 @@ async function refreshTableData(hatList, hareket) {
       
       tbody.appendChild(tr);
     });
+    
+    // ⚡ Tablo oluşturulduktan sonra, cache'de olmayan satırlar için açıklama kontrolü yap
+    const missingCacheRows = allData.filter(row => {
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      return !aciklamaCache.hasOwnProperty(cacheKey);
+    });
+    
+    // Her satır için paralel olarak API çağrısı yap
+    if (missingCacheRows.length > 0) {
+      const promises = missingCacheRows.map(async (row) => {
+        const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+        try {
+          const response = await fetch('/api/get-row-aciklamalar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              Hat_Adi: row.Hat_Adi,
+              Tarife: row.Tarife,
+              Tarife_Saati: row.Tarife_Saati
+            })
+          });
+          
+          const result = await response.json();
+          const hasAciklama = result.success && result.data && result.data.length > 0;
+          aciklamaCache[cacheKey] = hasAciklama;
+          
+          // İkonu güncelle
+          if (hasAciklama) {
+            const iconCells = tbody.querySelectorAll('.aciklama-icon-cell');
+            iconCells.forEach(cell => {
+              if (cell.dataset.hatAdi === row.Hat_Adi && 
+                  cell.dataset.tarife === row.Tarife && 
+                  cell.dataset.tarifeSaati === row.Tarife_Saati) {
+                cell.textContent = '💬';
+                cell.style.cursor = 'pointer';
+                cell.title = 'Açıklama mesajlarını görüntüle';
+                cell.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  openRowAciklamaModal(row);
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Açıklama kontrol hatası:', err);
+        }
+      });
+      
+      // Tüm API çağrılarını paralel olarak bekle
+      await Promise.all(promises);
+    }
     
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
@@ -5512,7 +5529,7 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
     // Cache'i güncelle
     aciklamaCache[cacheKey] = hasAciklama;
     
-    // Tablodaki ilgili ikonları bul ve güncelle
+    // ⚡ Tablodaki TÜM eşleşen satırların ikonlarını HEMEN güncelle (cross-device için)
     const allIconCells = document.querySelectorAll('.aciklama-icon-cell');
     allIconCells.forEach(cell => {
       if (cell.dataset.hatAdi === hatAdi && 
@@ -5522,10 +5539,29 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
           cell.textContent = '💬';
           cell.style.cursor = 'pointer';
           cell.title = 'Açıklama mesajlarını görüntüle';
+          
+          // Event listener ekle (sadece yoksa)
+          if (!cell.onclick) {
+            cell.addEventListener('click', (e) => {
+              e.stopPropagation();
+              // Row datasını bul
+              const tr = cell.closest('tr');
+              const cells = tr.querySelectorAll('td');
+              const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
+              const rowData = {};
+              cells.forEach((td, i) => {
+                if (headers[i]) {
+                  rowData[headers[i]] = td.textContent;
+                }
+              });
+              openRowAciklamaModal(rowData);
+            });
+          }
         } else {
           cell.textContent = '';
           cell.style.cursor = 'default';
           cell.title = '';
+          cell.onclick = null;
         }
       }
     });
