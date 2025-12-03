@@ -2217,8 +2217,7 @@ function closeTimer() {
   }
   
   if (tableRefreshInterval) {
-    clearTimeout(tableRefreshInterval); // setTimeout kullandığımız için clearTimeout
-    clearInterval(tableRefreshInterval); // Hem timeout hem interval temizle (güvenlik)
+    clearInterval(tableRefreshInterval);
     tableRefreshInterval = null;
     console.log('  ✔️ tableRefreshInterval temizlendi');
   }
@@ -2915,40 +2914,14 @@ async function startMultipleHatsTimer(hatList, hareket) {
   // Periyodik yenileme sayacını sıfırla
   lastTableRefreshTime = Date.now();
   
-  // Önceki interval'ları temizle
+  // Tablo otomatik yenileme başlat (5 saniyede bir)
   if (tableRefreshInterval) {
     clearInterval(tableRefreshInterval);
-    tableRefreshInterval = null;
   }
   
-  // İlk yenileme hemen yapılsın
-  console.log('🚀 İlk tablo yenilemesi başlatılıyor...');
-  await refreshTableData(hatList, hareket);
-  
-  // Recursive setTimeout kullan (mobil için daha güvenilir)
-  let refreshCounter = 0;
-  function scheduleNextRefresh() {
-    if (!timerInterval || timerClosedManually) {
-      console.log('⏹️ Timer kapatıldı, tablo yenileme durduruluyor');
-      return;
-    }
-    
-    tableRefreshInterval = setTimeout(async () => {
-      refreshCounter++;
-      const now = new Date().toLocaleTimeString('tr-TR');
-      console.log(`🔄 [${now}] #${refreshCounter} Tablo yenileme (setTimeout)...`);
-      
-      try {
-        await refreshTableData(hatList, hareket);
-        scheduleNextRefresh(); // Bir sonraki yenilemeyi planla
-      } catch (err) {
-        console.error('⚠️ Tablo yenileme hatası:', err);
-        scheduleNextRefresh(); // Hata olsa bile devam et
-      }
-    }, 2000); // 2 saniyede bir
-  }
-  
-  scheduleNextRefresh(); // İlk zamanlamayı başlat
+  tableRefreshInterval = setInterval(() => {
+    refreshTableData(hatList, hareket);
+  }, 5000); // 5 saniyede bir yenile
   
   if (timerInterval) {
     clearInterval(timerInterval);
@@ -2964,16 +2937,7 @@ async function startMultipleHatsTimer(hatList, hareket) {
 }
 
 // Tablo verilerini sessizce yenile (kullanıcı etkileşimi olmadan)
-async function refreshTableData(hatList, hareket) {
-  const timestamp = new Date().toLocaleTimeString('tr-TR');
-  console.log(`🔄 [${timestamp}] refreshTableData başlatıldı - Hatlar:`, hatList, 'Hareket:', hareket);
-  
-  // Visual feedback (mobil için)
-  if (tbody) {
-    tbody.style.opacity = '0.7';
-    tbody.style.transition = 'opacity 0.2s';
-  }
-  
+async function refreshTableData(hatList, hareket) {  
   try {
     const allData = [];
     
@@ -3125,25 +3089,7 @@ async function refreshTableData(hatList, hareket) {
       }
     });
     
-    const timestampEnd = new Date().toLocaleTimeString('tr-TR');
-    console.log(`✅ [${timestampEnd}] Tablo yenilendi: ${allData.length} kayıt, ${uniqueRows.size} benzersiz satır, ${uniqueRows.size} ikon güncellendi`);
-    
-    // 🔧 Mobil cihazlarda DOM güncellemesini zorla (force reflow)
-    void tbody.offsetHeight;
-    
-    // Scroll pozisyonunu koru ve force paint
-    const scrollPos = window.pageYOffset || document.documentElement.scrollTop;
-    tbody.style.display = 'none';
-    void tbody.offsetHeight; // Force reflow
-    tbody.style.display = '';
-    window.scrollTo(0, scrollPos);
-    
-    console.log('🎨 DOM force reflow yapıldı (mobil için)');
-    
-    // Visual feedback'i kaldır
-    if (tbody) {
-      tbody.style.opacity = '1';
-    }
+    console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
     // Arızalı filtresini uygula (eğer aktifse)
     if (showOnlyArizali) {
@@ -3152,11 +3098,6 @@ async function refreshTableData(hatList, hareket) {
     
   } catch (err) {
     console.error('⚠️ Tablo yenileme hatası:', err.message);
-    
-    // Hata olsa bile opacity'yi geri al
-    if (tbody) {
-      tbody.style.opacity = '1';
-    }
   }
 }
 
@@ -5207,9 +5148,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== MOBİL SENKRONIZASYON - VİSİBİLİTY EVENT ====================
 // Sayfa geri geldiğinde (mobil cihazlarda arka plandan çıkınca) tabloyu yenile
+let mobileRefreshCount = 0;
+
 document.addEventListener('visibilitychange', async () => {
   if (!document.hidden) {
-    console.log('👁️ Sayfa görünür hale geldi - mobil senkronizasyon için yenileme yapılıyor...');
+    mobileRefreshCount++;
+    console.log(`👁️ [#${mobileRefreshCount}] Sayfa görünür hale geldi - mobil senkronizasyon...`);
     
     // Eğer timer aktifse ve hatlar seçiliyse tabloyu yenile
     if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
@@ -5236,6 +5180,19 @@ window.addEventListener('focus', async () => {
 window.addEventListener('blur', () => {
   console.log('🔲 Pencere focus kaybetti');
 });
+
+// Mobil cihazlarda touchstart olayında da yenile (ekstra koruma)
+let lastTouchRefresh = 0;
+document.addEventListener('touchstart', async () => {
+  const now = Date.now();
+  // 10 saniyede bir touchstart'ta yenile (spam önleme)
+  if (now - lastTouchRefresh > 10000 && timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+    lastTouchRefresh = now;
+    console.log('👆 Touch event - tablo yenileniyor...');
+    const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+    await refreshTableData(selectedHatsForTracking, currentHareket);
+  }
+}, { passive: true });
 
 // ==================== OTOMATIK GÜNCELLEME KONTROLÜ ====================
 async function checkAutoUpdateAciklamalar() {
