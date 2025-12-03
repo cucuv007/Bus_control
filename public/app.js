@@ -124,7 +124,6 @@ let uploadMethod = null;
 let uploadType = null; // 'hat' or 'plaka'
 let timerInterval = null;
 let lastBusTime = null;
-let lastTableRefreshTime = 0; // Periyodik tablo yenileme için
 let selectedDepolamaTables = []; // Seçilen depolama tabloları
 let filteredHats = []; // Depolama'dan gelen hat listesi
 let availableHats = []; // Mevcut tüm hatlar (dropdown'daki)
@@ -256,29 +255,6 @@ if (aciklamaEkleFromPopup) {
     const aciklamaTextInline = document.getElementById('aciklamaTextInline');
     
     if (inlineForm.style.display === 'none') {
-      // Diğer formları kapat
-      const arizaliForm = document.getElementById('arizaliAciklamaForm');
-      const aracDegistirForm = document.getElementById('aracDegistirFormInline');
-      const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
-      
-      if (arizaliForm) {
-        arizaliForm.style.display = 'none';
-        const confirmBtn = document.getElementById('confirmApprovalBtn');
-        const questionText = document.getElementById('approvalQuestion');
-        if (confirmBtn && currentMode === 'operasyon') {
-          confirmBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
-          confirmBtn.style.background = '#e74c3c';
-        }
-        if (questionText && currentMode === 'operasyon') {
-          questionText.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
-        }
-      }
-      if (aracDegistirForm) aracDegistirForm.style.display = 'none';
-      if (aracDegistirBtn) {
-        aracDegistirBtn.textContent = '🚗 Araç Değiştir';
-        aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
-      }
-      
       // Formu göster
       inlineForm.style.display = 'block';
       aciklamaEkleFromPopup.textContent = '❌ Açıklama Formunu Kapat';
@@ -302,22 +278,6 @@ if (aracDegistirFromPopup) {
     const aracDegistirAciklama = document.getElementById('aracDegistirAciklama');
     
     if (inlineForm.style.display === 'none') {
-      // Arızalı formunu kapat
-      const arizaliForm = document.getElementById('arizaliAciklamaForm');
-      if (arizaliForm) {
-        arizaliForm.style.display = 'none';
-        // Arızalı butonunu eski haline döndür
-        const confirmBtn = document.getElementById('confirmApprovalBtn');
-        const questionText = document.getElementById('approvalQuestion');
-        if (confirmBtn && currentMode === 'operasyon') {
-          confirmBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
-          confirmBtn.style.background = '#e74c3c';
-        }
-        if (questionText && currentMode === 'operasyon') {
-          questionText.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
-        }
-      }
-      
       // Formu göster
       inlineForm.style.display = 'block';
       aracDegistirFromPopup.textContent = '❌ Formu Kapat';
@@ -1239,12 +1199,12 @@ function openApprovalConfirmation(rowData, tableName) {
       if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
     } else {
       approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
-      approvalQuestion.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
+      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
       confirmApprovalBtn.style.background = '#e74c3c';
       confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
       pendingApprovalData.removeArizali = false;
-      // Açıklama formunu başlangıçta gizli tut (butona basınca açılacak)
-      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
+      // Açıklama formunu göster (arızalı işaretleme için zorunlu)
+      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'block';
       // Açıklama alanını temizle
       const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
       if (arizaliAciklamaText) arizaliAciklamaText.value = '';
@@ -1317,32 +1277,9 @@ async function handleRowApproval() {
     return;
   }
   
-  // Operasyon modunda arızalı işaretleme için önce form açılmalı
+  // Operasyon modunda arızalı işaretleme için açıklama kontrolü
   if (currentMode === 'operasyon' && !pendingApprovalData.removeArizali) {
-    const arizaliAciklamaForm = document.getElementById('arizaliAciklamaForm');
     const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
-    
-    // Eğer form gizliyse, önce formu aç ve işlemi durdur
-    if (arizaliAciklamaForm && arizaliAciklamaForm.style.display === 'none') {
-      // Araç Değiştir formunu kapat
-      const aracDegistirForm = document.getElementById('aracDegistirFormInline');
-      const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
-      if (aracDegistirForm) aracDegistirForm.style.display = 'none';
-      if (aracDegistirBtn) {
-        aracDegistirBtn.textContent = '🚗 Araç Değiştir';
-        aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
-      }
-      
-      arizaliAciklamaForm.style.display = 'block';
-      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
-      confirmApprovalBtn.innerHTML = '✅ Kaydet ve İşaretle';
-      if (arizaliAciklamaText) {
-        arizaliAciklamaText.focus();
-      }
-      return; // İşlemi durdur, kullanıcı açıklama girsin
-    }
-    
-    // Form açıksa, açıklama kontrolü yap
     const aciklama = arizaliAciklamaText ? arizaliAciklamaText.value.trim() : '';
     
     if (!aciklama) {
@@ -1399,13 +1336,6 @@ async function handleRowApproval() {
       // Satırı tabloda hızlıca güncelle
       updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
-      // ⚡ Açıklama ikonunu güncelle
-      await updateAciklamaIconsForRow(
-        savedData.Hat_Adi,
-        savedData.Tarife,
-        savedData.Tarife_Saati
-      );
-      
       alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi ve açıklama kaydedildi!');
       
     } else {
@@ -1431,14 +1361,7 @@ async function handleRowApproval() {
       closeApprovalConfirmation();
       
       // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
-      await updateRowInTable(savedData, result.approvalTime);
-      
-      // ⚡ Açıklama ikonunu güncelle
-      await updateAciklamaIconsForRow(
-        savedData.Hat_Adi,
-        savedData.Tarife,
-        savedData.Tarife_Saati
-      );
+      updateRowInTable(savedData, result.approvalTime);
       
       alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
     }
@@ -1456,7 +1379,7 @@ async function handleRowApproval() {
   }
 }
 
-async function updateRowInTable(rowData, approvalTime) {
+function updateRowInTable(rowData, approvalTime) {
   // Tablodaki tüm satırları kontrol et ve eşleşeni bul
   const rows = tbody.querySelectorAll('tr');
   const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
@@ -1926,73 +1849,17 @@ function startTimer(tableName, hareket) {
   updateTimer(tableName, hareket);
 }
 
-// Mevcut tabloyu yenile (cross-device senkronizasyon için)
-async function refreshCurrentTable() {
-  if (!tbody || tbody.children.length === 0) {
-    return; // Tablo yüklenmemişse çık
-  }
-  
-  try {
-    // Mevcut tabloyu belirle
-    let tablesToRefresh = [];
-    
-    if (selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      // Çoklu hat takibi aktif
-      tablesToRefresh = selectedHatsForTracking;
-    } else if (currentTable) {
-      // Tek hat
-      tablesToRefresh = [currentTable];
-    } else {
-      return; // Hiçbir tablo seçili değil
-    }
-    
-    // Her satırın açıklama ikonunu güncelle
-    const rows = tbody.querySelectorAll('tr');
-    for (const row of rows) {
-      const cells = row.querySelectorAll('td');
-      if (cells.length === 0) continue;
-      
-      // Satır bilgilerini al
-      const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
-      const hatIndex = headers.indexOf('Hat_Adi');
-      const tarifeIndex = headers.indexOf('Tarife');
-      const saatIndex = headers.indexOf('Tarife_Saati');
-      
-      if (hatIndex === -1 || tarifeIndex === -1 || saatIndex === -1) continue;
-      
-      const hatAdi = cells[hatIndex]?.textContent || '';
-      const tarife = cells[tarifeIndex]?.textContent || '';
-      const tarifeSaati = cells[saatIndex]?.textContent || '';
-      
-      if (!hatAdi || !tarife || !tarifeSaati) continue;
-      
-      // Açıklama ikonunu güncelle
-      await updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati);
-    }
-    
-  } catch (err) {
-    console.error('❌ Tablo yenileme hatası:', err);
-  }
-}
-
 async function updateTimer(tableName, hareket) {
   // Manuel kapatıldıysa çık
   if (timerClosedManually) {
     return;
   }
   
-  // ⚡ Her 5 saniyede bir tabloyu yenile (cross-device senkronizasyon için)
-  const now = Date.now();
-  if (now - lastTableRefreshTime >= 5000) {
-    lastTableRefreshTime = now;
-    await refreshCurrentTable();
-  }
-  
   try {
-    const nowDate = new Date();
-    const hours = String(nowDate.getHours()).padStart(2, '0');
-    const minutes = String(nowDate.getMinutes()).padStart(2, '0');
-    const seconds = String(nowDate.getSeconds()).padStart(2, '0');
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}:${seconds}`;
     
     const res = await fetch('/api/get-next-bus', {
@@ -2967,6 +2834,15 @@ async function startMultipleHatsTimer(hatList, hareket) {
   selectedHatsForTracking = hatList;
   selectedHareketForTracking = hareket;
   
+  // Tablo otomatik yenileme başlat (5 saniyede bir)
+  if (tableRefreshInterval) {
+    clearInterval(tableRefreshInterval);
+  }
+  
+  tableRefreshInterval = setInterval(() => {
+    refreshTableData(hatList, hareket);
+  }, 5000); // 5 saniyede bir yenile
+  
   if (timerInterval) {
     clearInterval(timerInterval);
   }
@@ -2980,24 +2856,171 @@ async function startMultipleHatsTimer(hatList, hareket) {
   updateMultipleHatsTimer(hatList, hareket);
 }
 
+// Tablo verilerini sessizce yenile (kullanıcı etkileşimi olmadan)
+async function refreshTableData(hatList, hareket) {
+  try {
+    const allData = [];
+    
+    for (const tableName of hatList) {
+      const res = await fetch('/api/get-table-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableName: tableName,
+          hareket: hareket
+        })
+      });
+      
+      if (!res.ok) continue;
+      
+      const result = await res.json();
+      
+      if (result.success && result.data) {
+        result.data.forEach(row => {
+          allData.push({
+            ...row,
+            _Hat: tableName
+          });
+        });
+      }
+    }
+    
+    if (allData.length === 0) return;
+    
+    // Tarife_Saati'ne göre sırala (normalize edilmiş saatlerle)
+    allData.sort((a, b) => {
+      const timeA = normalizeSaat(a.Tarife_Saati || '');
+      const timeB = normalizeSaat(b.Tarife_Saati || '');
+      return timeA.localeCompare(timeB);
+    });
+    
+    // Sadece tbody'yi güncelle (başlıklar değişmesin)
+    const firstRow = allData[0];
+    const allKeys = Object.keys(firstRow);
+    const hatIndex = allKeys.indexOf('_Hat');
+    if (hatIndex > -1) {
+      allKeys.splice(hatIndex, 1);
+      allKeys.unshift('_Hat');
+    }
+    
+    // _IsYeniPlaka sütununu gizle
+    const isYeniPlakaIndex = allKeys.indexOf('_IsYeniPlaka');
+    if (isYeniPlakaIndex > -1) {
+      allKeys.splice(isYeniPlakaIndex, 1);
+    }
+    
+    // id sütununu gizle
+    const idIndex = allKeys.indexOf('id');
+    if (idIndex > -1) {
+      allKeys.splice(idIndex, 1);
+    }
+    
+    tbody.innerHTML = '';
+    allData.forEach(row => {
+      const tr = document.createElement('tr');
+      allKeys.forEach(k => {
+        const td = document.createElement('td');
+        const value = row[k];
+        td.textContent = value !== null && value !== undefined ? value : '';
+        
+        // Plaka sütunu: Yeni_Plaka'dan geliyorsa kırmızı yap
+        if (k === 'Plaka' && row._IsYeniPlaka) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
+        
+        // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
+        if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {
+          td.style.color = '#e74c3c';
+          td.style.fontWeight = 'bold';
+        }
+        
+        tr.appendChild(td);
+      });
+      
+      // Açıklama ikonu sütunu ekle (cache kullan)
+      const tdAciklama = document.createElement('td');
+      tdAciklama.style.textAlign = 'center';
+      tdAciklama.style.fontSize = '18px';
+      tdAciklama.className = 'aciklama-icon-cell';
+      tdAciklama.dataset.hatAdi = row.Hat_Adi || '';
+      tdAciklama.dataset.tarife = row.Tarife || '';
+      tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
+      
+      // Cache'den kontrol et (timer yenilemede API çağrısı yapma)
+      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      if (aciklamaCache.hasOwnProperty(cacheKey) && aciklamaCache[cacheKey]) {
+        tdAciklama.textContent = '💬';
+        tdAciklama.style.cursor = 'pointer';
+        tdAciklama.title = 'Açıklama mesajlarını görüntüle';
+        tdAciklama.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openRowAciklamaModal(row);
+        });
+      }
+      
+      tr.appendChild(tdAciklama);
+      
+      // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
+      const originalTableName = row._Hat || hatList[0];
+      
+      const userSession = localStorage.getItem('userSession');
+      if (userSession) {
+        const session = JSON.parse(userSession);
+        
+        if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
+          tr.style.cursor = 'pointer';
+          tr.addEventListener('click', () => {
+            openApprovalConfirmation(row, originalTableName);
+          });
+        } else {
+          tr.style.cursor = 'default';
+          tr.addEventListener('mouseenter', () => {
+            tr.style.backgroundColor = '#f5f5f5';
+          });
+          tr.addEventListener('mouseleave', () => {
+            tr.style.backgroundColor = '';
+          });
+        }
+      }
+      
+      // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
+      if (row.Onaylanan && row.Tarife_Saati) {
+        const onaylananIndex = allKeys.indexOf('Onaylanan');
+        if (onaylananIndex !== -1) {
+          const onaylananCell = tr.children[onaylananIndex];
+          const fontColor = getApprovalFontColor(row.Onaylanan, row.Tarife_Saati);
+          onaylananCell.style.color = fontColor;
+          onaylananCell.style.fontWeight = 'bold';
+        }
+      }
+      
+      tbody.appendChild(tr);
+    });
+    
+    console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
+    
+    // Arızalı filtresini uygula (eğer aktifse)
+    if (showOnlyArizali) {
+      applyTableFilter();
+    }
+    
+  } catch (err) {
+    console.error('⚠️ Tablo yenileme hatası:', err.message);
+  }
+}
+
 async function updateMultipleHatsTimer(hatList, hareket) {
   // Manuel kapatıldıysa çık
   if (timerClosedManually) {
     return;
   }
   
-  // ⚡ Her 5 saniyede bir tabloyu yenile (cross-device senkronizasyon için)
-  const now = Date.now();
-  if (now - lastTableRefreshTime >= 5000) {
-    lastTableRefreshTime = now;
-    await refreshCurrentTable();
-  }
-  
   try {
-    const nowDate = new Date();
-    const hours = String(nowDate.getHours()).padStart(2, '0');
-    const minutes = String(nowDate.getMinutes()).padStart(2, '0');
-    const seconds = String(nowDate.getSeconds()).padStart(2, '0');
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}:${seconds}`;
     
     let allBusesList = [];
@@ -3754,14 +3777,19 @@ async function handleAddAciklamaInline() {
     // Açıklama formunu gizle
     document.getElementById('aciklamaFormInline').style.display = 'none';
     
-    // ⚡ Cache'i temizle ve ilgili satırın açıklama ikonunu güncelle
-    const cacheKey = `${rowData.Hat_Adi}|${rowData.Tarife}|${rowData.Tarife_Saati}`;
-    delete aciklamaCache[cacheKey];
+    // ⚡ İlgili satırın açıklama ikonunu güncelle
     await updateAciklamaIconsForRow(
       rowData.Hat_Adi,
       rowData.Tarife,
       rowData.Tarife_Saati
     );
+    
+    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
+    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      console.log('🔄 Tablo otomatik yenileniyor...');
+      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+      await refreshTableData(selectedHatsForTracking, currentHareket);
+    }
     
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
@@ -3892,14 +3920,19 @@ async function handleAracDegistir() {
     // Araç değiştir formunu gizle
     document.getElementById('aracDegistirFormInline').style.display = 'none';
     
-    // ⚡ Cache'i temizle ve ilgili satırın açıklama ikonunu güncelle
-    const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
-    delete aciklamaCache[cacheKey];
+    // ⚡ İlgili satırın açıklama ikonunu güncelle
     await updateAciklamaIconsForRow(
       hatAdi,
       tarife,
       tarifeSaati
     );
+    
+    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
+    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      console.log('🔄 Tablo otomatik yenileniyor...');
+      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+      await refreshTableData(selectedHatsForTracking, currentHareket);
+    }
     
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
@@ -3964,12 +3997,9 @@ async function saveArizaliAciklama(rowData) {
     
     console.log('✅ Arızalı açıklaması kaydedildi:', result);
     
-    // Cache'i temizle ve İlgili satırın açıklama ikonunu güncelle
-    const hatAdi = rowData.tableName || rowData.Hat_Adi;
-    const cacheKey = `${hatAdi}|${rowData.tarife}|${rowData.tarifeSaati}`;
-    delete aciklamaCache[cacheKey];
+    // İlgili satırın açıklama ikonunu güncelle
     await updateAciklamaIconsForRow(
-      hatAdi,
+      rowData.tableName || rowData.Hat_Adi,
       rowData.tarife,
       rowData.tarifeSaati
     );
@@ -4069,9 +4099,7 @@ async function removeArizaliAciklama(rowData) {
     const deleteResult = await deleteRes.json();
     console.log('✅ Arızalı açıklamaları silindi:', deleteResult);
     
-    // Cache'i temizle ve İlgili satırın açıklama ikonunu güncelle
-    const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
-    delete aciklamaCache[cacheKey];
+    // İlgili satırın açıklama ikonunu güncelle
     await updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati);
     
   } catch (err) {
