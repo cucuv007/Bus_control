@@ -1398,6 +1398,13 @@ async function handleRowApproval() {
       // Satırı tabloda hızlıca güncelle
       updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
+      // ⚡ Eğer timer aktifse tabloyu otomatik yenile (mobil cihazlar için)
+      if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+        console.log('🔄 Tablo otomatik yenileniyor (Arızalı işlemi)...');
+        const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+        await refreshTableData(selectedHatsForTracking, currentHareket);
+      }
+      
       alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi ve açıklama kaydedildi!');
       
     } else {
@@ -1424,6 +1431,13 @@ async function handleRowApproval() {
       
       // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
       updateRowInTable(savedData, result.approvalTime);
+      
+      // ⚡ Eğer timer aktifse tabloyu otomatik yenile (mobil cihazlar için)
+      if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+        console.log('🔄 Tablo otomatik yenileniyor (Onaylama işlemi)...');
+        const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+        await refreshTableData(selectedHatsForTracking, currentHareket);
+      }
       
       alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
     }
