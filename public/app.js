@@ -3700,13 +3700,6 @@ async function handleAddAciklamaInline() {
       rowData.Tarife_Saati
     );
     
-    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
-    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      console.log('🔄 Tablo otomatik yenileniyor...');
-      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-      await refreshTableData(selectedHatsForTracking, currentHareket);
-    }
-    
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
       statusEl.style.display = 'none';
@@ -3844,13 +3837,6 @@ async function handleAracDegistir() {
       tarife,
       tarifeSaati
     );
-    
-    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
-    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      console.log('🔄 Tablo otomatik yenileniyor...');
-      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-      await refreshTableData(selectedHatsForTracking, currentHareket);
-    }
     
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
