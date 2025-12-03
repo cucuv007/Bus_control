@@ -1926,17 +1926,73 @@ function startTimer(tableName, hareket) {
   updateTimer(tableName, hareket);
 }
 
+// Mevcut tabloyu yenile (cross-device senkronizasyon için)
+async function refreshCurrentTable() {
+  if (!tbody || tbody.children.length === 0) {
+    return; // Tablo yüklenmemişse çık
+  }
+  
+  try {
+    // Mevcut tabloyu belirle
+    let tablesToRefresh = [];
+    
+    if (selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      // Çoklu hat takibi aktif
+      tablesToRefresh = selectedHatsForTracking;
+    } else if (currentTable) {
+      // Tek hat
+      tablesToRefresh = [currentTable];
+    } else {
+      return; // Hiçbir tablo seçili değil
+    }
+    
+    // Her satırın açıklama ikonunu güncelle
+    const rows = tbody.querySelectorAll('tr');
+    for (const row of rows) {
+      const cells = row.querySelectorAll('td');
+      if (cells.length === 0) continue;
+      
+      // Satır bilgilerini al
+      const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
+      const hatIndex = headers.indexOf('Hat_Adi');
+      const tarifeIndex = headers.indexOf('Tarife');
+      const saatIndex = headers.indexOf('Tarife_Saati');
+      
+      if (hatIndex === -1 || tarifeIndex === -1 || saatIndex === -1) continue;
+      
+      const hatAdi = cells[hatIndex]?.textContent || '';
+      const tarife = cells[tarifeIndex]?.textContent || '';
+      const tarifeSaati = cells[saatIndex]?.textContent || '';
+      
+      if (!hatAdi || !tarife || !tarifeSaati) continue;
+      
+      // Açıklama ikonunu güncelle
+      await updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati);
+    }
+    
+  } catch (err) {
+    console.error('❌ Tablo yenileme hatası:', err);
+  }
+}
+
 async function updateTimer(tableName, hareket) {
   // Manuel kapatıldıysa çık
   if (timerClosedManually) {
     return;
   }
   
+  // ⚡ Her 5 saniyede bir tabloyu yenile (cross-device senkronizasyon için)
+  const now = Date.now();
+  if (now - lastTableRefreshTime >= 5000) {
+    lastTableRefreshTime = now;
+    await refreshCurrentTable();
+  }
+  
   try {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const nowDate = new Date();
+    const hours = String(nowDate.getHours()).padStart(2, '0');
+    const minutes = String(nowDate.getMinutes()).padStart(2, '0');
+    const seconds = String(nowDate.getSeconds()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}:${seconds}`;
     
     const res = await fetch('/api/get-next-bus', {
@@ -2928,6 +2984,13 @@ async function updateMultipleHatsTimer(hatList, hareket) {
   // Manuel kapatıldıysa çık
   if (timerClosedManually) {
     return;
+  }
+  
+  // ⚡ Her 5 saniyede bir tabloyu yenile (cross-device senkronizasyon için)
+  const now = Date.now();
+  if (now - lastTableRefreshTime >= 5000) {
+    lastTableRefreshTime = now;
+    await refreshCurrentTable();
   }
   
   try {
