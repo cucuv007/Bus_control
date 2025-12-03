@@ -1399,13 +1399,6 @@ async function handleRowApproval() {
       // Satırı tabloda hızlıca güncelle
       updateRowStatus(savedData, isRemoving ? null : 'Arızalı');
       
-      // ⚡ Eğer timer aktifse tabloyu otomatik yenile (mobil cihazlar için)
-      if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-        console.log('🔄 Tablo otomatik yenileniyor (Arızalı işlemi)...');
-        const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-        await refreshTableData(selectedHatsForTracking, currentHareket);
-      }
-      
       alert(isRemoving ? '✅ Arızalı bilgisi kaldırıldı!' : '✅ Arızalı olarak işaretlendi ve açıklama kaydedildi!');
       
     } else {
@@ -1432,13 +1425,6 @@ async function handleRowApproval() {
       
       // Satırı tabloda hızlıca güncelle (yenileme yapmadan)
       updateRowInTable(savedData, result.approvalTime);
-      
-      // ⚡ Eğer timer aktifse tabloyu otomatik yenile (mobil cihazlar için)
-      if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-        console.log('🔄 Tablo otomatik yenileniyor (Onaylama işlemi)...');
-        const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-        await refreshTableData(selectedHatsForTracking, currentHareket);
-      }
       
       alert(`✅ Onaylandı!\nSaat: ${result.approvalTime}`);
     }
@@ -2911,18 +2897,6 @@ async function startMultipleHatsTimer(hatList, hareket) {
   selectedHatsForTracking = hatList;
   selectedHareketForTracking = hareket;
   
-  // Periyodik yenileme sayacını sıfırla
-  lastTableRefreshTime = Date.now();
-  
-  // Tablo otomatik yenileme başlat (5 saniyede bir)
-  if (tableRefreshInterval) {
-    clearInterval(tableRefreshInterval);
-  }
-  
-  tableRefreshInterval = setInterval(() => {
-    refreshTableData(hatList, hareket);
-  }, 5000); // 5 saniyede bir yenile
-  
   if (timerInterval) {
     clearInterval(timerInterval);
   }
@@ -2934,160 +2908,6 @@ async function startMultipleHatsTimer(hatList, hareket) {
   }, 1000);
   
   updateMultipleHatsTimer(hatList, hareket);
-}
-
-// Tablo verilerini sessizce yenile (kullanıcı etkileşimi olmadan)
-async function refreshTableData(hatList, hareket) {  
-  try {
-    const allData = [];
-    
-    for (const tableName of hatList) {
-      const res = await fetch('/api/get-table-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tableName: tableName,
-          hareket: hareket
-        })
-      });
-      
-      if (!res.ok) continue;
-      
-      const result = await res.json();
-      
-      if (result.success && result.data) {
-        result.data.forEach(row => {
-          allData.push({
-            ...row,
-            _Hat: tableName
-          });
-        });
-      }
-    }
-    
-    if (allData.length === 0) return;
-    
-    // Tarife_Saati'ne göre sırala (normalize edilmiş saatlerle)
-    allData.sort((a, b) => {
-      const timeA = normalizeSaat(a.Tarife_Saati || '');
-      const timeB = normalizeSaat(b.Tarife_Saati || '');
-      return timeA.localeCompare(timeB);
-    });
-    
-    // Sadece tbody'yi güncelle (başlıklar değişmesin)
-    const firstRow = allData[0];
-    const allKeys = Object.keys(firstRow);
-    const hatIndex = allKeys.indexOf('_Hat');
-    if (hatIndex > -1) {
-      allKeys.splice(hatIndex, 1);
-      allKeys.unshift('_Hat');
-    }
-    
-    // _IsYeniPlaka sütununu gizle
-    const isYeniPlakaIndex = allKeys.indexOf('_IsYeniPlaka');
-    if (isYeniPlakaIndex > -1) {
-      allKeys.splice(isYeniPlakaIndex, 1);
-    }
-    
-    // id sütununu gizle
-    const idIndex = allKeys.indexOf('id');
-    if (idIndex > -1) {
-      allKeys.splice(idIndex, 1);
-    }
-    
-    tbody.innerHTML = '';
-    allData.forEach(row => {
-      const tr = document.createElement('tr');
-      allKeys.forEach(k => {
-        const td = document.createElement('td');
-        const value = row[k];
-        td.textContent = value !== null && value !== undefined ? value : '';
-        
-        // Plaka sütunu: Yeni_Plaka'dan geliyorsa kırmızı yap
-        if (k === 'Plaka' && row._IsYeniPlaka) {
-          td.style.color = '#e74c3c';
-          td.style.fontWeight = 'bold';
-        }
-        
-        // "Durum" sütunu ve "Arızalı" varsa kırmızı yap
-        if (k === 'Durum' && value && value.toString().toLowerCase().includes('arızalı')) {
-          td.style.color = '#e74c3c';
-          td.style.fontWeight = 'bold';
-        }
-        
-        tr.appendChild(td);
-      });
-      
-      // Açıklama ikonu sütunu ekle (cache kullan)
-      const tdAciklama = document.createElement('td');
-      tdAciklama.style.textAlign = 'center';
-      tdAciklama.style.fontSize = '18px';
-      tdAciklama.className = 'aciklama-icon-cell';
-      tdAciklama.dataset.hatAdi = row.Hat_Adi || '';
-      tdAciklama.dataset.tarife = row.Tarife || '';
-      tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
-      
-      // Cache'den kontrol et (timer yenilemede API çağrısı yapma)
-      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-      if (aciklamaCache.hasOwnProperty(cacheKey) && aciklamaCache[cacheKey]) {
-        tdAciklama.textContent = '💬';
-        tdAciklama.style.cursor = 'pointer';
-        tdAciklama.title = 'Açıklama mesajlarını görüntüle';
-        tdAciklama.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openRowAciklamaModal(row);
-        });
-      }
-      
-      tr.appendChild(tdAciklama);
-      
-      // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
-      const originalTableName = row._Hat || hatList[0];
-      
-      const userSession = localStorage.getItem('userSession');
-      if (userSession) {
-        const session = JSON.parse(userSession);
-        
-        if (session.gorev === 'Operasyon' || session.gorev === 'Depolama') {
-          tr.style.cursor = 'pointer';
-          tr.addEventListener('click', () => {
-            openApprovalConfirmation(row, originalTableName);
-          });
-        } else {
-          tr.style.cursor = 'default';
-          tr.addEventListener('mouseenter', () => {
-            tr.style.backgroundColor = '#f5f5f5';
-          });
-          tr.addEventListener('mouseleave', () => {
-            tr.style.backgroundColor = '';
-          });
-        }
-      }
-      
-      // Eğer "Onaylanan" sütunu varsa sadece o hücrenin font rengini değiştir
-      if (row.Onaylanan && row.Tarife_Saati) {
-        const onaylananIndex = allKeys.indexOf('Onaylanan');
-        if (onaylananIndex !== -1) {
-          const onaylananCell = tr.children[onaylananIndex];
-          const fontColor = getApprovalFontColor(row.Onaylanan, row.Tarife_Saati);
-          onaylananCell.style.color = fontColor;
-          onaylananCell.style.fontWeight = 'bold';
-        }
-      }
-      
-      tbody.appendChild(tr);
-    });
-    
-    console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
-    
-    // Arızalı filtresini uygula (eğer aktifse)
-    if (showOnlyArizali) {
-      applyTableFilter();
-    }
-    
-  } catch (err) {
-    console.error('⚠️ Tablo yenileme hatası:', err.message);
-  }
 }
 
 async function updateMultipleHatsTimer(hatList, hareket) {
@@ -5134,54 +4954,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   handleRefresh();
 });
-
-// ==================== MOBİL SENKRONIZASYON - VİSİBİLİTY EVENT ====================
-// Sayfa geri geldiğinde (mobil cihazlarda arka plandan çıkınca) tabloyu yenile
-let mobileRefreshCount = 0;
-
-document.addEventListener('visibilitychange', async () => {
-  if (!document.hidden) {
-    mobileRefreshCount++;
-    console.log(`👁️ [#${mobileRefreshCount}] Sayfa görünür hale geldi - mobil senkronizasyon...`);
-    
-    // Eğer timer aktifse ve hatlar seçiliyse tabloyu yenile
-    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-      console.log('🔄 Görünürlük değişti - tablo yenileniyor:', selectedHatsForTracking);
-      await refreshTableData(selectedHatsForTracking, currentHareket);
-    }
-  } else {
-    console.log('🔒 Sayfa gizlendi (arka plan)');
-  }
-});
-
-// Window focus event (mobil cihazlar için ek koruma)
-window.addEventListener('focus', async () => {
-  console.log('🎯 Pencere focus aldı - yenileme kontrolü...');
-  
-  if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-    const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-    console.log('🔄 Focus - tablo yenileniyor:', selectedHatsForTracking);
-    await refreshTableData(selectedHatsForTracking, currentHareket);
-  }
-});
-
-window.addEventListener('blur', () => {
-  console.log('🔲 Pencere focus kaybetti');
-});
-
-// Mobil cihazlarda touchstart olayında da yenile (ekstra koruma)
-let lastTouchRefresh = 0;
-document.addEventListener('touchstart', async () => {
-  const now = Date.now();
-  // 10 saniyede bir touchstart'ta yenile (spam önleme)
-  if (now - lastTouchRefresh > 10000 && timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-    lastTouchRefresh = now;
-    console.log('👆 Touch event - tablo yenileniyor...');
-    const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-    await refreshTableData(selectedHatsForTracking, currentHareket);
-  }
-}, { passive: true });
 
 // ==================== OTOMATIK GÜNCELLEME KONTROLÜ ====================
 async function checkAutoUpdateAciklamalar() {
