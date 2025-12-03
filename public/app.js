@@ -3073,57 +3073,6 @@ async function refreshTableData(hatList, hareket) {
       tbody.appendChild(tr);
     });
     
-    // ⚡ Tüm satırların açıklama cache'ini güncelle (cross-device senkronizasyon)
-    for (const row of allData) {
-      const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-      
-      // Cache'de yoksa veya güncel değilse API'den al
-      try {
-        const response = await fetch('/api/get-row-aciklamalar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            Hat_Adi: row.Hat_Adi,
-            Tarife: row.Tarife,
-            Tarife_Saati: row.Tarife_Saati
-          })
-        });
-        
-        const result = await response.json();
-        const hasAciklama = result.success && result.data && result.data.length > 0;
-        
-        // Cache'i güncelle
-        const oldValue = aciklamaCache[cacheKey];
-        aciklamaCache[cacheKey] = hasAciklama;
-        
-        // Eğer değişiklik olduysa ikonu güncelle
-        if (oldValue !== hasAciklama) {
-          const iconCells = tbody.querySelectorAll('.aciklama-icon-cell');
-          iconCells.forEach(cell => {
-            if (cell.dataset.hatAdi === row.Hat_Adi && 
-                cell.dataset.tarife === row.Tarife && 
-                cell.dataset.tarifeSaati === row.Tarife_Saati) {
-              if (hasAciklama) {
-                cell.textContent = '💬';
-                cell.style.cursor = 'pointer';
-                cell.title = 'Açıklama mesajlarını görüntüle';
-                cell.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  openRowAciklamaModal(row);
-                });
-              } else {
-                cell.textContent = '';
-                cell.style.cursor = 'default';
-                cell.title = '';
-              }
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Cache güncelleme hatası:', err);
-      }
-    }
-    
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
     // Arızalı filtresini uygula (eğer aktifse)
