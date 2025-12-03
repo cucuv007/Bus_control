@@ -255,6 +255,29 @@ if (aciklamaEkleFromPopup) {
     const aciklamaTextInline = document.getElementById('aciklamaTextInline');
     
     if (inlineForm.style.display === 'none') {
+      // Diğer formları kapat
+      const arizaliForm = document.getElementById('arizaliAciklamaForm');
+      const aracDegistirForm = document.getElementById('aracDegistirFormInline');
+      const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
+      
+      if (arizaliForm) {
+        arizaliForm.style.display = 'none';
+        const confirmBtn = document.getElementById('confirmApprovalBtn');
+        const questionText = document.getElementById('approvalQuestion');
+        if (confirmBtn && currentMode === 'operasyon') {
+          confirmBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+          confirmBtn.style.background = '#e74c3c';
+        }
+        if (questionText && currentMode === 'operasyon') {
+          questionText.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
+        }
+      }
+      if (aracDegistirForm) aracDegistirForm.style.display = 'none';
+      if (aracDegistirBtn) {
+        aracDegistirBtn.textContent = '🚗 Araç Değiştir';
+        aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+      }
+      
       // Formu göster
       inlineForm.style.display = 'block';
       aciklamaEkleFromPopup.textContent = '❌ Açıklama Formunu Kapat';
@@ -278,6 +301,22 @@ if (aracDegistirFromPopup) {
     const aracDegistirAciklama = document.getElementById('aracDegistirAciklama');
     
     if (inlineForm.style.display === 'none') {
+      // Arızalı formunu kapat
+      const arizaliForm = document.getElementById('arizaliAciklamaForm');
+      if (arizaliForm) {
+        arizaliForm.style.display = 'none';
+        // Arızalı butonunu eski haline döndür
+        const confirmBtn = document.getElementById('confirmApprovalBtn');
+        const questionText = document.getElementById('approvalQuestion');
+        if (confirmBtn && currentMode === 'operasyon') {
+          confirmBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
+          confirmBtn.style.background = '#e74c3c';
+        }
+        if (questionText && currentMode === 'operasyon') {
+          questionText.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
+        }
+      }
+      
       // Formu göster
       inlineForm.style.display = 'block';
       aracDegistirFromPopup.textContent = '❌ Formu Kapat';
@@ -1284,6 +1323,15 @@ async function handleRowApproval() {
     
     // Eğer form gizliyse, önce formu aç ve işlemi durdur
     if (arizaliAciklamaForm && arizaliAciklamaForm.style.display === 'none') {
+      // Araç Değiştir formunu kapat
+      const aracDegistirForm = document.getElementById('aracDegistirFormInline');
+      const aracDegistirBtn = document.getElementById('aracDegistirFromPopup');
+      if (aracDegistirForm) aracDegistirForm.style.display = 'none';
+      if (aracDegistirBtn) {
+        aracDegistirBtn.textContent = '🚗 Araç Değiştir';
+        aracDegistirBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+      }
+      
       arizaliAciklamaForm.style.display = 'block';
       approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
       confirmApprovalBtn.innerHTML = '✅ Kaydet ve İşaretle';
