@@ -3852,19 +3852,14 @@ async function handleAddAciklamaInline() {
     // Açıklama formunu gizle
     document.getElementById('aciklamaFormInline').style.display = 'none';
     
-    // ⚡ İlgili satırın açıklama ikonunu güncelle
+    // ⚡ Cache'i temizle ve ilgili satırın açıklama ikonunu güncelle
+    const cacheKey = `${rowData.Hat_Adi}|${rowData.Tarife}|${rowData.Tarife_Saati}`;
+    delete aciklamaCache[cacheKey];
     await updateAciklamaIconsForRow(
       rowData.Hat_Adi,
       rowData.Tarife,
       rowData.Tarife_Saati
     );
-    
-    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
-    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      console.log('🔄 Tablo otomatik yenileniyor...');
-      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-      await refreshTableData(selectedHatsForTracking, currentHareket);
-    }
     
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
@@ -3995,19 +3990,14 @@ async function handleAracDegistir() {
     // Araç değiştir formunu gizle
     document.getElementById('aracDegistirFormInline').style.display = 'none';
     
-    // ⚡ İlgili satırın açıklama ikonunu güncelle
+    // ⚡ Cache'i temizle ve ilgili satırın açıklama ikonunu güncelle
+    const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
+    delete aciklamaCache[cacheKey];
     await updateAciklamaIconsForRow(
       hatAdi,
       tarife,
       tarifeSaati
     );
-    
-    // ⚡ Eğer timer aktifse tabloyu otomatik yenile
-    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
-      console.log('🔄 Tablo otomatik yenileniyor...');
-      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
-      await refreshTableData(selectedHatsForTracking, currentHareket);
-    }
     
     // 1.5 saniye sonra durum mesajını temizle
     setTimeout(() => {
