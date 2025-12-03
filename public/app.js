@@ -1821,13 +1821,13 @@ async function loadTableData() {
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
-      // Mesaj ikonu ekle (solda)
-      const messageIcon = document.createElement('span');
-      messageIcon.className = 'message-icon';
       const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
       const hasAciklama = aciklamaCache[cacheKey];
       
       if (hasAciklama) {
+        // Mesaj ikonu göster
+        const messageIcon = document.createElement('span');
+        messageIcon.className = 'message-icon';
         messageIcon.textContent = '💬';
         messageIcon.style.cursor = 'pointer';
         messageIcon.title = 'Açıklama mesajlarını görüntüle';
@@ -1835,49 +1835,43 @@ async function loadTableData() {
           e.stopPropagation();
           openRowAciklamaModal(row);
         };
+        tdAciklama.appendChild(messageIcon);
       } else {
-        messageIcon.textContent = '';
-        messageIcon.style.cursor = 'default';
+        // Refresh ikonu göster (mesaj yoksa)
+        const refreshIcon = document.createElement('span');
+        refreshIcon.textContent = '🔄';
+        refreshIcon.style.cursor = 'pointer';
+        refreshIcon.style.fontSize = '14px';
+        refreshIcon.style.opacity = '0.6';
+        refreshIcon.title = 'Bu satırın mesaj durumunu kontrol et';
+        refreshIcon.onclick = async (e) => {
+          e.stopPropagation();
+          refreshIcon.style.opacity = '0.3';
+          
+          const hasAciklama = await checkRowHasAciklama(row);
+          const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+          aciklamaCache[cacheKey] = hasAciklama;
+          
+          if (hasAciklama) {
+            // Refresh ikonunu kaldır, mesaj ikonu ekle
+            tdAciklama.innerHTML = '';
+            const messageIcon = document.createElement('span');
+            messageIcon.className = 'message-icon';
+            messageIcon.textContent = '💬';
+            messageIcon.style.cursor = 'pointer';
+            messageIcon.title = 'Açıklama mesajlarını görüntüle';
+            messageIcon.onclick = (e) => {
+              e.stopPropagation();
+              openRowAciklamaModal(row);
+            };
+            tdAciklama.appendChild(messageIcon);
+          } else {
+            refreshIcon.style.opacity = '0.6';
+          }
+        };
+        tdAciklama.appendChild(refreshIcon);
       }
       
-      // Refresh ikonu ekle (sağda, sadece bu satır için)
-      const refreshIcon = document.createElement('span');
-      refreshIcon.textContent = '🔄';
-      refreshIcon.style.cursor = 'pointer';
-      refreshIcon.style.fontSize = '14px';
-      refreshIcon.style.marginLeft = '5px';
-      refreshIcon.style.opacity = '0.6';
-      refreshIcon.title = 'Bu satırın mesaj ikonunu yenile';
-      refreshIcon.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        refreshIcon.style.opacity = '0.3';
-        
-        // API'den açıklama kontrolü yap
-        const hasAciklama = await checkRowHasAciklama(row);
-        const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-        aciklamaCache[cacheKey] = hasAciklama;
-        
-        // İkonu güncelle
-        if (hasAciklama) {
-          messageIcon.textContent = '💬';
-          messageIcon.style.cursor = 'pointer';
-          messageIcon.title = 'Açıklama mesajlarını görüntüle';
-          messageIcon.onclick = (e) => {
-            e.stopPropagation();
-            openRowAciklamaModal(row);
-          };
-        } else {
-          messageIcon.textContent = '';
-          messageIcon.style.cursor = 'default';
-          messageIcon.title = '';
-          messageIcon.onclick = null;
-        }
-        
-        refreshIcon.style.opacity = '0.6';
-      });
-      
-      tdAciklama.appendChild(messageIcon);
-      tdAciklama.appendChild(refreshIcon);
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
@@ -1950,9 +1944,13 @@ async function loadTableData() {
             aciklamaCache[cacheKey] = hasAciklama;
             
             // İkonu güncelle
-            const messageIcon = iconCell.querySelector('.message-icon');
-            if (messageIcon) {
+            const currentIcon = iconCell.querySelector('span');
+            if (currentIcon) {
               if (hasAciklama) {
+                // Refresh ikonunu kaldır, mesaj ikonu ekle
+                iconCell.innerHTML = '';
+                const messageIcon = document.createElement('span');
+                messageIcon.className = 'message-icon';
                 messageIcon.textContent = '💬';
                 messageIcon.style.cursor = 'pointer';
                 messageIcon.title = 'Açıklama mesajlarını görüntüle';
@@ -1969,12 +1967,9 @@ async function loadTableData() {
                   });
                   openRowAciklamaModal(fullRowData);
                 };
-              } else {
-                messageIcon.textContent = '';
-                messageIcon.style.cursor = 'default';
-                messageIcon.title = '';
-                messageIcon.onclick = null;
+                iconCell.appendChild(messageIcon);
               }
+              // Mesaj yoksa refresh ikonu zaten var, değiştirme
             }
             
             processed++;
@@ -2932,13 +2927,13 @@ async function handleApplyHatSelection() {
       tdAciklama.dataset.tarife = row.Tarife || '';
       tdAciklama.dataset.tarifeSaati = row.Tarife_Saati || '';
       
-      // Mesaj ikonu ekle (solda)
-      const messageIcon = document.createElement('span');
-      messageIcon.className = 'message-icon';
       const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
       const hasAciklama = aciklamaCache[cacheKey];
       
       if (hasAciklama) {
+        // Mesaj ikonu göster
+        const messageIcon = document.createElement('span');
+        messageIcon.className = 'message-icon';
         messageIcon.textContent = '💬';
         messageIcon.style.cursor = 'pointer';
         messageIcon.title = 'Açıklama mesajlarını görüntüle';
@@ -2946,47 +2941,42 @@ async function handleApplyHatSelection() {
           e.stopPropagation();
           openRowAciklamaModal(row);
         };
+        tdAciklama.appendChild(messageIcon);
       } else {
-        messageIcon.textContent = '';
-        messageIcon.style.cursor = 'default';
+        // Refresh ikonu göster (mesaj yoksa)
+        const refreshIcon = document.createElement('span');
+        refreshIcon.textContent = '🔄';
+        refreshIcon.style.cursor = 'pointer';
+        refreshIcon.style.fontSize = '14px';
+        refreshIcon.style.opacity = '0.6';
+        refreshIcon.title = 'Bu satırın mesaj durumunu kontrol et';
+        refreshIcon.onclick = async (e) => {
+          e.stopPropagation();
+          refreshIcon.style.opacity = '0.3';
+          const hasAciklama = await checkRowHasAciklama(row);
+          const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+          aciklamaCache[cacheKey] = hasAciklama;
+          
+          if (hasAciklama) {
+            // Refresh ikonunu kaldır, mesaj ikonu ekle
+            tdAciklama.innerHTML = '';
+            const messageIcon = document.createElement('span');
+            messageIcon.className = 'message-icon';
+            messageIcon.textContent = '💬';
+            messageIcon.style.cursor = 'pointer';
+            messageIcon.title = 'Açıklama mesajlarını görüntüle';
+            messageIcon.onclick = (e) => {
+              e.stopPropagation();
+              openRowAciklamaModal(row);
+            };
+            tdAciklama.appendChild(messageIcon);
+          } else {
+            refreshIcon.style.opacity = '0.6';
+          }
+        };
+        tdAciklama.appendChild(refreshIcon);
       }
       
-      // Refresh ikonu ekle (sağda)
-      const refreshIcon = document.createElement('span');
-      refreshIcon.textContent = '🔄';
-      refreshIcon.style.cursor = 'pointer';
-      refreshIcon.style.fontSize = '14px';
-      refreshIcon.style.marginLeft = '5px';
-      refreshIcon.style.opacity = '0.6';
-      refreshIcon.title = 'Bu satırın mesaj ikonunu yenile';
-      refreshIcon.onclick = async (e) => {
-        e.stopPropagation();
-        refreshIcon.style.opacity = '0.3';
-        const hasAciklama = await checkRowHasAciklama(row);
-        const cacheKey = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
-        aciklamaCache[cacheKey] = hasAciklama;
-        
-        // İkonu güncelle
-        if (hasAciklama) {
-          messageIcon.textContent = '💬';
-          messageIcon.style.cursor = 'pointer';
-          messageIcon.title = 'Açıklama mesajlarını görüntüle';
-          messageIcon.onclick = (e) => {
-            e.stopPropagation();
-            openRowAciklamaModal(row);
-          };
-        } else {
-          messageIcon.textContent = '';
-          messageIcon.style.cursor = 'default';
-          messageIcon.title = '';
-          messageIcon.onclick = null;
-        }
-        
-        refreshIcon.style.opacity = '0.6';
-      };
-      
-      tdAciklama.appendChild(messageIcon);
-      tdAciklama.appendChild(refreshIcon);
       tr.appendChild(tdAciklama);
       
       // Satıra tıklanınca onay popup'ı aç (sadece Operasyon ve Depolama için)
@@ -3051,9 +3041,13 @@ async function handleApplyHatSelection() {
             aciklamaCache[cacheKey] = hasAciklama;
             
             // İkonu güncelle
-            const messageIcon = iconCell.querySelector('.message-icon');
-            if (messageIcon) {
+            const currentIcon = iconCell.querySelector('span');
+            if (currentIcon) {
               if (hasAciklama) {
+                // Refresh ikonunu kaldır, mesaj ikonu ekle
+                iconCell.innerHTML = '';
+                const messageIcon = document.createElement('span');
+                messageIcon.className = 'message-icon';
                 messageIcon.textContent = '💬';
                 messageIcon.style.cursor = 'pointer';
                 messageIcon.title = 'Açıklama mesajlarını görüntüle';
@@ -3071,12 +3065,9 @@ async function handleApplyHatSelection() {
                   });
                   openRowAciklamaModal(fullRowData);
                 };
-              } else {
-                messageIcon.textContent = '';
-                messageIcon.style.cursor = 'default';
-                messageIcon.title = '';
-                messageIcon.onclick = null;
+                iconCell.appendChild(messageIcon);
               }
+              // Mesaj yoksa refresh ikonu zaten var, değiştirme
             }
             
             processed++;
