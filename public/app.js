@@ -5806,32 +5806,73 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
           cell.dataset.tarife === tarife && 
           cell.dataset.tarifeSaati === tarifeSaati) {
         if (hasAciklama) {
-          cell.textContent = '💬';
-          cell.style.cursor = 'pointer';
-          cell.title = 'Açıklama mesajlarını görüntüle';
-          
-          // Event listener ekle (sadece yoksa)
-          if (!cell.onclick) {
-            cell.addEventListener('click', (e) => {
-              e.stopPropagation();
-              // Row datasını bul
-              const tr = cell.closest('tr');
-              const cells = tr.querySelectorAll('td');
-              const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent);
-              const rowData = {};
-              cells.forEach((td, i) => {
-                if (headers[i]) {
-                  rowData[headers[i]] = td.textContent;
-                }
-              });
-              openRowAciklamaModal(rowData);
+          // Refresh ikonunu kaldır, mesaj ikonu ekle
+          cell.innerHTML = '';
+          const messageIcon = document.createElement('span');
+          messageIcon.className = 'message-icon';
+          messageIcon.textContent = '💬';
+          messageIcon.style.cursor = 'pointer';
+          messageIcon.title = 'Açıklama mesajlarını görüntüle';
+          messageIcon.onclick = (e) => {
+            e.stopPropagation();
+            // Row datasını bul
+            const tr = cell.closest('tr');
+            const cells = tr.querySelectorAll('td');
+            const headers = Array.from(document.querySelectorAll('thead th')).map(th => th.textContent.trim());
+            const rowData = {};
+            cells.forEach((td, i) => {
+              if (headers[i] && !headers[i].includes('💬')) {
+                rowData[headers[i]] = td.textContent;
+              }
             });
-          }
+            openRowAciklamaModal(rowData);
+          };
+          cell.appendChild(messageIcon);
         } else {
-          cell.textContent = '';
-          cell.style.cursor = 'default';
-          cell.title = '';
-          cell.onclick = null;
+          // Mesaj yoksa refresh ikonu ekle
+          cell.innerHTML = '';
+          const refreshIcon = document.createElement('span');
+          refreshIcon.textContent = '🔄';
+          refreshIcon.style.cursor = 'pointer';
+          refreshIcon.style.fontSize = '14px';
+          refreshIcon.style.opacity = '0.6';
+          refreshIcon.title = 'Bu satırın mesaj durumunu kontrol et';
+          refreshIcon.onclick = async (e) => {
+            e.stopPropagation();
+            refreshIcon.style.opacity = '0.3';
+            // Row data'yı bul
+            const tr = cell.closest('tr');
+            const cells = tr.querySelectorAll('td');
+            const headers = Array.from(document.querySelectorAll('thead th')).map(th => th.textContent.trim());
+            const rowData = {};
+            cells.forEach((td, i) => {
+              if (headers[i] && !headers[i].includes('💬')) {
+                rowData[headers[i]] = td.textContent;
+              }
+            });
+            
+            const hasAciklama = await checkRowHasAciklama(rowData);
+            const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
+            aciklamaCache[cacheKey] = hasAciklama;
+            
+            if (hasAciklama) {
+              // Refresh ikonunu kaldır, mesaj ikonu ekle
+              cell.innerHTML = '';
+              const messageIcon = document.createElement('span');
+              messageIcon.className = 'message-icon';
+              messageIcon.textContent = '💬';
+              messageIcon.style.cursor = 'pointer';
+              messageIcon.title = 'Açıklama mesajlarını görüntüle';
+              messageIcon.onclick = (e) => {
+                e.stopPropagation();
+                openRowAciklamaModal(rowData);
+              };
+              cell.appendChild(messageIcon);
+            } else {
+              refreshIcon.style.opacity = '0.6';
+            }
+          };
+          cell.appendChild(refreshIcon);
         }
       }
     });
