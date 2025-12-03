@@ -43,12 +43,29 @@ function getTodayTableName() {
 // Bugünün gün tablosundan plaka bilgisini al (Yeni_Plaka varsa onu, yoksa Plaka'yı)
 async function getPlakaForTarife(hatAdi, tarife, todayTable) {
   try {
-    const { data, error } = await supabase
+    // Tarife normalizasyonu - T2 → T02, T3 → T03 gibi
+    const normalizedTarife = tarife.match(/^T\d$/) ? tarife.replace(/^T(\d)$/, 'T0$1') : tarife;
+    
+    // Önce normalize edilmiş tarife ile dene
+    let { data, error } = await supabase
       .from(todayTable)
       .select('Plaka, Yeni_Plaka')
       .eq('Hat_Adi', hatAdi)
-      .eq('Tarife', tarife)
+      .eq('Tarife', normalizedTarife)
       .single();
+    
+    // Bulunamazsa orijinal tarife ile dene
+    if (error && tarife !== normalizedTarife) {
+      const result = await supabase
+        .from(todayTable)
+        .select('Plaka, Yeni_Plaka')
+        .eq('Hat_Adi', hatAdi)
+        .eq('Tarife', tarife)
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
     
     if (error || !data) {
       return { plaka: null, isYeniPlaka: false };

@@ -1199,12 +1199,12 @@ function openApprovalConfirmation(rowData, tableName) {
       if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
     } else {
       approvalModalTitle.textContent = '⚠️ Arıza Kaydı';
-      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
+      approvalQuestion.textContent = '⚠️ Arızalı Olarak İşaretle butonuna basarak arıza kaydı ekleyebilirsiniz.';
       confirmApprovalBtn.style.background = '#e74c3c';
       confirmApprovalBtn.innerHTML = '⚠️ Arızalı Olarak Işaretle';
       pendingApprovalData.removeArizali = false;
-      // Açıklama formunu göster (arızalı işaretleme için zorunlu)
-      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'block';
+      // Açıklama formunu başlangıçta gizli tut (butona basınca açılacak)
+      if (arizaliAciklamaForm) arizaliAciklamaForm.style.display = 'none';
       // Açıklama alanını temizle
       const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
       if (arizaliAciklamaText) arizaliAciklamaText.value = '';
@@ -1277,9 +1277,23 @@ async function handleRowApproval() {
     return;
   }
   
-  // Operasyon modunda arızalı işaretleme için açıklama kontrolü
+  // Operasyon modunda arızalı işaretleme için önce form açılmalı
   if (currentMode === 'operasyon' && !pendingApprovalData.removeArizali) {
+    const arizaliAciklamaForm = document.getElementById('arizaliAciklamaForm');
     const arizaliAciklamaText = document.getElementById('arizaliAciklamaText');
+    
+    // Eğer form gizliyse, önce formu aç ve işlemi durdur
+    if (arizaliAciklamaForm && arizaliAciklamaForm.style.display === 'none') {
+      arizaliAciklamaForm.style.display = 'block';
+      approvalQuestion.textContent = 'Arıza detaylarını açıklayın:';
+      confirmApprovalBtn.innerHTML = '✅ Kaydet ve İşaretle';
+      if (arizaliAciklamaText) {
+        arizaliAciklamaText.focus();
+      }
+      return; // İşlemi durdur, kullanıcı açıklama girsin
+    }
+    
+    // Form açıksa, açıklama kontrolü yap
     const aciklama = arizaliAciklamaText ? arizaliAciklamaText.value.trim() : '';
     
     if (!aciklama) {
