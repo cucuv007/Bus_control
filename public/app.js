@@ -124,6 +124,7 @@ let uploadMethod = null;
 let uploadType = null; // 'hat' or 'plaka'
 let timerInterval = null;
 let lastBusTime = null;
+let lastTableRefreshTime = 0; // Periyodik tablo yenileme için
 let selectedDepolamaTables = []; // Seçilen depolama tabloları
 let filteredHats = []; // Depolama'dan gelen hat listesi
 let availableHats = []; // Mevcut tüm hatlar (dropdown'daki)
@@ -2910,6 +2911,9 @@ async function startMultipleHatsTimer(hatList, hareket) {
   selectedHatsForTracking = hatList;
   selectedHareketForTracking = hareket;
   
+  // Periyodik yenileme sayacını sıfırla
+  lastTableRefreshTime = Date.now();
+  
   // Tablo otomatik yenileme başlat (5 saniyede bir)
   if (tableRefreshInterval) {
     clearInterval(tableRefreshInterval);
@@ -3076,6 +3080,17 @@ async function refreshTableData(hatList, hareket) {
     
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
+    // 💬 Açıklama ikonlarını güncelle (cache'i yenile)
+    const uniqueRows = new Set();
+    allData.forEach(row => {
+      const key = `${row.Hat_Adi}|${row.Tarife}|${row.Tarife_Saati}`;
+      if (!uniqueRows.has(key)) {
+        uniqueRows.add(key);
+        // Her benzersiz satır için açıklama kontrolü yap
+        updateAciklamaIconsForRow(row.Hat_Adi, row.Tarife, row.Tarife_Saati);
+      }
+    });
+    
     // Arızalı filtresini uygula (eğer aktifse)
     if (showOnlyArizali) {
       applyTableFilter();
@@ -3092,11 +3107,19 @@ async function updateMultipleHatsTimer(hatList, hareket) {
     return;
   }
   
+  // 🔄 Periyodik tablo yenileme (her 10 saniyede bir) - mobil senkronizasyon için
+  const now = Date.now();
+  if (now - lastTableRefreshTime >= 10000) { // 10 saniye
+    lastTableRefreshTime = now;
+    console.log('🔄 Periyodik tablo yenileme başlatılıyor (mobil senkronizasyon)...');
+    await refreshTableData(hatList, hareket);
+  }
+  
   try {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const nowDate = new Date();
+    const hours = String(nowDate.getHours()).padStart(2, '0');
+    const minutes = String(nowDate.getMinutes()).padStart(2, '0');
+    const seconds = String(nowDate.getSeconds()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}:${seconds}`;
     
     let allBusesList = [];
@@ -3853,7 +3876,9 @@ async function handleAddAciklamaInline() {
     // Açıklama formunu gizle
     document.getElementById('aciklamaFormInline').style.display = 'none';
     
-    // ⚡ İlgili satırın açıklama ikonunu güncelle
+    // ⚡ Cache'i temizle ve ilgili satırın açıklama ikonunu güncelle
+    const cacheKey = `${rowData.Hat_Adi}|${rowData.Tarife}|${rowData.Tarife_Saati}`;
+    delete aciklamaCache[cacheKey];
     await updateAciklamaIconsForRow(
       rowData.Hat_Adi,
       rowData.Tarife,
@@ -3996,7 +4021,9 @@ async function handleAracDegistir() {
     // Araç değiştir formunu gizle
     document.getElementById('aracDegistirFormInline').style.display = 'none';
     
-    // ⚡ İlgili satırın açıklama ikonunu güncelle
+    // ⚡ Cache'i temizle ve ilgili satırın açıklama ikonunu güncelle
+    const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
+    delete aciklamaCache[cacheKey];
     await updateAciklamaIconsForRow(
       hatAdi,
       tarife,
@@ -4073,9 +4100,12 @@ async function saveArizaliAciklama(rowData) {
     
     console.log('✅ Arızalı açıklaması kaydedildi:', result);
     
-    // İlgili satırın açıklama ikonunu güncelle
+    // Cache'i temizle ve İlgili satırın açıklama ikonunu güncelle
+    const hatAdi = rowData.tableName || rowData.Hat_Adi;
+    const cacheKey = `${hatAdi}|${rowData.tarife}|${rowData.tarifeSaati}`;
+    delete aciklamaCache[cacheKey];
     await updateAciklamaIconsForRow(
-      rowData.tableName || rowData.Hat_Adi,
+      hatAdi,
       rowData.tarife,
       rowData.tarifeSaati
     );
@@ -4175,7 +4205,9 @@ async function removeArizaliAciklama(rowData) {
     const deleteResult = await deleteRes.json();
     console.log('✅ Arızalı açıklamaları silindi:', deleteResult);
     
-    // İlgili satırın açıklama ikonunu güncelle
+    // Cache'i temizle ve İlgili satırın açıklama ikonunu güncelle
+    const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
+    delete aciklamaCache[cacheKey];
     await updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati);
     
   } catch (err) {
