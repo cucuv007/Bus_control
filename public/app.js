@@ -2914,14 +2914,19 @@ async function startMultipleHatsTimer(hatList, hareket) {
   // Periyodik yenileme sayacını sıfırla
   lastTableRefreshTime = Date.now();
   
-  // Tablo otomatik yenileme başlat (5 saniyede bir)
+  // Tablo otomatik yenileme başlat (3 saniyede bir - mobil senkronizasyon için)
   if (tableRefreshInterval) {
     clearInterval(tableRefreshInterval);
   }
   
-  tableRefreshInterval = setInterval(() => {
-    refreshTableData(hatList, hareket);
-  }, 5000); // 5 saniyede bir yenile
+  // İlk yenileme hemen yapılsın
+  console.log('🚀 İlk tablo yenilemesi başlatılıyor...');
+  await refreshTableData(hatList, hareket);
+  
+  tableRefreshInterval = setInterval(async () => {
+    console.log('🔄 Periyodik tablo yenileme (tableRefreshInterval)...');
+    await refreshTableData(hatList, hareket);
+  }, 3000); // 3 saniyede bir yenile
   
   if (timerInterval) {
     clearInterval(timerInterval);
@@ -2938,6 +2943,9 @@ async function startMultipleHatsTimer(hatList, hareket) {
 
 // Tablo verilerini sessizce yenile (kullanıcı etkileşimi olmadan)
 async function refreshTableData(hatList, hareket) {
+  const timestamp = new Date().toLocaleTimeString('tr-TR');
+  console.log(`🔄 [${timestamp}] refreshTableData başlatıldı - Hatlar:`, hatList, 'Hareket:', hareket);
+  
   try {
     const allData = [];
     
@@ -3078,8 +3086,6 @@ async function refreshTableData(hatList, hareket) {
       tbody.appendChild(tr);
     });
     
-    console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
-    
     // 💬 Açıklama ikonlarını güncelle (cache'i yenile)
     const uniqueRows = new Set();
     allData.forEach(row => {
@@ -3090,6 +3096,9 @@ async function refreshTableData(hatList, hareket) {
         updateAciklamaIconsForRow(row.Hat_Adi, row.Tarife, row.Tarife_Saati);
       }
     });
+    
+    const timestampEnd = new Date().toLocaleTimeString('tr-TR');
+    console.log(`✅ [${timestampEnd}] Tablo yenilendi: ${allData.length} kayıt, ${uniqueRows.size} benzersiz satır, ${uniqueRows.size} ikon güncellendi`);
     
     // Arızalı filtresini uygula (eğer aktifse)
     if (showOnlyArizali) {
@@ -3105,14 +3114,6 @@ async function updateMultipleHatsTimer(hatList, hareket) {
   // Manuel kapatıldıysa çık
   if (timerClosedManually) {
     return;
-  }
-  
-  // 🔄 Periyodik tablo yenileme (her 10 saniyede bir) - mobil senkronizasyon için
-  const now = Date.now();
-  if (now - lastTableRefreshTime >= 10000) { // 10 saniye
-    lastTableRefreshTime = now;
-    console.log('🔄 Periyodik tablo yenileme başlatılıyor (mobil senkronizasyon)...');
-    await refreshTableData(hatList, hareket);
   }
   
   try {
@@ -5152,6 +5153,23 @@ document.addEventListener('DOMContentLoaded', () => {
   startForceLogoutCheck();
   
   handleRefresh();
+});
+
+// ==================== MOBİL SENKRONIZASYON - VİSİBİLİTY EVENT ====================
+// Sayfa geri geldiğinde (mobil cihazlarda arka plandan çıkınca) tabloyu yenile
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden) {
+    console.log('👁️ Sayfa görünür hale geldi - mobil senkronizasyon için yenileme yapılıyor...');
+    
+    // Eğer timer aktifse ve hatlar seçiliyse tabloyu yenile
+    if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+      const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+      console.log('🔄 Görünürlük değişti - tablo yenileniyor:', selectedHatsForTracking);
+      await refreshTableData(selectedHatsForTracking, currentHareket);
+    }
+  } else {
+    console.log('🔒 Sayfa gizlendi (arka plan)');
+  }
 });
 
 // ==================== OTOMATIK GÜNCELLEME KONTROLÜ ====================
