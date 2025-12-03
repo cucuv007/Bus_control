@@ -2968,6 +2968,12 @@ async function refreshTableData(hatList, hareket) {
   const timestamp = new Date().toLocaleTimeString('tr-TR');
   console.log(`🔄 [${timestamp}] refreshTableData başlatıldı - Hatlar:`, hatList, 'Hareket:', hareket);
   
+  // Visual feedback (mobil için)
+  if (tbody) {
+    tbody.style.opacity = '0.7';
+    tbody.style.transition = 'opacity 0.2s';
+  }
+  
   try {
     const allData = [];
     
@@ -3122,6 +3128,23 @@ async function refreshTableData(hatList, hareket) {
     const timestampEnd = new Date().toLocaleTimeString('tr-TR');
     console.log(`✅ [${timestampEnd}] Tablo yenilendi: ${allData.length} kayıt, ${uniqueRows.size} benzersiz satır, ${uniqueRows.size} ikon güncellendi`);
     
+    // 🔧 Mobil cihazlarda DOM güncellemesini zorla (force reflow)
+    void tbody.offsetHeight;
+    
+    // Scroll pozisyonunu koru ve force paint
+    const scrollPos = window.pageYOffset || document.documentElement.scrollTop;
+    tbody.style.display = 'none';
+    void tbody.offsetHeight; // Force reflow
+    tbody.style.display = '';
+    window.scrollTo(0, scrollPos);
+    
+    console.log('🎨 DOM force reflow yapıldı (mobil için)');
+    
+    // Visual feedback'i kaldır
+    if (tbody) {
+      tbody.style.opacity = '1';
+    }
+    
     // Arızalı filtresini uygula (eğer aktifse)
     if (showOnlyArizali) {
       applyTableFilter();
@@ -3129,6 +3152,11 @@ async function refreshTableData(hatList, hareket) {
     
   } catch (err) {
     console.error('⚠️ Tablo yenileme hatası:', err.message);
+    
+    // Hata olsa bile opacity'yi geri al
+    if (tbody) {
+      tbody.style.opacity = '1';
+    }
   }
 }
 
