@@ -2914,7 +2914,7 @@ async function startMultipleHatsTimer(hatList, hareket) {
   // Periyodik yenileme sayacını sıfırla
   lastTableRefreshTime = Date.now();
   
-  // Tablo otomatik yenileme başlat (3 saniyede bir - mobil senkronizasyon için)
+  // Tablo otomatik yenileme başlat (1 saniyede bir - mobil senkronizasyon için)
   if (tableRefreshInterval) {
     clearInterval(tableRefreshInterval);
   }
@@ -2923,10 +2923,13 @@ async function startMultipleHatsTimer(hatList, hareket) {
   console.log('🚀 İlk tablo yenilemesi başlatılıyor...');
   await refreshTableData(hatList, hareket);
   
-  tableRefreshInterval = setInterval(async () => {
-    console.log('🔄 Periyodik tablo yenileme (tableRefreshInterval)...');
-    await refreshTableData(hatList, hareket);
-  }, 3000); // 3 saniyede bir yenile
+  tableRefreshInterval = setInterval(() => {
+    const now = new Date().toLocaleTimeString('tr-TR');
+    console.log(`🔄 [${now}] Periyodik tablo yenileme (tableRefreshInterval)...`);
+    refreshTableData(hatList, hareket).catch(err => {
+      console.error('⚠️ Tablo yenileme hatası (interval):', err);
+    });
+  }, 1000); // 1 saniyede bir yenile (mobil için)
   
   if (timerInterval) {
     clearInterval(timerInterval);
@@ -5170,6 +5173,21 @@ document.addEventListener('visibilitychange', async () => {
   } else {
     console.log('🔒 Sayfa gizlendi (arka plan)');
   }
+});
+
+// Window focus event (mobil cihazlar için ek koruma)
+window.addEventListener('focus', async () => {
+  console.log('🎯 Pencere focus aldı - yenileme kontrolü...');
+  
+  if (timerInterval && selectedHatsForTracking && selectedHatsForTracking.length > 0) {
+    const currentHareket = selectedHareketForTracking || 'Çalışma_Zamanı';
+    console.log('🔄 Focus - tablo yenileniyor:', selectedHatsForTracking);
+    await refreshTableData(selectedHatsForTracking, currentHareket);
+  }
+});
+
+window.addEventListener('blur', () => {
+  console.log('🔲 Pencere focus kaybetti');
 });
 
 // ==================== OTOMATIK GÜNCELLEME KONTROLÜ ====================

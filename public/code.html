@@ -766,6 +766,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- Eruda - Mobile Debug Console (Mobil cihazlarda console görmek için) -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  // Sadece mobil cihazlarda ve touch destekli cihazlarda Eruda'yı başlat
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+      ('ontouchstart' in window)) {
+    eruda.init();
+    console.log('📱 Eruda console başlatıldı - Sağ alt köşedeki ikona tıklayın');
+  }
+</script>
+
 <script src="/app.js"></script>
 </body>
 </html>
