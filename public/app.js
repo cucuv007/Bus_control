@@ -2844,14 +2844,16 @@ async function fetchDangerTimes() {
       `${window.SUPABASE_URL}/rest/v1/Danger?select=Name,Uyarı`,
       {
         headers: {
-          'apikey': window.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`
+          'apikey': window.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${window.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json'
         }
       }
     );
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      console.warn('Danger times yüklenemedi, HTTP:', response.status);
+      return;
     }
     
     const data = await response.json();
@@ -2867,6 +2869,7 @@ async function fetchDangerTimes() {
     console.log('✅ Danger times loaded:', Object.keys(dangerTimesCache).length, 'records');
   } catch (error) {
     console.error('Danger times fetch error:', error);
+    console.warn('Danger tablosu erişilemedi - zamanlar gösterilmeyecek');
   }
 }
 
@@ -2901,7 +2904,7 @@ async function handleSetDangerTime() {
     // Convert HH:MM to HH:MM:00 for time type
     const timeWithSeconds = `${timeValue}:00`;
     
-    // Update each hat one by one using Supabase REST API
+    // Update each hat using Supabase REST API
     let successCount = 0;
     for (const hatName of selectedHatNames) {
       try {
@@ -2910,8 +2913,8 @@ async function handleSetDangerTime() {
           {
             method: 'PATCH',
             headers: {
-              'apikey': window.SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+              'apikey': window.SUPABASE_SERVICE_KEY,
+              'Authorization': `Bearer ${window.SUPABASE_SERVICE_KEY}`,
               'Content-Type': 'application/json',
               'Prefer': 'return=minimal'
             },
@@ -2919,15 +2922,14 @@ async function handleSetDangerTime() {
           }
         );
         
-        if (response.ok) {
+        if (response.ok || response.status === 204) {
           successCount++;
-          // Update cache immediately
           dangerTimesCache[hatName] = timeWithSeconds;
         } else {
-          console.error(`Failed to update ${hatName}:`, response.status);
+          console.error(`${hatName} güncellenemedi:`, response.status);
         }
       } catch (err) {
-        console.error(`Error updating ${hatName}:`, err);
+        console.error(`${hatName} güncelleme hatası:`, err);
       }
     }
     
@@ -2946,7 +2948,7 @@ async function handleSetDangerTime() {
       // Clear input
       dangerTimeInput.value = '';
     } else {
-      alert('❌ Hiçbir hat güncellenemedi');
+      alert('❌ Hiçbir hat güncellenemedi. Supabase bağlantısını kontrol edin.');
     }
   } catch (error) {
     console.error('Set danger time error:', error);
