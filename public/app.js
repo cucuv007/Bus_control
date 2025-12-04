@@ -574,7 +574,7 @@ if (setDangerTimeBtn) {
   setDangerTimeBtn.addEventListener('click', handleSetDangerTime);
 }
 
-// Auto-format time input (HH:MM)
+// Auto-format time input (MM:SS) with auto-complete for 2-digit input
 if (dangerTimeInput) {
   dangerTimeInput.addEventListener('input', function(e) {
     let value = e.target.value.replace(/[^0-9]/g, ''); // Sadece rakam
@@ -583,7 +583,21 @@ if (dangerTimeInput) {
       value = value.substring(0, 2) + ':' + value.substring(2, 4);
     }
     
-    e.target.value = value.substring(0, 5); // Max 5 karakter (HH:MM)
+    e.target.value = value.substring(0, 5); // Max 5 karakter (MM:SS)
+  });
+  
+  // Blur event: Eğer sadece 2 hane girilmişse otomatik :00 ekle
+  dangerTimeInput.addEventListener('blur', function(e) {
+    let value = e.target.value.trim();
+    
+    // Eğer sadece 2 rakam girilmişse (35 gibi), :00 ekle
+    if (/^\d{2}$/.test(value)) {
+      e.target.value = value + ':00';
+    }
+    // Eğer boşsa, default 00:00 yap
+    else if (value === '') {
+      e.target.value = '00:00';
+    }
   });
   
   dangerTimeInput.addEventListener('keypress', function(e) {
@@ -592,6 +606,22 @@ if (dangerTimeInput) {
       e.preventDefault();
     }
   });
+  
+  // Admin-only access control
+  const userSession = localStorage.getItem('userSession');
+  if (userSession) {
+    const session = JSON.parse(userSession);
+    if (session.gorev !== 'Admin') {
+      dangerTimeInput.disabled = true;
+      dangerTimeInput.style.opacity = '0.5';
+      dangerTimeInput.style.cursor = 'not-allowed';
+      if (setDangerTimeBtn) {
+        setDangerTimeBtn.disabled = true;
+        setDangerTimeBtn.style.opacity = '0.5';
+        setDangerTimeBtn.style.cursor = 'not-allowed';
+      }
+    }
+  }
 }
 
 // refreshHatsBtn başlangıçta gizli olabilir, kontrol et
@@ -2931,8 +2961,8 @@ async function handleSetDangerTime() {
       if (checkbox) checkbox.checked = true;
     });
     
-    // Clear input
-    dangerTimeInput.value = '';
+    // Clear input to default
+    dangerTimeInput.value = '00:00';
     
   } catch (error) {
     console.error('Set danger time error:', error);
