@@ -1636,7 +1636,8 @@ async function handleRefresh() {
       'Operasyon_Açıklama',
       'Saat',
       'Kullanıcı_Verileri',
-      'Kullanıcılar'
+      'Kullanıcılar',
+      'Danger'
     ];
     
     tables = tables.filter(table => !systemTables.includes(table));
@@ -2675,7 +2676,8 @@ async function loadFilteredTables() {
       'Operasyon_Açıklama',
       'Saat',
       'Kullanıcı_Verileri',
-      'Kullanıcılar'
+      'Kullanıcılar',
+      'Danger'
     ];
     
     allTables = allTables.filter(table => !systemTables.includes(table));
