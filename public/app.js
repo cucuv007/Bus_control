@@ -113,11 +113,14 @@ const hatCheckboxList = document.getElementById('hatCheckboxList');
 const selectAllHats = document.getElementById('selectAllHats');
 const applyHatSelection = document.getElementById('applyHatSelection');
 const refreshHatsBtn = document.getElementById('refreshHatsBtn');
+const setDangerTimeBtn = document.getElementById('setDangerTime');
+const dangerTimeInput = document.getElementById('dangerTimeInput');
 
 // State variables
 let selectedFiles = [];
 let currentTable = null;
 let currentHareket = null;
+let dangerTimesCache = {}; // Cache for danger times
 let isLoading = false;
 let allFiles = [];
 let uploadMethod = null;
@@ -566,6 +569,9 @@ if (selectAllHats) {
 }
 if (applyHatSelection) {
   applyHatSelection.addEventListener('click', handleApplyHatSelection);
+}
+if (setDangerTimeBtn) {
+  setDangerTimeBtn.addEventListener('click', handleSetDangerTime);
 }
 
 // refreshHatsBtn başlangıçta gizli olabilir, kontrol et
@@ -2738,7 +2744,7 @@ async function loadFilteredTables() {
 }
 
 // ==================== HAT SELECTION FUNCTIONS ====================
-function renderHatCheckboxes() {
+async function renderHatCheckboxes() {
   if (availableHats.length === 0) {
     hatSelectionContainer.style.display = 'none';
     return;
@@ -2752,10 +2758,22 @@ function renderHatCheckboxes() {
   selectAllHats.checked = false;
   selectAllHats.indeterminate = false;
   
+  // Fetch danger times
+  await fetchDangerTimes();
+  
   availableHats.forEach(hatName => {
     const label = document.createElement('label');
-    label.style.display = 'block';
+    label.style.display = 'flex';
+    label.style.justifyContent = 'space-between';
+    label.style.alignItems = 'center';
     label.style.marginBottom = '5px';
+    label.style.padding = '4px';
+    label.style.borderRadius = '3px';
+    label.style.transition = 'background 0.2s';
+    
+    const leftDiv = document.createElement('div');
+    leftDiv.style.display = 'flex';
+    leftDiv.style.alignItems = 'center';
     
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -2765,10 +2783,112 @@ function renderHatCheckboxes() {
     
     checkbox.addEventListener('change', updateSelectAllHats);
     
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(hatName));
+    leftDiv.appendChild(checkbox);
+    leftDiv.appendChild(document.createTextNode(hatName));
+    
+    // Add danger time display
+    const dangerTime = dangerTimesCache[hatName];
+    if (dangerTime) {
+      // Extract HH:MM from HH:MM:SS
+      const timeDisplay = dangerTime.substring(0, 5);
+      const timeSpan = document.createElement('span');
+      timeSpan.textContent = timeDisplay;
+      timeSpan.style.marginLeft = 'auto';
+      timeSpan.style.fontWeight = 'bold';
+      timeSpan.style.color = '#e74c3c';
+      timeSpan.style.fontSize = '0.9em';
+      label.appendChild(leftDiv);
+      label.appendChild(timeSpan);
+    } else {
+      label.appendChild(leftDiv);
+    }
+    
+    // Hover effect
+    label.addEventListener('mouseenter', () => {
+      label.style.background = '#e8f4f8';
+    });
+    label.addEventListener('mouseleave', () => {
+      label.style.background = 'transparent';
+    });
+    
     hatCheckboxList.appendChild(label);
   });
+}
+
+// Fetch danger times from database
+async function fetchDangerTimes() {
+  try {
+    const response = await fetch('/api/get-danger-times');
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      dangerTimesCache = result.data;
+    }
+  } catch (error) {
+    console.error('Danger times fetch error:', error);
+  }
+}
+
+// Handle Set Time button click
+async function handleSetDangerTime() {
+  const timeValue = dangerTimeInput.value;
+  
+  if (!timeValue) {
+    alert('Lütfen bir zaman girin (örn: 00:30)');
+    return;
+  }
+  
+  const checkboxes = document.querySelectorAll('.hat-checkbox:checked');
+  const selectedHatNames = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (selectedHatNames.length === 0) {
+    alert('Lütfen en az bir hat seçin');
+    return;
+  }
+  
+  try {
+    setDangerTimeBtn.disabled = true;
+    setDangerTimeBtn.textContent = '⏳ Güncelleniyor...';
+    
+    const response = await fetch('/api/update-danger-time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hatNames: selectedHatNames,
+        uyariTime: timeValue
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert(`✅ ${selectedHatNames.length} hat için uyarı zamanı güncellendi: ${timeValue}`);
+      
+      // Update cache and re-render to show new times
+      selectedHatNames.forEach(hatName => {
+        dangerTimesCache[hatName] = `${timeValue}:00`;
+      });
+      
+      await renderHatCheckboxes();
+      
+      // Re-check previously selected hats
+      selectedHatNames.forEach(hatName => {
+        const checkbox = document.querySelector(`.hat-checkbox[value="${hatName}"]`);
+        if (checkbox) checkbox.checked = true;
+      });
+      
+      // Clear input
+      dangerTimeInput.value = '';
+    } else {
+      alert('❌ Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'));
+    }
+  } catch (error) {
+    console.error('Set danger time error:', error);
+    alert('❌ Güncelleme hatası: ' + error.message);
+  } finally {
+    setDangerTimeBtn.disabled = false;
+    setDangerTimeBtn.textContent = '⚙️ Set Time';
+  }
 }
 
 function handleSelectAllHats(e) {

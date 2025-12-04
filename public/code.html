@@ -567,6 +567,14 @@
         </label>
         <div id="hatCheckboxList"></div>
       </div>
+      
+      <!-- Set Time Section -->
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+        <label style="margin: 0; font-weight: bold;">⏰ Uyarı Zamanı:</label>
+        <input type="time" id="dangerTimeInput" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
+        <button id="setDangerTime" class="btn" style="margin: 0; background: #3498db; white-space: nowrap;">⚙️ Set Time</button>
+      </div>
+      
       <button id="applyHatSelection" class="btn" style="margin-top: 10px; width: 100%;">⏱️ Seçili Hatları Takip Et</button>
       <button id="refreshHatsBtn" class="btn" style="margin-top: 10px; width: 100%; background: #e74c3c;">🔄 Hatları Yenile</button>
       <button id="inceleAciklamaBtn" class="btn" style="margin-top: 10px; width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📝 Açıklamaları İncele</button>
@@ -766,6 +774,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <script src="/app.js"></script>
 </body>
 </html>
