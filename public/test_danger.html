@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>🧪 Danger Tablosu Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.clear {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        #output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .warning { color: #dcdcaa; }
+        .info { color: #9cdcfe; }
+        .timestamp {
+            color: #808080;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Supabase Operasyon_Açıklama Test</h1>
+        
+        <div class="btn-group">
+            <button onclick="testRead()">📖 Operasyon Verilerini Oku</button>
+            <button onclick="testUpdate()">✏️ Test Güncelleme (Devre Dışı)</button>
+            <button class="clear" onclick="clearOutput()">🗑️ Temizle</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vhxjyfappvmtwfdkhkoc.supabase.co';
+        const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeGp5ZmFwcHZtdHdmZGtoa29jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjU0MjkyNywiZXhwIjoyMDQ4MTE4OTI3fQ.VWnKC7B_5oqKhthYCVzMoHuSUxYmH9O6A3xjcwwm7NQ';
+
+        // Page load event
+        window.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Test sayfası hazır!', 'success');
+            log(`🌐 Supabase URL: ${SUPABASE_URL}`, 'info');
+            log(`🔑 Service Key: ${SERVICE_KEY.substring(0, 50)}...`, 'info');
+            log('', 'info');
+            log('👆 Yukarıdaki butonlarla test edebilirsiniz.', 'warning');
+            log('═'.repeat(50), 'info');
+        });
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString('tr-TR');
+            const line = `<span class="timestamp">[${timestamp}]</span> <span class="${type}">${message}</span>\n`;
+            output.innerHTML += line;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            log('🧹 Çıktı temizlendi. Test başlatmak için yukarıdaki butonlara tıklayın.', 'info');
+        }
+
+        async function testRead() {
+            log('⏳ Operasyon_Açıklama tablosundan veriler okunuyor...', 'info');
+            
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/Operasyon_Açıklama?select=*&limit=20`,
+                    {
+                        headers: {
+                            'apikey': SERVICE_KEY,
+                            'Authorization': `Bearer ${SERVICE_KEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                log(`📡 HTTP Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Başarılı! ${data.length} kayıt bulundu.`, 'success');
+                    
+                    if (data.length > 0) {
+                        log('📋 İlk 20 kayıt:', 'info');
+                        log('═'.repeat(50), 'info');
+                        data.forEach((row, index) => {
+                            const rowInfo = `${index + 1}. ${JSON.stringify(row).substring(0, 80)}...`;
+                            log(rowInfo, 'success');
+                        });
+                        log('═'.repeat(50), 'info');
+                        log(`📊 Toplam: ${data.length} kayıt`, 'success');
+                    } else {
+                        log('⚠️ Tablo boş! Veri yok.', 'warning');
+                    }
+                } else if (response.status === 401) {
+                    log('❌ 401 UNAUTHORIZED!', 'error');
+                    log('🔒 Row Level Security (RLS) AÇIK!', 'error');
+                    log('', 'info');
+                    log('ÇÖZÜM:', 'warning');
+                    log('1. Supabase Dashboard → SQL Editor', 'info');
+                    log('2. Şu SQL\'i çalıştır:', 'info');
+                    log('   ALTER TABLE "Operasyon_Açıklama" DISABLE ROW LEVEL SECURITY;', 'warning');
+                    log('3. Bu sayfayı yenile ve tekrar test et.', 'info');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Hata: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ağ hatası: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUpdate() {
+            log('⏳ Test güncelleme yapılıyor (Hat: 104 → 00:45:00)...', 'info');
+            
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/Takip?Name=eq.104`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SERVICE_KEY,
+                            'Authorization': `Bearer ${SERVICE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify({ Uyarı: '00:45:00' })
+                    }
+                );
+
+                log(`📡 HTTP Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok || response.status === 204) {
+                    log('✅ Güncelleme başarılı!', 'success');
+                    log('📝 Hat 104 için Uyarı: 00:45:00 olarak ayarlandı.', 'success');
+                    log('', 'info');
+                    log('📖 Kontrol etmek için "Danger Verilerini Oku" butonuna tıklayın.', 'info');
+                } else if (response.status === 401) {
+                    log('❌ 401 UNAUTHORIZED!', 'error');
+                    log('🔒 RLS yazma izni yok!', 'error');
+                    log('', 'info');
+                    log('ÇÖZÜM: Yukarıdaki okuma testindeki SQL\'i çalıştırın.', 'warning');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Hata: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ağ hatası: ${error.message}`, 'error');
+            }
+        }
+
+        // Sayfa yüklendiğinde
+        window.addEventListener('load', () => {
+            log('🚀 Test sayfası hazır!', 'success');
+            log(`🌐 Supabase URL: ${SUPABASE_URL}`, 'info');
+            log(`🔑 Service Key: ${SERVICE_KEY.substring(0, 40)}...`, 'info');
+            log('', 'info');
+            log('👆 Yukarıdaki butonlarla test edebilirsiniz.', 'info');
+            log('═'.repeat(50), 'info');
+        });
+    </script>
+</body>
+</html>

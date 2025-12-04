@@ -1663,7 +1663,7 @@ async function handleRefresh() {
       'Saat',
       'Kullanıcı_Verileri',
       'Kullanıcılar',
-      'Danger'
+      'Takip'
     ];
     
     tables = tables.filter(table => !systemTables.includes(table));
@@ -2703,7 +2703,7 @@ async function loadFilteredTables() {
       'Saat',
       'Kullanıcı_Verileri',
       'Kullanıcılar',
-      'Danger'
+      'Takip'
     ];
     
     allTables = allTables.filter(table => !systemTables.includes(table));
@@ -2841,7 +2841,7 @@ async function renderHatCheckboxes() {
 async function fetchDangerTimes() {
   try {
     const response = await fetch(
-      `${window.SUPABASE_URL}/rest/v1/Danger?select=Name,Uyarı`,
+      `${window.SUPABASE_URL}/rest/v1/Takip?select=Name,Uyarı`,
       {
         headers: {
           'apikey': window.SUPABASE_SERVICE_KEY,
@@ -2852,7 +2852,7 @@ async function fetchDangerTimes() {
     );
     
     if (!response.ok) {
-      console.warn('Danger times yüklenemedi, HTTP:', response.status);
+      console.warn('Takip times yüklenemedi, HTTP:', response.status);
       return;
     }
     
@@ -2866,10 +2866,10 @@ async function fetchDangerTimes() {
       });
     }
     
-    console.log('✅ Danger times loaded:', Object.keys(dangerTimesCache).length, 'records');
+    console.log('✅ Takip times loaded:', Object.keys(dangerTimesCache).length, 'records');
   } catch (error) {
-    console.error('Danger times fetch error:', error);
-    console.warn('Danger tablosu erişilemedi - zamanlar gösterilmeyecek');
+    console.error('Takip times fetch error:', error);
+    console.warn('Takip tablosu erişilemedi - zamanlar gösterilmeyecek');
   }
 }
 
@@ -2909,7 +2909,7 @@ async function handleSetDangerTime() {
     for (const hatName of selectedHatNames) {
       try {
         const response = await fetch(
-          `${window.SUPABASE_URL}/rest/v1/Danger?Name=eq.${encodeURIComponent(hatName)}`,
+          `${window.SUPABASE_URL}/rest/v1/Takip?Name=eq.${encodeURIComponent(hatName)}`,
           {
             method: 'PATCH',
             headers: {

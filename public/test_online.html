@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Takip Tablosu Test - Online</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.clear {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        #output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .warning { color: #dcdcaa; }
+        .info { color: #9cdcfe; }
+        .timestamp {
+            color: #808080;
+            font-size: 12px;
+        }
+        .status {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Takip Tablosu Test (Online)</h1>
+        
+        <div class="status">
+            <strong>🌐 Test Modu:</strong> Online (CORS engeli yok) <br>
+            <strong>📍 Konum:</strong> <span id="location">Kontrol ediliyor...</span>
+        </div>
+        
+        <div class="btn-group">
+            <button onclick="testTakip()">📖 Takip Tablosu Oku</button>
+            <button onclick="testOperasyon()">📋 Operasyon_Açıklama Oku</button>
+            <button class="clear" onclick="clearOutput()">🗑️ Temizle</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vhxjyfappvmtwfdkhkoc.supabase.co';
+        const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeGp5ZmFwcHZtdHdmZGtoa29jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjU0MjkyNywiZXhwIjoyMDQ4MTE4OTI3fQ.VWnKC7B_5oqKhthYCVzMoHuSUxYmH9O6A3xjcwwm7NQ';
+
+        window.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('location').textContent = window.location.href;
+            log('🚀 Test sayfası hazır!', 'success');
+            log(`🌐 Supabase URL: ${SUPABASE_URL}`, 'info');
+            log(`🔑 Service Key: ${SERVICE_KEY.substring(0, 50)}...`, 'info');
+            log('', 'info');
+            log('👆 Yukarıdaki butonlarla test edebilirsiniz.', 'warning');
+            log('═'.repeat(60), 'info');
+        });
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString('tr-TR');
+            const line = `<span class="timestamp">[${timestamp}]</span> <span class="${type}">${message}</span>\n`;
+            output.innerHTML += line;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            log('🧹 Çıktı temizlendi. Test başlatmak için yukarıdaki butonlara tıklayın.', 'info');
+        }
+
+        async function testTakip() {
+            log('⏳ Takip tablosundan veriler okunuyor...', 'info');
+            
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/Takip?select=id,Name,Uyarı&order=Name.asc&limit=10`,
+                    {
+                        headers: {
+                            'apikey': SERVICE_KEY,
+                            'Authorization': `Bearer ${SERVICE_KEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                log(`📡 HTTP Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ BAŞARILI! ${data.length} kayıt bulundu.`, 'success');
+                    
+                    if (data.length > 0) {
+                        log('📋 İlk 10 kayıt:', 'info');
+                        log('═'.repeat(60), 'info');
+                        data.forEach(row => {
+                            const time = row.Uyarı || '00:00:00';
+                            log(`  ID: ${String(row.id).padEnd(5)} | ${String(row.Name).padEnd(15)} | ${time}`, 'success');
+                        });
+                        log('═'.repeat(60), 'info');
+                    } else {
+                        log('⚠️ Tablo boş! Veri yok.', 'warning');
+                    }
+                } else if (response.status === 401) {
+                    log('❌ 401 UNAUTHORIZED!', 'error');
+                    log('🔒 Row Level Security (RLS) AÇIK!', 'error');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Hata: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ağ hatası: ${error.message}`, 'error');
+                log('💡 İpucu: CORS hatası olabilir (localhost sorunu)', 'warning');
+            }
+        }
+
+        async function testOperasyon() {
+            log('⏳ Operasyon_Açıklama tablosundan veriler okunuyor...', 'info');
+            
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/Operasyon_Açıklama?select=*&limit=5`,
+                    {
+                        headers: {
+                            'apikey': SERVICE_KEY,
+                            'Authorization': `Bearer ${SERVICE_KEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                log(`📡 HTTP Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ BAŞARILI! ${data.length} kayıt bulundu.`, 'success');
+                    
+                    if (data.length > 0) {
+                        log('📋 İlk 5 kayıt:', 'info');
+                        log('═'.repeat(60), 'info');
+                        data.forEach((row, index) => {
+                            log(`  ${index + 1}. ${JSON.stringify(row)}`, 'success');
+                        });
+                        log('═'.repeat(60), 'info');
+                    }
+                } else if (response.status === 401) {
+                    log('❌ 401 UNAUTHORIZED!', 'error');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Hata: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ağ hatası: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
