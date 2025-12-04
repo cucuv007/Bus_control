@@ -6115,6 +6115,11 @@ function closeBosDoluPopup() {
   if (bosDoluList) {
     bosDoluList.innerHTML = '';
   }
+  // Clear countdown interval
+  if (bosAracCountdownInterval) {
+    clearInterval(bosAracCountdownInterval);
+    bosAracCountdownInterval = null;
+  }
 }
 
 function findAndShowBosAraclar() {
@@ -6205,8 +6210,17 @@ function findAndShowBosAraclar() {
   showBosDoluPopup(bosAraclar);
 }
 
+// Global countdown interval tracker
+let bosAracCountdownInterval = null;
+
 function showBosDoluPopup(bosAraclar) {
   if (!bosDoluList || !bosDoluContainer) return;
+  
+  // Clear previous countdown
+  if (bosAracCountdownInterval) {
+    clearInterval(bosAracCountdownInterval);
+    bosAracCountdownInterval = null;
+  }
   
   bosDoluList.innerHTML = '';
   
@@ -6215,18 +6229,92 @@ function showBosDoluPopup(bosAraclar) {
   } else {
     bosAraclar.forEach((arac, index) => {
       const item = document.createElement('div');
-      item.style.cssText = 'padding: 12px; margin-bottom: 8px; background: #f8f9fa; border-left: 4px solid #3498db; border-radius: 6px;';
+      item.className = 'bos-arac-item';
+      item.dataset.hatAdi = arac.hatAdi;
+      item.dataset.donusSaati = arac.tarifeSaati;
+      item.dataset.index = index;
+      item.style.cssText = 'padding: 12px; margin-bottom: 8px; background: #f8f9fa; border-left: 4px solid #3498db; border-radius: 6px; transition: all 0.3s ease;';
       item.innerHTML = `
         <div style="font-size: 14px; color: #2c3e50; margin-bottom: 4px;">
           <strong>${index + 1}. ${arac.hatAdi}</strong> - ${arac.tarife}
         </div>
-        <div style="font-size: 12px; color: #7f8c8d;">
-          Dönüş: ${arac.tarifeSaati}
+        <div style="font-size: 12px; color: #7f8c8d; display: flex; justify-content: space-between; align-items: center;">
+          <span>Dönüş: ${arac.tarifeSaati}</span>
+          <span class="countdown-display" style="font-weight: bold; color: #27ae60;"></span>
         </div>
       `;
       bosDoluList.appendChild(item);
     });
+    
+    // Start countdown updates
+    updateBosDoluCountdowns();
+    bosAracCountdownInterval = setInterval(updateBosDoluCountdowns, 1000);
   }
   
   bosDoluContainer.style.display = 'block';
+}
+
+async function updateBosDoluCountdowns() {
+  const items = document.querySelectorAll('.bos-arac-item');
+  if (items.length === 0) return;
+  
+  const now = new Date();
+  const currentTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  
+  items.forEach(async (item) => {
+    const donusSaatiStr = item.dataset.donusSaati;
+    const hatAdi = item.dataset.hatAdi;
+    const countdownDisplay = item.querySelector('.countdown-display');
+    
+    if (!donusSaatiStr || !countdownDisplay) return;
+    
+    // Parse dönüş saati (HH:MM:SS)
+    const timeParts = donusSaatiStr.split(':');
+    if (timeParts.length < 2) return;
+    
+    const donusHours = parseInt(timeParts[0]) || 0;
+    const donusMinutes = parseInt(timeParts[1]) || 0;
+    const donusSeconds = parseInt(timeParts[2]) || 0;
+    const donusTimeInSeconds = donusHours * 3600 + donusMinutes * 60 + donusSeconds;
+    
+    // Geri sayım hesapla
+    let diffSeconds = donusTimeInSeconds - currentTime;
+    
+    // Eğer mevcut saat >= dönüş saati ise geri sayım yapma
+    if (diffSeconds <= 0) {
+      countdownDisplay.textContent = '';
+      item.style.borderLeft = '4px solid #3498db';
+      item.style.background = '#f8f9fa';
+      return;
+    }
+    
+    // Geri sayımı göster
+    const hours = Math.floor(diffSeconds / 3600);
+    const minutes = Math.floor((diffSeconds % 3600) / 60);
+    const seconds = diffSeconds % 60;
+    const countdownText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    countdownDisplay.textContent = `⏱️ ${countdownText}`;
+    
+    // Takip tablosundan uyarı süresini kontrol et
+    const uyariTime = dangerTimesCache[hatAdi];
+    
+    if (uyariTime && uyariTime !== '00:00:00') {
+      // Uyarı süresini saniyeye çevir (format: HH:MM:SS, bizim için 00:MM:SS)
+      const uyariParts = uyariTime.split(':');
+      const uyariMinutes = parseInt(uyariParts[1]) || 0;
+      const uyariSeconds = parseInt(uyariParts[2]) || 0;
+      const uyariTotalSeconds = uyariMinutes * 60 + uyariSeconds;
+      
+      // Eğer geri sayım uyarı süresinin altına düştüyse kırmızı yap
+      if (diffSeconds <= uyariTotalSeconds) {
+        item.style.borderLeft = '4px solid #e74c3c';
+        item.style.background = '#ffebee';
+        countdownDisplay.style.color = '#e74c3c';
+      } else {
+        item.style.borderLeft = '4px solid #3498db';
+        item.style.background = '#f8f9fa';
+        countdownDisplay.style.color = '#27ae60';
+      }
+    }
+  });
 }
