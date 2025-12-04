@@ -17,14 +17,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Hat names array is required' });
     }
 
-    if (!uyariTime || !/^\d{2}:\d{2}$/.test(uyariTime)) {
-      return res.status(400).json({ success: false, error: 'Valid time in HH:MM format is required' });
+    if (!uyariTime || !/^\d{2}:\d{2}:\d{2}$/.test(uyariTime)) {
+      return res.status(400).json({ success: false, error: 'Valid time in HH:MM:SS format is required' });
     }
 
     console.log(`📋 Takip tablosunda ${hatNames.length} hat güncelleniyor...`);
 
-    // Convert HH:MM to HH:MM:00 for time type
-    const timeValue = `${uyariTime}:00`;
+    // Time already in HH:MM:SS format from frontend
+    const timeValue = uyariTime;
 
     // Update Uyarı column for all selected hat names
     const { data, error } = await supabase

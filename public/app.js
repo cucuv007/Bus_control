@@ -2811,8 +2811,8 @@ async function renderHatCheckboxes() {
     // Add danger time display
     const dangerTime = dangerTimesCache[hatName];
     if (dangerTime && dangerTime !== '00:00:00') {
-      // Extract HH:MM from HH:MM:SS
-      const timeDisplay = dangerTime.substring(0, 5);
+      // Extract MM:SS from HH:MM:SS (skip first 3 chars: 00:)
+      const timeDisplay = dangerTime.substring(3, 8);
       const timeSpan = document.createElement('span');
       timeSpan.textContent = timeDisplay;
       timeSpan.style.marginLeft = 'auto';
@@ -2869,16 +2869,21 @@ async function handleSetDangerTime() {
   const timeValue = dangerTimeInput.value.trim();
   
   if (!timeValue) {
-    alert('Lütfen bir zaman girin (örn: 00:30)');
+    alert('Lütfen bir zaman girin (örn: 35:00 = 35 dakika)');
     return;
   }
   
-  // Validate time format HH:MM
-  const timePattern = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
+  // Validate time format MM:SS (dakika:saniye)
+  const timePattern = /^([0-5]?[0-9]):([0-5][0-9])$/;
   if (!timePattern.test(timeValue)) {
-    alert('Geçersiz zaman formatı! Lütfen HH:MM formatında girin (örn: 00:30, 12:45)');
+    alert('Geçersiz zaman formatı! Lütfen MM:SS formatında girin (örn: 35:00 = 35 dakika)');
     return;
   }
+  
+  // Kullanıcı MM:SS (dakika:saniye) giriyor
+  // PostgreSQL için HH:MM:SS formatına çevir: 00:MM:SS
+  const [minutes, seconds] = timeValue.split(':');
+  const formattedTime = `00:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}`;
   
   const checkboxes = document.querySelectorAll('.hat-checkbox:checked');
   const selectedHatNames = Array.from(checkboxes).map(cb => cb.value);
@@ -2900,7 +2905,7 @@ async function handleSetDangerTime() {
       },
       body: JSON.stringify({
         hatNames: selectedHatNames,
-        uyariTime: timeValue
+        uyariTime: formattedTime
       })
     });
     
@@ -2910,13 +2915,12 @@ async function handleSetDangerTime() {
       throw new Error(result.error || 'Güncelleme başarısız');
     }
     
-    // Update cache
-    const timeWithSeconds = `${timeValue}:00`;
+    // Update cache with HH:MM:SS format
     selectedHatNames.forEach(hatName => {
-      dangerTimesCache[hatName] = timeWithSeconds;
+      dangerTimesCache[hatName] = formattedTime;
     });
     
-    alert(`✅ ${result.count} hat için uyarı zamanı güncellendi: ${timeValue}`);
+    alert(`✅ ${result.count} hat için uyarı zamanı güncellendi: ${timeValue} (${minutes} dakika ${seconds} saniye)`);
     
     // Re-render to show new times
     await renderHatCheckboxes();
