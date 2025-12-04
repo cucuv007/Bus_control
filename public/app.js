@@ -574,6 +574,26 @@ if (setDangerTimeBtn) {
   setDangerTimeBtn.addEventListener('click', handleSetDangerTime);
 }
 
+// Auto-format time input (HH:MM)
+if (dangerTimeInput) {
+  dangerTimeInput.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/[^0-9]/g, ''); // Sadece rakam
+    
+    if (value.length >= 2) {
+      value = value.substring(0, 2) + ':' + value.substring(2, 4);
+    }
+    
+    e.target.value = value.substring(0, 5); // Max 5 karakter (HH:MM)
+  });
+  
+  dangerTimeInput.addEventListener('keypress', function(e) {
+    // Sadece rakam girişine izin ver
+    if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab') {
+      e.preventDefault();
+    }
+  });
+}
+
 // refreshHatsBtn başlangıçta gizli olabilir, kontrol et
 if (refreshHatsBtn) {
   // Depolama ve Admin kullanıcıları için aktif
@@ -2786,9 +2806,11 @@ async function renderHatCheckboxes() {
     leftDiv.appendChild(checkbox);
     leftDiv.appendChild(document.createTextNode(hatName));
     
+    label.appendChild(leftDiv);
+    
     // Add danger time display
     const dangerTime = dangerTimesCache[hatName];
-    if (dangerTime) {
+    if (dangerTime && dangerTime !== '00:00:00') {
       // Extract HH:MM from HH:MM:SS
       const timeDisplay = dangerTime.substring(0, 5);
       const timeSpan = document.createElement('span');
@@ -2797,10 +2819,10 @@ async function renderHatCheckboxes() {
       timeSpan.style.fontWeight = 'bold';
       timeSpan.style.color = '#e74c3c';
       timeSpan.style.fontSize = '0.9em';
-      label.appendChild(leftDiv);
+      timeSpan.style.padding = '2px 8px';
+      timeSpan.style.background = '#ffe6e6';
+      timeSpan.style.borderRadius = '3px';
       label.appendChild(timeSpan);
-    } else {
-      label.appendChild(leftDiv);
     }
     
     // Hover effect
@@ -2818,12 +2840,31 @@ async function renderHatCheckboxes() {
 // Fetch danger times from database
 async function fetchDangerTimes() {
   try {
-    const response = await fetch('/api/get-danger-times');
-    const result = await response.json();
+    const response = await fetch(
+      `${window.SUPABASE_URL}/rest/v1/Danger?select=Name,Uyarı`,
+      {
+        headers: {
+          'apikey': window.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
     
-    if (result.success && result.data) {
-      dangerTimesCache = result.data;
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
+    
+    const data = await response.json();
+    
+    // Convert array to map
+    dangerTimesCache = {};
+    if (data && Array.isArray(data)) {
+      data.forEach(row => {
+        dangerTimesCache[row.Name] = row.Uyarı;
+      });
+    }
+    
+    console.log('✅ Danger times loaded:', Object.keys(dangerTimesCache).length, 'records');
   } catch (error) {
     console.error('Danger times fetch error:', error);
   }
@@ -2831,10 +2872,17 @@ async function fetchDangerTimes() {
 
 // Handle Set Time button click
 async function handleSetDangerTime() {
-  const timeValue = dangerTimeInput.value;
+  const timeValue = dangerTimeInput.value.trim();
   
   if (!timeValue) {
     alert('Lütfen bir zaman girin (örn: 00:30)');
+    return;
+  }
+  
+  // Validate time format HH:MM
+  const timePattern = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
+  if (!timePattern.test(timeValue)) {
+    alert('Geçersiz zaman formatı! Lütfen HH:MM formatında girin (örn: 00:30, 12:45)');
     return;
   }
   
@@ -2850,25 +2898,43 @@ async function handleSetDangerTime() {
     setDangerTimeBtn.disabled = true;
     setDangerTimeBtn.textContent = '⏳ Güncelleniyor...';
     
-    const response = await fetch('/api/update-danger-time', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        hatNames: selectedHatNames,
-        uyariTime: timeValue
-      })
-    });
+    // Convert HH:MM to HH:MM:00 for time type
+    const timeWithSeconds = `${timeValue}:00`;
     
-    const result = await response.json();
+    // Update each hat one by one using Supabase REST API
+    let successCount = 0;
+    for (const hatName of selectedHatNames) {
+      try {
+        const response = await fetch(
+          `${window.SUPABASE_URL}/rest/v1/Danger?Name=eq.${encodeURIComponent(hatName)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': window.SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ Uyarı: timeWithSeconds })
+          }
+        );
+        
+        if (response.ok) {
+          successCount++;
+          // Update cache immediately
+          dangerTimesCache[hatName] = timeWithSeconds;
+        } else {
+          console.error(`Failed to update ${hatName}:`, response.status);
+        }
+      } catch (err) {
+        console.error(`Error updating ${hatName}:`, err);
+      }
+    }
     
-    if (result.success) {
-      alert(`✅ ${selectedHatNames.length} hat için uyarı zamanı güncellendi: ${timeValue}`);
+    if (successCount > 0) {
+      alert(`✅ ${successCount} hat için uyarı zamanı güncellendi: ${timeValue}`);
       
-      // Update cache and re-render to show new times
-      selectedHatNames.forEach(hatName => {
-        dangerTimesCache[hatName] = `${timeValue}:00`;
-      });
-      
+      // Re-render to show new times
       await renderHatCheckboxes();
       
       // Re-check previously selected hats
@@ -2880,7 +2946,7 @@ async function handleSetDangerTime() {
       // Clear input
       dangerTimeInput.value = '';
     } else {
-      alert('❌ Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'));
+      alert('❌ Hiçbir hat güncellenemedi');
     }
   } catch (error) {
     console.error('Set danger time error:', error);
