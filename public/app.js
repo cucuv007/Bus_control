@@ -2840,31 +2840,22 @@ async function renderHatCheckboxes() {
 // Fetch danger times from database
 async function fetchDangerTimes() {
   try {
-    const response = await fetch(
-      `${window.SUPABASE_URL}/rest/v1/Takip?select=Name,Uyarı`,
-      {
-        headers: {
-          'apikey': window.SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${window.SUPABASE_SERVICE_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    const response = await fetch('/api/get-danger-times');
     
     if (!response.ok) {
       console.warn('Takip times yüklenemedi, HTTP:', response.status);
       return;
     }
     
-    const data = await response.json();
+    const result = await response.json();
     
-    // Convert array to map
-    dangerTimesCache = {};
-    if (data && Array.isArray(data)) {
-      data.forEach(row => {
-        dangerTimesCache[row.Name] = row.Uyarı;
-      });
+    if (!result.success) {
+      console.error('Takip times API hatası:', result.error);
+      return;
     }
+    
+    // API'den gelen data zaten map formatında
+    dangerTimesCache = result.data || {};
     
     console.log('✅ Takip times loaded:', Object.keys(dangerTimesCache).length, 'records');
   } catch (error) {
@@ -2901,55 +2892,44 @@ async function handleSetDangerTime() {
     setDangerTimeBtn.disabled = true;
     setDangerTimeBtn.textContent = '⏳ Güncelleniyor...';
     
-    // Convert HH:MM to HH:MM:00 for time type
+    // Use API endpoint instead of direct Supabase call
+    const response = await fetch('/api/update-danger-time', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        hatNames: selectedHatNames,
+        uyariTime: timeValue
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Güncelleme başarısız');
+    }
+    
+    // Update cache
     const timeWithSeconds = `${timeValue}:00`;
+    selectedHatNames.forEach(hatName => {
+      dangerTimesCache[hatName] = timeWithSeconds;
+    });
     
-    // Update each hat using Supabase REST API
-    let successCount = 0;
-    for (const hatName of selectedHatNames) {
-      try {
-        const response = await fetch(
-          `${window.SUPABASE_URL}/rest/v1/Takip?Name=eq.${encodeURIComponent(hatName)}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'apikey': window.SUPABASE_SERVICE_KEY,
-              'Authorization': `Bearer ${window.SUPABASE_SERVICE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({ Uyarı: timeWithSeconds })
-          }
-        );
-        
-        if (response.ok || response.status === 204) {
-          successCount++;
-          dangerTimesCache[hatName] = timeWithSeconds;
-        } else {
-          console.error(`${hatName} güncellenemedi:`, response.status);
-        }
-      } catch (err) {
-        console.error(`${hatName} güncelleme hatası:`, err);
-      }
-    }
+    alert(`✅ ${result.count} hat için uyarı zamanı güncellendi: ${timeValue}`);
     
-    if (successCount > 0) {
-      alert(`✅ ${successCount} hat için uyarı zamanı güncellendi: ${timeValue}`);
-      
-      // Re-render to show new times
-      await renderHatCheckboxes();
-      
-      // Re-check previously selected hats
-      selectedHatNames.forEach(hatName => {
-        const checkbox = document.querySelector(`.hat-checkbox[value="${hatName}"]`);
-        if (checkbox) checkbox.checked = true;
-      });
-      
-      // Clear input
-      dangerTimeInput.value = '';
-    } else {
-      alert('❌ Hiçbir hat güncellenemedi. Supabase bağlantısını kontrol edin.');
-    }
+    // Re-render to show new times
+    await renderHatCheckboxes();
+    
+    // Re-check previously selected hats
+    selectedHatNames.forEach(hatName => {
+      const checkbox = document.querySelector(`.hat-checkbox[value="${hatName}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+    
+    // Clear input
+    dangerTimeInput.value = '';
+    
   } catch (error) {
     console.error('Set danger time error:', error);
     alert('❌ Güncelleme hatası: ' + error.message);
