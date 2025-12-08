@@ -4896,6 +4896,11 @@ async function handleRefreshHats() {
     const tarifeSaatiIndex = headers.indexOf('Tarife_Saati');
     const calismaZamaniIndex = headers.indexOf('Çalışma_Zamanı');
     const hareketIndex = headers.indexOf('Hareket');
+    const onaylananIndex = headers.indexOf('Onaylanan');
+    const durumIndex = headers.indexOf('Durum');
+
+    let hasOnaylananData = false;
+    let hasDurumData = false;
 
     rows.forEach(row => {
       const cells = row.querySelectorAll('td');
@@ -4905,10 +4910,30 @@ async function handleRefreshHats() {
           rowData[header] = cells[index]?.textContent.trim() || '';
         });
         tableData.push(rowData);
+        
+        // Onaylanan ve Durum sütunlarında veri var mı kontrol et
+        if (onaylananIndex !== -1 && cells[onaylananIndex]?.textContent.trim()) {
+          hasOnaylananData = true;
+        }
+        if (durumIndex !== -1 && cells[durumIndex]?.textContent.trim()) {
+          hasDurumData = true;
+        }
       }
     });
 
     console.log(`📊 ${tableData.length} satır toplanıyor...`);
+    console.log(`✅ Onaylanan sütununda veri: ${hasOnaylananData}`);
+    console.log(`✅ Durum sütununda veri: ${hasDurumData}`);
+
+    // Onaylanan veya Durum sütununda hiç veri yoksa işlemi durdur
+    if (!hasOnaylananData && !hasDurumData) {
+      alert('ℹ️ Liste Güncel\n\n' +
+            'Onaylanan veya Durum sütunlarında hiç veri bulunmuyor.\n' +
+            'Yenileme işlemine gerek yok.');
+      refreshHatsBtn.disabled = false;
+      refreshHatsBtn.textContent = '🔄 Hatları Yenile';
+      return;
+    }
 
     // 2. Excel oluştur (XLSX kütüphanesi kullanarak)
     const wb = XLSX.utils.book_new();
