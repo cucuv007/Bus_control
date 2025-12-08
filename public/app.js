@@ -5236,10 +5236,44 @@ async function loadAciklamaData(gorevParam) {
       }
     });
     
-    // Eski veri varsa butonu göster
+    // Eski veri varsa VE saat izin veriyorsa butonu göster
     if (sistemiGuncelleBtn) {
       if (hasOldData) {
-        sistemiGuncelleBtn.style.display = 'inline-block';
+        // Saat kontrolü yap - AutoReset için izin var mı?
+        try {
+          const userSession = localStorage.getItem('userSession');
+          let currentGorev = 'User';
+          if (userSession) {
+            const session = JSON.parse(userSession);
+            currentGorev = session.gorev;
+          }
+          
+          const timeCheckRes = await fetch('/api/check-time-restriction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'auto-reset',
+              gorev: currentGorev
+            })
+          });
+          
+          const timeCheckData = await timeCheckRes.json();
+          
+          if (timeCheckData.allowed) {
+            // İzin var - butonu göster
+            sistemiGuncelleBtn.style.display = 'inline-block';
+            console.log('✅ Eski veri var ve saat izin veriyor - buton gösteriliyor');
+          } else {
+            // İzin yok - butonu gizle
+            sistemiGuncelleBtn.style.display = 'none';
+            console.log('🚫 Eski veri var ama saat izin vermiyor - buton gizleniyor');
+            console.log('⏰ Sebep:', timeCheckData.reason);
+          }
+        } catch (err) {
+          console.error('⏰ Saat kontrolü hatası:', err);
+          // Hata durumunda butonu göster (güvenli taraf)
+          sistemiGuncelleBtn.style.display = 'inline-block';
+        }
       } else {
         sistemiGuncelleBtn.style.display = 'none';
       }

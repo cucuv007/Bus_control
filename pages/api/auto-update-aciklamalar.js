@@ -24,23 +24,9 @@ export default async function handler(req, res) {
   try {
     console.log('🔍 Otomatik güncelleme kontrolü başladı...');
 
-    // 1. Saat kontrolü - Sadece 04:00:00 ve sonrasında çalışsın
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentSecond = now.getSeconds();
-    
-    // Saat 04:00:00'dan önceyse işlem yapma
-    if (currentHour < 4) {
-      console.log(`⏰ Henüz saat 04:00:00 olmadı (Şu an: ${currentHour}:${currentMinute}:${currentSecond}), güncelleme yapılmayacak`);
-      return res.status(200).json({
-        success: true,
-        updated: false,
-        message: 'Güncelleme saati henüz gelmedi (04:00:00 öncesi)'
-      });
-    }
-
-    console.log(`✅ Saat kontrolü geçildi: ${currentHour}:${currentMinute}:${currentSecond}`);
+    // 1. Saat kontrolü zaten frontend'de yapıldı (AutoReset ile)
+    // Buraya geldiysek saat uygun demektir
+    console.log('✅ Saat kontrolü frontend tarafından geçildi');
 
     // 2. Her iki tablodan veri çek
     console.log('📊 Tablolardan veri çekiliyor...');
