@@ -440,11 +440,11 @@ if (degişenFilterCheckbox) {
   degişenFilterCheckbox.addEventListener('change', (e) => {
     console.log('💬 Değişen checkbox change event başladı');
     e.stopPropagation();
-    e.preventDefault();
     showOnlyDegisen = e.target.checked;
     console.log('💬 Değişen filtresi:', showOnlyDegisen ? 'Aktif' : 'Pasif');
+    console.log('💬 Timer container display:', timerContainer.style.display);
     applyTableFilter();
-    console.log('💬 Değişen checkbox change event bitti');
+    console.log('💬 Değişen checkbox change event bitti, timer display:', timerContainer.style.display);
   });
   
   // Checkbox'a tıklandığında event propagation'ı durdur
