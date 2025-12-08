@@ -146,6 +146,7 @@ let selectedHatsForTracking = []; // Timer için seçili hatlar (yenileme için)
 let selectedHareketForTracking = null; // Timer için seçili hareket tipi (yenileme için)
 let aciklamaCache = {}; // Açıklama kontrolü cache'i
 let showOnlyArizali = false; // Sadece arızalı göster filtresi
+let showOnlyDegisen = false; // Değişen araçları göster filtresi
 
 // ==================== EVENT LISTENERS ====================
 uploadBtn.addEventListener('click', openUploadModal);
@@ -432,6 +433,44 @@ if (arizaliFilterCheckbox) {
   }
 }
 
+// Değişen Araçlar Filtresi Checkbox
+const degişenFilterCheckbox = document.getElementById('degişenFilterCheckbox');
+if (degişenFilterCheckbox) {
+  // Checkbox change event'i
+  degişenFilterCheckbox.addEventListener('change', (e) => {
+    console.log('💬 Değişen checkbox change event başladı');
+    e.stopPropagation();
+    e.preventDefault();
+    showOnlyDegisen = e.target.checked;
+    console.log('💬 Değişen filtresi:', showOnlyDegisen ? 'Aktif' : 'Pasif');
+    applyTableFilter();
+    console.log('💬 Değişen checkbox change event bitti');
+  });
+  
+  // Checkbox'a tıklandığında event propagation'ı durdur
+  degişenFilterCheckbox.addEventListener('click', (e) => {
+    console.log('💬 Değişen checkbox click event');
+    e.stopPropagation();
+  });
+  
+  // Label veya container'a tıklandığında da durdur
+  const filterLabel = degişenFilterCheckbox.closest('label');
+  if (filterLabel) {
+    filterLabel.addEventListener('click', (e) => {
+      console.log('💬 Değişen label click event');
+      e.stopPropagation();
+    });
+  }
+  
+  const filterContainer = degişenFilterCheckbox.closest('div');
+  if (filterContainer) {
+    filterContainer.addEventListener('click', (e) => {
+      console.log('💬 Değişen filter container click event');
+      e.stopPropagation();
+    });
+  }
+}
+
 // Boş/Dolu checkbox event listener
 if (bosDoluCheckbox) {
   bosDoluCheckbox.addEventListener('change', (e) => {
@@ -461,10 +500,15 @@ if (closeBosDoluBtn) {
 // Tabloyu filtreleme fonksiyonu (timer yenileme kullanmadan)
 function applyTableFilter() {
   const allRows = tbody.querySelectorAll('tr');
+  const headerCells = theadRow.querySelectorAll('th');
+  const headers = Array.from(headerCells).map(th => th.textContent.trim());
+  const plakaIndex = headers.indexOf('Plaka');
   
   allRows.forEach(row => {
+    let shouldShow = true;
+    
+    // Arızalı filtresi kontrolü
     if (showOnlyArizali) {
-      // Durum sütununu bul
       const cells = row.querySelectorAll('td');
       let hasDurum = false;
       
@@ -475,12 +519,55 @@ function applyTableFilter() {
         }
       });
       
-      // Arızalı varsa göster, yoksa gizle
-      row.style.display = hasDurum ? '' : 'none';
-    } else {
-      // Filtre kapalıysa tüm satırları göster
-      row.style.display = '';
+      if (!hasDurum) {
+        shouldShow = false;
+      }
     }
+    
+    // Değişen araçlar filtresi kontrolü
+    if (showOnlyDegisen && shouldShow) {
+      const cells = row.querySelectorAll('td');
+      let isDegisen = false;
+      
+      // Plaka sütununu kontrol et
+      if (plakaIndex !== -1 && cells[plakaIndex]) {
+        const plakaCell = cells[plakaIndex];
+        const cellText = plakaCell.textContent || '';
+        const cellStyle = window.getComputedStyle(plakaCell);
+        const cellColor = cellStyle.color;
+        
+        // Kırmızı renk kontrolü (rgb formatında)
+        const isRed = cellColor.includes('rgb(231, 76, 60)') || 
+                      cellColor.includes('rgb(255, 0, 0)') ||
+                      plakaCell.style.color === 'red' ||
+                      plakaCell.style.color === '#e74c3c' ||
+                      plakaCell.style.color === 'rgb(231, 76, 60)';
+        
+        // 💬 ikonu kontrolü (🔄 olmamalı)
+        const hasMessageIcon = cellText.includes('💬');
+        const hasRefreshIcon = cellText.includes('🔄');
+        
+        console.log('🔍 Değişen kontrol:', {
+          plaka: cellText,
+          isRed,
+          hasMessageIcon,
+          hasRefreshIcon,
+          color: cellColor
+        });
+        
+        // Kırmızı VE 💬 ikonu var VE 🔄 yok
+        if (isRed && hasMessageIcon && !hasRefreshIcon) {
+          isDegisen = true;
+        }
+      }
+      
+      if (!isDegisen) {
+        shouldShow = false;
+      }
+    }
+    
+    // Satırı göster veya gizle
+    row.style.display = shouldShow ? '' : 'none';
   });
 }
 
