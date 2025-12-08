@@ -118,20 +118,74 @@ export default async function handler(req, res) {
       
       if (isEarlyMorning) {
         // Start 00:00:00 - 06:00:00 aralığında
-        // Bir sonraki günü hesapla - yani bugün izin verme, yarın Finish'ten sonra izin ver
-        // Bugün izin YOK, yarın Finish'ten sonra izin var
-        // Şu an için izin verme
-        console.log('🚫 Early morning range - otomatik temizleme bugün yapılmayacak (yarın Finish sonrası yapılacak)');
-        return res.status(200).json({ 
-          success: true, 
-          allowed: false,
-          reason: `Start değeri ${startTime} erken sabah aralığında (00:00:00-06:00:00). Otomatik temizleme yarın ${finishTime} sonrasında yapılacak.`,
-          currentTime,
-          startTime,
-          finishTime,
-          isEarlyMorning: true,
-          nextDayProcessing: true
+        // Bu durumda YARIN için kontrol yapmalıyız
+        // BUGÜN hiçbir zaman izin verme, YARIN Start-Finish dışında izin ver
+        
+        // Şimdi hangi gündeyiz kontrol et
+        const now = new Date();
+        const turkeyTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+        const currentHour = turkeyTime.getHours();
+        const currentDate = turkeyTime.getDate();
+        
+        console.log('📅 Gün ve saat kontrolü:', {
+          currentDate,
+          currentHour,
+          currentTime
         });
+        
+        // YARININ tarihini hesapla
+        const tomorrow = new Date(turkeyTime);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowDate = tomorrow.getDate();
+        
+        console.log('📅 Yarın tarihi:', tomorrowDate);
+        
+        // Eğer şu an YARIN'ın tarihindeyse ve Start-Finish dışındaysa izin ver
+        // Ama şu an BUGÜN'ün tarihindeyse izin verme
+        
+        // Basit kontrol: Bugün sabah 00:00-06:00 arasında mıyız?
+        if (currentHour >= 0 && currentHour < 6) {
+          // Sabahın erken saatleri - yasak saat aralığında mıyız?
+          const inRestrictedPeriod = isTimeBetween(currentTime, startTime, finishTime);
+          if (inRestrictedPeriod) {
+            console.log('🚫 Yarının yasak saatlerindeyiz - işlem yapılamaz');
+            return res.status(200).json({ 
+              success: true, 
+              allowed: false,
+              reason: `Otomatik temizleme ${startTime} - ${finishTime} saatleri arasında yapılamaz`,
+              currentTime,
+              startTime,
+              finishTime,
+              inRestrictedPeriod: true,
+              tomorrowRestricted: true
+            });
+          } else {
+            console.log('✅ Yarının izin verilen saatlerindeyiz - işlem yapılabilir');
+            return res.status(200).json({ 
+              success: true, 
+              allowed: true,
+              reason: 'Otomatik temizleme yapılabilir (yarının izin verilen saatleri)',
+              currentTime,
+              startTime,
+              finishTime,
+              inRestrictedPeriod: false,
+              tomorrowAllowed: true
+            });
+          }
+        } else {
+          // Bugün gündüz - yarın için işlem yapılacak, bugün izin verme
+          console.log('🚫 Bugün gündüz - otomatik temizleme yarın yapılacak');
+          return res.status(200).json({ 
+            success: true, 
+            allowed: false,
+            reason: `Start değeri ${startTime} erken sabah aralığında (00:00:00-06:00:00). Otomatik temizleme yarın ${finishTime} sonrasında yapılacak.`,
+            currentTime,
+            startTime,
+            finishTime,
+            isEarlyMorning: true,
+            nextDayProcessing: true
+          });
+        }
       } else {
         // Start 06:00:01 ve sonrası
         // Bugün işlem yapabilir ama Start-Finish aralığında YAPAMAZ
