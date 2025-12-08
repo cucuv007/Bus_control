@@ -95,12 +95,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Table name gerekli' });
     }
 
+    // Tablo adını temizle (başındaki ve sonundaki boşlukları kaldır)
+    const cleanTableName = tableName.trim();
+    console.log(`📋 Tablo adı: "${tableName}" → Temizlenmiş: "${cleanTableName}"`);
+
     // Bugüne uygun çalışma zamanlarını al
     const allowedCalismaZamanlari = getAllowedCalismaZamanlari();
     console.log(`📅 Bugün için uygun Çalışma_Zamanı kodları: ${allowedCalismaZamanlari.join(', ')}`);
 
     let query = supabase
-      .from(tableName)
+      .from(cleanTableName)
       .select('*')
       .order('Tarife_Saati', { ascending: true });
 

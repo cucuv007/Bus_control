@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     
     // Sonuçları işle
     const tables = (data || [])
-      .map(row => row.tablename)
+      .map(row => row.tablename ? row.tablename.trim() : null)
       .filter(name => 
         name && 
         !name.startsWith('pg_') && 

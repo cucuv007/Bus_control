@@ -3025,26 +3025,28 @@ async function handleApplyHatSelection() {
     const allData = [];
     
     for (const tableName of selectedHats) {
-      console.log(`📡 API çağrısı yapılıyor: /api/get-table-data → tableName: "${tableName}"`);
+      // Tablo adını temizle (boşlukları kaldır)
+      const cleanTableName = tableName.trim();
+      console.log(`📡 API çağrısı yapılıyor: /api/get-table-data → tableName: "${cleanTableName}"`);
       
       const res = await fetch('/api/get-table-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tableName: tableName,
+          tableName: cleanTableName,
           hareket: currentHareket
         })
       });
       
-      console.log(`📡 API yanıt kodu: ${res.status} (${tableName})`);
+      console.log(`📡 API yanıt kodu: ${res.status} (${cleanTableName})`);
       
       if (!res.ok) {
-        console.error(`❌ API hatası (${tableName}): Status ${res.status}`);
+        console.error(`❌ API hatası (${cleanTableName}): Status ${res.status}`);
         continue; // Bu hatta hata var, diğerine geç
       }
       
       const result = await res.json();
-      console.log(`✅ API başarılı (${tableName}):`, result);
+      console.log(`✅ API başarılı (${cleanTableName}):`, result);
       
       if (result.success && result.data) {
         // Her satıra kaynak hat bilgisini ekle
