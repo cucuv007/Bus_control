@@ -532,31 +532,19 @@ function applyTableFilter() {
       // Plaka sütununu kontrol et
       if (plakaIndex !== -1 && cells[plakaIndex]) {
         const plakaCell = cells[plakaIndex];
-        const cellText = plakaCell.textContent || '';
         const cellStyle = window.getComputedStyle(plakaCell);
         const cellColor = cellStyle.color;
         
-        // Kırmızı renk kontrolü (rgb formatında)
-        const isRed = cellColor.includes('rgb(231, 76, 60)') || 
-                      cellColor.includes('rgb(255, 0, 0)') ||
-                      plakaCell.style.color === 'red' ||
-                      plakaCell.style.color === '#e74c3c' ||
-                      plakaCell.style.color === 'rgb(231, 76, 60)';
-        
-        // 💬 ikonu kontrolü (🔄 olmamalı)
-        const hasMessageIcon = cellText.includes('💬');
-        const hasRefreshIcon = cellText.includes('🔄');
+        // Sadece kırmızı renk kontrolü: rgb(231, 76, 60)
+        const isRed = cellColor === 'rgb(231, 76, 60)';
         
         console.log('🔍 Değişen kontrol:', {
-          plaka: cellText,
-          isRed,
-          hasMessageIcon,
-          hasRefreshIcon,
-          color: cellColor
+          plaka: plakaCell.textContent,
+          color: cellColor,
+          isRed
         });
         
-        // Kırmızı VE 💬 ikonu var VE 🔄 yok
-        if (isRed && hasMessageIcon && !hasRefreshIcon) {
+        if (isRed) {
           isDegisen = true;
         }
       }
