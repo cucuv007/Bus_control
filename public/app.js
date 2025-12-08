@@ -5487,9 +5487,14 @@ async function handleSistemiGuncelle() {
       `💾 Yedek dosyalar indirildi\n\n` +
       `Modal yenileniyor...`);
 
-    // 9. Modalı yenile
+    // 9. Modalı yenile ve butonu gizle
     closeAciklamaInceleModalFunc();
     openAciklamaInceleModal();
+    
+    // Buton artık görünmeyecek çünkü eski veri kalmadı
+    if (sistemiGuncelleBtn) {
+      sistemiGuncelleBtn.style.display = 'none';
+    }
 
   } catch (err) {
     console.error('Sistemi güncelle hatası:', err);
@@ -5657,32 +5662,29 @@ async function checkAutoUpdateAciklamalar() {
     console.log('🔍 Otomatik güncelleme kontrolü başlatılıyor...');
     console.log('👤 Kullanıcı Görevi:', session.gorev);
     
-    // Admin için zaman kısıtlaması yok, direkt işleme devam et
-    if (session.gorev !== 'Admin') {
-      // Zaman kısıtlaması kontrolü (sadece Admin olmayan kullanıcılar için)
-      const timeCheckRes = await fetch('/api/check-time-restriction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'login',
-          gorev: session.gorev
-        })
-      });
+    // Saat tablosundan AutoReset kontrolü yap
+    console.log('⏰ AutoReset saat aralığı kontrol ediliyor...');
+    
+    const timeCheckRes = await fetch('/api/check-time-restriction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'auto-reset',
+        gorev: session.gorev
+      })
+    });
 
-      const timeCheckData = await timeCheckRes.json();
-      console.log('⏰ Zaman kontrolü sonucu:', timeCheckData);
+    const timeCheckData = await timeCheckRes.json();
+    console.log('⏰ AutoReset zaman kontrolü sonucu:', timeCheckData);
 
-      if (!timeCheckData.allowed) {
-        console.log('⏸️ Otomatik güncelleme atlanıyor:', timeCheckData.reason);
-        console.log(`⏰ Şu anki saat: ${timeCheckData.currentTime}`);
-        console.log(`🚫 Yasak saatler: ${timeCheckData.startTime} - ${timeCheckData.finishTime}`);
-        return;
-      }
-
-      console.log('✅ Zaman kontrolü geçildi, otomatik güncelleme yapılacak');
-    } else {
-      console.log('👑 Admin kullanıcısı - zaman kısıtlaması olmadan işlem yapılıyor');
+    if (!timeCheckData.allowed) {
+      console.log('⏸️ Otomatik güncelleme atlanıyor:', timeCheckData.reason);
+      console.log(`⏰ Şu anki saat: ${timeCheckData.currentTime}`);
+      console.log(`🚫 Yasak saatler: ${timeCheckData.startTime} - ${timeCheckData.finishTime}`);
+      return;
     }
+
+    console.log('✅ Zaman kontrolü geçildi, otomatik güncelleme yapılacak');
     
     const updateRes = await fetch('/api/auto-update-aciklamalar', {
       method: 'POST',

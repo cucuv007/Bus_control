@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, gorev } = req.body; // action: "login", "hatlar-yenile", "yukleme"
+    const { action, gorev } = req.body; // action: "login", "hatlar-yenile", "yukleme", "auto-reset"
     
     // Admin için her zaman izin ver
     if (gorev === 'Admin') {
@@ -65,6 +65,8 @@ export default async function handler(req, res) {
     let restrictionName = 'Hatları Yenile'; // default
     if (action === 'yukleme') {
       restrictionName = 'Yükleme';
+    } else if (action === 'auto-reset') {
+      restrictionName = 'AutoReset';
     }
 
     // Saat tablosundan ilgili kaydı getir
@@ -97,6 +99,71 @@ export default async function handler(req, res) {
       startTime,
       finishTime
     });
+
+    // AutoReset için özel kontrol
+    if (action === 'auto-reset') {
+      // Start değeri 00:00:00 - 06:00:00 aralığında mı kontrol et
+      const startParts = startTime.split(':').map(Number);
+      const startHour = startParts[0];
+      const startMinute = startParts[1];
+      const startSecond = startParts[2];
+      
+      const isEarlyMorning = (startHour < 6) || (startHour === 6 && startMinute === 0 && startSecond === 0);
+      
+      console.log('🌅 Early morning check:', {
+        startTime,
+        startHour,
+        isEarlyMorning
+      });
+      
+      if (isEarlyMorning) {
+        // Start 00:00:00 - 06:00:00 aralığında
+        // Bir sonraki günü hesapla - yani bugün izin verme, yarın Finish'ten sonra izin ver
+        // Bugün izin YOK, yarın Finish'ten sonra izin var
+        // Şu an için izin verme
+        console.log('🚫 Early morning range - otomatik temizleme bugün yapılmayacak (yarın Finish sonrası yapılacak)');
+        return res.status(200).json({ 
+          success: true, 
+          allowed: false,
+          reason: `Start değeri ${startTime} erken sabah aralığında (00:00:00-06:00:00). Otomatik temizleme yarın ${finishTime} sonrasında yapılacak.`,
+          currentTime,
+          startTime,
+          finishTime,
+          isEarlyMorning: true,
+          nextDayProcessing: true
+        });
+      } else {
+        // Start 06:00:01 ve sonrası
+        // Bugün işlem yapabilir ama Start-Finish aralığında YAPAMAZ
+        const inRestrictedPeriod = isTimeBetween(currentTime, startTime, finishTime);
+        
+        if (inRestrictedPeriod) {
+          // Yasak saatler içinde - izin verme
+          console.log('🚫 Şu an yasak saatler içinde - otomatik temizleme yapılamaz');
+          return res.status(200).json({ 
+            success: true, 
+            allowed: false,
+            reason: `Otomatik temizleme ${startTime} - ${finishTime} saatleri arasında yapılamaz`,
+            currentTime,
+            startTime,
+            finishTime,
+            inRestrictedPeriod: true
+          });
+        } else {
+          // İzin verilen saat - otomatik temizleme yapılabilir
+          console.log('✅ İzin verilen saat - otomatik temizleme yapılabilir');
+          return res.status(200).json({ 
+            success: true, 
+            allowed: true,
+            reason: 'Otomatik temizleme yapılabilir',
+            currentTime,
+            startTime,
+            finishTime,
+            inRestrictedPeriod: false
+          });
+        }
+      }
+    }
 
     // Şu anki saat Start ve Finish arasında mı?
     const inRestrictedPeriod = isTimeBetween(currentTime, startTime, finishTime);
