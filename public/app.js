@@ -395,13 +395,13 @@ if (closeRowAciklamaBtn) {
 }
 
 // Arızalı Filtresi Checkbox
+// Arızalı Araçlar Filtresi Checkbox
 const arizaliFilterCheckbox = document.getElementById('arizaliFilterCheckbox');
 if (arizaliFilterCheckbox) {
   // Checkbox change event'i
   arizaliFilterCheckbox.addEventListener('change', (e) => {
     console.log('🔧 Checkbox change event başladı');
     e.stopPropagation();
-    e.preventDefault();
     showOnlyArizali = e.target.checked;
     console.log('🔧 Arızalı filtresi:', showOnlyArizali ? 'Aktif' : 'Pasif');
     console.log('🔧 Timer container display:', timerContainer.style.display);
@@ -415,19 +415,11 @@ if (arizaliFilterCheckbox) {
     e.stopPropagation();
   });
   
-  // Label veya container'a tıklandığında da durdur
+  // Label'a tıklandığında da durdur
   const filterLabel = arizaliFilterCheckbox.closest('label');
   if (filterLabel) {
     filterLabel.addEventListener('click', (e) => {
       console.log('🔧 Label click event');
-      e.stopPropagation();
-    });
-  }
-  
-  const filterContainer = arizaliFilterCheckbox.closest('div');
-  if (filterContainer) {
-    filterContainer.addEventListener('click', (e) => {
-      console.log('🔧 Filter container click event');
       e.stopPropagation();
     });
   }
@@ -439,33 +431,35 @@ if (degişenFilterCheckbox) {
   // Checkbox change event'i
   degişenFilterCheckbox.addEventListener('change', (e) => {
     console.log('💬 Değişen checkbox change event başladı');
+    console.log('💬 e.target.checked:', e.target.checked);
+    console.log('💬 degişenFilterCheckbox.checked (before):', degişenFilterCheckbox.checked);
     e.stopPropagation();
     showOnlyDegisen = e.target.checked;
-    console.log('💬 Değişen filtresi:', showOnlyDegisen ? 'Aktif' : 'Pasif');
+    console.log('💬 showOnlyDegisen değeri:', showOnlyDegisen);
     console.log('💬 Timer container display:', timerContainer.style.display);
     applyTableFilter();
+    console.log('💬 degişenFilterCheckbox.checked (after filter):', degişenFilterCheckbox.checked);
     console.log('💬 Değişen checkbox change event bitti, timer display:', timerContainer.style.display);
+    
+    // 100ms sonra tekrar kontrol et
+    setTimeout(() => {
+      console.log('💬 100ms sonra checkbox durumu:', degişenFilterCheckbox.checked);
+      console.log('💬 100ms sonra showOnlyDegisen:', showOnlyDegisen);
+    }, 100);
   });
   
   // Checkbox'a tıklandığında event propagation'ı durdur
   degişenFilterCheckbox.addEventListener('click', (e) => {
     console.log('💬 Değişen checkbox click event');
+    console.log('💬 Click - checked:', degişenFilterCheckbox.checked);
     e.stopPropagation();
   });
   
-  // Label veya container'a tıklandığında da durdur
+  // Label'a tıklandığında da durdur
   const filterLabel = degişenFilterCheckbox.closest('label');
   if (filterLabel) {
     filterLabel.addEventListener('click', (e) => {
       console.log('💬 Değişen label click event');
-      e.stopPropagation();
-    });
-  }
-  
-  const filterContainer = degişenFilterCheckbox.closest('div');
-  if (filterContainer) {
-    filterContainer.addEventListener('click', (e) => {
-      console.log('💬 Değişen filter container click event');
       e.stopPropagation();
     });
   }
@@ -3656,8 +3650,8 @@ async function refreshTableData(hatList, hareket) {
     
     console.log(`♻️ Tablo otomatik yenilendi: ${allData.length} kayıt`);
     
-    // Arızalı filtresini uygula (eğer aktifse)
-    if (showOnlyArizali) {
+    // Filtreleri uygula (eğer aktifse)
+    if (showOnlyArizali || showOnlyDegisen) {
       applyTableFilter();
     }
     
