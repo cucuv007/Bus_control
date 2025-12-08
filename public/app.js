@@ -2869,6 +2869,21 @@ async function renderHatCheckboxes() {
     return;
   }
   
+  // Depolama filtresi varsa, sadece o hatları göster
+  let hatsToShow = availableHats;
+  if (filteredHats.length > 0) {
+    hatsToShow = availableHats.filter(hat => filteredHats.includes(hat));
+    console.log('🔍 Hat Seçimi filtrelendi:');
+    console.log('  - Tüm hatlar:', availableHats);
+    console.log('  - Depolamadan gelenler:', filteredHats);
+    console.log('  - Gösterilecekler:', hatsToShow);
+  }
+  
+  if (hatsToShow.length === 0) {
+    hatSelectionContainer.style.display = 'none';
+    return;
+  }
+  
   hatSelectionContainer.style.display = 'block';
   hatCheckboxList.innerHTML = '';
   
@@ -2880,7 +2895,7 @@ async function renderHatCheckboxes() {
   // Fetch danger times
   await fetchDangerTimes();
   
-  availableHats.forEach(hatName => {
+  hatsToShow.forEach(hatName => {
     const label = document.createElement('label');
     label.style.display = 'flex';
     label.style.justifyContent = 'space-between';
