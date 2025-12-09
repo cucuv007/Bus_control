@@ -2717,6 +2717,10 @@ function renderDepolamaCheckboxes() {
     const session = JSON.parse(userSession);
     const gorev = session.gorev;
     
+    console.log('🔍 Kullanıcı görevi:', gorev);
+    console.log('🔍 Görev tipi:', typeof gorev);
+    console.log('🔍 Görev uzunluğu:', gorev ? gorev.length : 0);
+    
     // Depolama görevine göre izin verilen depolamalar
     const depolamaAccess = {
       'Aksu Depolama': ['AKSU'],
@@ -2727,6 +2731,8 @@ function renderDepolamaCheckboxes() {
       'Varsak Aktarma Depolama': ['VARSAK ALTIAYAK'],
       'Varsak Altıayak Depolama': ['VARSAK AKTARMA']
     };
+    
+    console.log('🔍 Erişim kontrolü:', depolamaAccess[gorev] ? 'Bulundu' : 'Bulunamadı');
     
     // Eğer kullanıcının görevi depolama erişim listesinde varsa
     if (depolamaAccess[gorev]) {
