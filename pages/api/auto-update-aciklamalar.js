@@ -22,7 +22,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    const { username } = req.body;
     console.log('🔍 Otomatik güncelleme kontrolü başladı...');
+    console.log('👤 Tetikleyen kullanıcı:', username || 'Bilinmiyor');
 
     // 1. Saat kontrolü zaten frontend'de yapıldı (AutoReset ile)
     // Buraya geldiysek saat uygun demektir
@@ -248,7 +250,7 @@ export default async function handler(req, res) {
               <h2>Merhaba ${recipient.Kullanıcı},</h2>
               <p>Sistemde eski tarihli açıklama kayıtları tespit edildi ve otomatik temizleme yapıldı.</p>
               <p><strong>İşlem Zamanı:</strong> ${dateStr}</p>
-              <p><strong>İşlemi Yapan:</strong> Sistem (AutoReset)</p>
+              <p><strong>Tetikleyen Kullanıcı:</strong> ${username || 'Sistem (AutoReset)'}</p>
               <p>Ekte temizlenmeden önceki açıklama kayıtlarını bulabilirsiniz:</p>
               <ul>
                 ${operasyonBase64 ? '<li>Operasyon Açıklamaları</li>' : ''}

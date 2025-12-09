@@ -5923,9 +5923,13 @@ async function checkAutoUpdateAciklamalar() {
 
     console.log('✅ Zaman kontrolü geçildi, otomatik güncelleme yapılacak');
     
+    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
     const updateRes = await fetch('/api/auto-update-aciklamalar', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: session.username || 'Bilinmiyor'
+      })
     });
 
     console.log('📨 API yanıt durumu:', updateRes.status, updateRes.statusText);
