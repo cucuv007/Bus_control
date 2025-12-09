@@ -1829,9 +1829,13 @@ async function handleRefresh() {
       });
     }
     
-    // Mevcut hatları kaydet ve checkbox listesini oluştur
+    // Mevcut hatları kaydet
     availableHats = tables;
-    renderHatCheckboxes();
+    
+    // Hat Seçimi bölümünü başlangıçta gizle (Depolama filtresi uygulanınca gösterilecek)
+    if (hatSelectionContainer) {
+      hatSelectionContainer.style.display = 'none';
+    }
     
     if (tableSelection) tableSelection.style.display = 'block';
     if (hareketSelect) hareketSelect.value = '';
@@ -1839,9 +1843,9 @@ async function handleRefresh() {
     // Depolama checkbox listesini oluştur
     renderDepolamaCheckboxes();
     
-    statusEl.textContent = `${tables.length} tablo bulundu. Lütfen bir tablo seçiniz.`;
-    theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
-    tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
+    statusEl.textContent = `${tables.length} tablo bulundu. Lütfen Depolama filtresi uygulayın.`;
+    theadRow.innerHTML = "<th>Depolama Filtresi Uygulayın</th>";
+    tbody.innerHTML = '<tr><td class="small">Depolama filtresi seçip uygulayın</td></tr>';
     
   } catch (err) {
     console.error('Refresh error:', err);
@@ -2772,10 +2776,17 @@ async function handleApplyDepolamaFilter() {
   closeTimer();
   
   if (selectedDepolamaTables.length === 0) {
-    // Depolama filtresi yok, tüm tabloları göster
+    // Depolama filtresi yok, Hat Seçimi'ni gizle
     filteredHats = [];
-    statusEl.textContent = 'Depolama filtresi kaldırıldı. Tüm tablolar gösteriliyor.';
-    await loadFilteredTables();
+    statusEl.textContent = 'Depolama filtresi kaldırıldı. Lütfen depolama seçin.';
+    
+    // Hat seçimi bölümünü gizle
+    if (hatSelectionContainer) {
+      hatSelectionContainer.style.display = 'none';
+    }
+    
+    theadRow.innerHTML = "<th>Depolama Filtresi Uygulayın</th>";
+    tbody.innerHTML = '<tr><td class="small">Depolama filtresi seçip uygulayın</td></tr>';
     return;
   }
   
