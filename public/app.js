@@ -701,12 +701,54 @@ if (refreshHatsBtn) {
     const session = JSON.parse(userSession);
     if (session.gorev === 'Depolama' || session.gorev === 'Admin') {
       refreshHatsBtn.addEventListener('click', handleRefreshHats);
+      // Başlangıçta pasif yap, Tümünü Seç işaretlendiğinde aktif olacak
+      refreshHatsBtn.disabled = true;
+      refreshHatsBtn.style.opacity = '0.5';
+      refreshHatsBtn.style.cursor = 'not-allowed';
+      refreshHatsBtn.title = 'Hatları yenilemek için önce "Tümünü Seç" işaretleyin';
     } else {
       refreshHatsBtn.disabled = true;
       refreshHatsBtn.style.opacity = '0.5';
       refreshHatsBtn.style.cursor = 'not-allowed';
       refreshHatsBtn.title = 'Bu özellik sadece Depolama ve Admin kullanıcıları için aktiftir';
     }
+  }
+}
+
+// Hatları Yenile butonu durum kontrolü
+function updateRefreshHatsButtonState() {
+  if (!refreshHatsBtn) return;
+  
+  const userSession = localStorage.getItem('userSession');
+  if (!userSession) return;
+  
+  const session = JSON.parse(userSession);
+  
+  // Sadece Depolama kullanıcıları için kontrol yap (Admin her zaman aktif)
+  if (session.gorev === 'Depolama') {
+    const checkboxes = document.querySelectorAll('.hat-checkbox');
+    const checkedCount = document.querySelectorAll('.hat-checkbox:checked').length;
+    
+    // Sadece "Tümünü Seç" işaretliyse aktif
+    if (selectAllHats && selectAllHats.checked && checkedCount === checkboxes.length && checkboxes.length > 0) {
+      refreshHatsBtn.disabled = false;
+      refreshHatsBtn.style.opacity = '1';
+      refreshHatsBtn.style.cursor = 'pointer';
+      refreshHatsBtn.title = 'Hatları yenile';
+      console.log('✅ Hatları Yenile butonu aktif - Tümü seçili');
+    } else {
+      refreshHatsBtn.disabled = true;
+      refreshHatsBtn.style.opacity = '0.5';
+      refreshHatsBtn.style.cursor = 'not-allowed';
+      refreshHatsBtn.title = 'Hatları yenilemek için önce "Tümünü Seç" işaretleyin';
+      console.log('❌ Hatları Yenile butonu pasif - Tümü seçili değil');
+    }
+  } else if (session.gorev === 'Admin') {
+    // Admin için her zaman aktif
+    refreshHatsBtn.disabled = false;
+    refreshHatsBtn.style.opacity = '1';
+    refreshHatsBtn.style.cursor = 'pointer';
+    refreshHatsBtn.title = 'Hatları yenile';
   }
 }
 
@@ -2851,10 +2893,18 @@ async function loadFilteredTables() {
     theadRow.innerHTML = "<th>Tablo Seçiniz</th>";
     tbody.innerHTML = '<tr><td class="small">Tablo seçiniz</td></tr>';
     
-    // Mevcut hatları kaydet ve checkbox listesini oluştur
+    // Mevcut hatları kaydet
     availableHats = tables;
     console.log('🎯 Hat Seçimi için oluşturulan hatlar:', availableHats);
-    renderHatCheckboxes();
+    
+    // Sadece depolama filtresi uygulandıysa Hat Seçimi bölümünü göster
+    if (filteredHats.length > 0) {
+      console.log('✅ Depolama filtresi aktif, Hat Seçimi gösteriliyor');
+      renderHatCheckboxes();
+    } else {
+      console.log('❌ Depolama filtresi yok, Hat Seçimi gizleniyor');
+      hatSelectionContainer.style.display = 'none';
+    }
     
   } catch (err) {
     console.error('Load filtered tables error:', err);
@@ -3069,6 +3119,9 @@ function handleSelectAllHats(e) {
   if (!isChecked) {
     selectedHats = [];
   }
+  
+  // Hatları Yenile butonu kontrolü
+  updateRefreshHatsButtonState();
 }
 
 function updateSelectAllHats() {
@@ -3088,6 +3141,9 @@ function updateSelectAllHats() {
     selectAllHats.checked = false;
     selectAllHats.indeterminate = true;
   }
+  
+  // Hatları Yenile butonu kontrolü
+  updateRefreshHatsButtonState();
 }
 
 async function handleApplyHatSelection() {
