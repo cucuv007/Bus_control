@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { recipients, operasyonExcelData, depolamaExcelData, timestamp } = req.body;
+    const { recipients, operasyonExcelData, depolamaExcelData, timestamp, username } = req.body;
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return res.status(400).json({
@@ -74,6 +74,7 @@ export default async function handler(req, res) {
             <h2>Merhaba ${recipient.Kullanıcı},</h2>
             <p>Açıklama tabloları temizlenmiştir.</p>
             <p><strong>İşlem Zamanı:</strong> ${dateStr}</p>
+            <p><strong>İşlemi Yapan Kullanıcı:</strong> ${username || 'Bilinmiyor'}</p>
             <p>Ekte temizlenmeden önceki açıklama kayıtlarını bulabilirsiniz:</p>
             <ul>
               ${operasyonExcelData ? '<li>Operasyon Açıklamaları</li>' : ''}

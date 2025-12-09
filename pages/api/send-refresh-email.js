@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { recipients, excelData, screenshotData, timestamp } = req.body;
+    const { recipients, excelData, screenshotData, timestamp, username } = req.body;
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return res.status(400).json({
@@ -74,6 +74,7 @@ export default async function handler(req, res) {
             <h2>Merhaba ${recipient.Kullanıcı},</h2>
             <p>Hat listesi yenileme işlemi gerçekleştirilmiştir.</p>
             <p><strong>İşlem Zamanı:</strong> ${dateStr}</p>
+            <p><strong>İşlemi Yapan Kullanıcı:</strong> ${username || 'Bilinmiyor'}</p>
             <p>Ekteki dosyalarda temizlenmeden önceki hat listesi ve ekran görüntüsünü bulabilirsiniz.</p>
             <hr>
             <p><em>Bu mail otomatik olarak gönderilmiştir.</em></p>

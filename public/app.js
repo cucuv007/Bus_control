@@ -5210,6 +5210,7 @@ async function handleRefreshHats() {
 
     // 6. Mail gönder
     console.log('📧 Mailler gönderiliyor...');
+    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
     const emailRes = await fetch('/api/send-refresh-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5217,7 +5218,8 @@ async function handleRefreshHats() {
         recipients: usersData.users,
         excelData: excelBase64,
         screenshotData: screenshotBase64,
-        timestamp
+        timestamp,
+        username: session.username || 'Bilinmiyor'
       })
     });
 
@@ -5640,6 +5642,7 @@ async function handleSistemiGuncelle() {
 
     // 5. Mail gönder - Her iki Excel dosyasını gönder
     console.log('📧 Mailler gönderiliyor...');
+    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
     
     try {
       const emailRes = await fetch('/api/send-aciklama-emails', {
@@ -5649,7 +5652,8 @@ async function handleSistemiGuncelle() {
           recipients: usersData.users,
           operasyonExcelData: operasyonBase64,
           depolamaExcelData: depolamaBase64,
-          timestamp
+          timestamp,
+          username: session.username || 'Bilinmiyor'
         })
       });
 
