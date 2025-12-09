@@ -5035,9 +5035,11 @@ async function handleRefreshHats() {
     // Kullanıcı bilgilerini al
     const userSession = localStorage.getItem('userSession');
     let currentGorev = 'User';
+    let currentUsername = 'Bilinmiyor';
     if (userSession) {
-      const session = JSON.parse(userSession);
-      currentGorev = session.gorev;
+      const sessionData = JSON.parse(userSession);
+      currentGorev = sessionData.gorev;
+      currentUsername = sessionData.username;
     }
 
     // Admin için zaman kısıtlaması yok, direkt işleme devam et
@@ -5214,7 +5216,6 @@ async function handleRefreshHats() {
 
     // 6. Mail gönder
     console.log('📧 Mailler gönderiliyor...');
-    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
     const emailRes = await fetch('/api/send-refresh-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5223,7 +5224,7 @@ async function handleRefreshHats() {
         excelData: excelBase64,
         screenshotData: screenshotBase64,
         timestamp,
-        username: session.username || 'Bilinmiyor'
+        username: currentUsername
       })
     });
 
