@@ -5284,6 +5284,11 @@ async function handleRefreshHats() {
     }
 
     console.log(`✅ ${clearResult.updatedCount} satır temizlendi`);
+    
+    // Kullanıcıya bilgilendirme göster
+    if (clearResult.updatedCount > 0) {
+      console.log(`🎉 Onaylanan ve Durum sütunları ${clearResult.updatedCount} satırdan temizlendi!`);
+    }
 
     // 9. Seçili hatların Yeni_Plaka sütunlarını temizle (bugünün gün tablosunda)
     console.log('🧹 Seçili hatların Yeni_Plaka sütunları temizleniyor...');
