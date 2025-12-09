@@ -16,69 +16,31 @@ export default async function handler(req, res) {
 
   let client;
   try {
-    const { rows } = req.body; // Array of row objects
+    const { hatlar } = req.body; // Hat sütunundaki tablo isimleri
 
-    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    if (!hatlar || !Array.isArray(hatlar) || hatlar.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'rows array gerekli'
+        error: 'hatlar array gerekli'
       });
     }
 
-    console.log(`🧹 ${rows.length} satırın Onaylanan ve Durum sütunları temizlenecek...`);
+    console.log(`🧹 ${hatlar.length} tablonun Onaylanan ve Durum sütunları temizlenecek...`);
+    console.log(`📋 Tablolar:`, hatlar);
 
     client = await pool.connect();
 
     let updatedCount = 0;
 
-    // Hatları grupla
-    const hatGroups = {};
-    rows.forEach(row => {
-      const { Hat_Adi } = row;
-      if (!hatGroups[Hat_Adi]) {
-        hatGroups[Hat_Adi] = [];
-      }
-      hatGroups[Hat_Adi].push(row);
-    });
-
-    console.log(`📊 ${Object.keys(hatGroups).length} farklı hat tablosunda işlem yapılacak`);
-
-    // Her hat için toplu UPDATE
-    for (const [hatAdi, hatRows] of Object.entries(hatGroups)) {
+    // Her tablo için tüm satırları temizle
+    for (const hatAdi of hatlar) {
       try {
-        // WHERE koşullarını oluştur
-        const conditions = hatRows.map((row, idx) => {
-          const { Tarife, Tarife_Saati, Calisma_Zamani, Hareket, Onaylanan, Durum } = row;
-          // SQL injection'dan korunmak için escape
-          const escapeSql = (val) => val ? val.replace(/'/g, "''") : val;
-          
-          let cond = `("Tarife" = '${escapeSql(Tarife)}' AND "Tarife_Saati" = '${escapeSql(Tarife_Saati)}'`;
-          if (Calisma_Zamani) {
-            cond += ` AND "Çalışma_Zamanı" = '${escapeSql(Calisma_Zamani)}'`;
-          }
-          if (Hareket) {
-            cond += ` AND "Hareket" = '${escapeSql(Hareket)}'`;
-          }
-          
-          // Onaylanan veya Durum değerini de WHERE koşuluna ekle
-          if (Onaylanan) {
-            cond += ` AND ("Onaylanan" = '${escapeSql(Onaylanan)}' OR "Onaylanan" IS NOT NULL)`;
-          }
-          if (Durum) {
-            cond += ` AND ("Durum" = '${escapeSql(Durum)}' OR "Durum" IS NOT NULL)`;
-          }
-          
-          cond += ')';
-          return cond;
-        }).join(' OR ');
-
         const query = `
           UPDATE public."${hatAdi}"
-          SET "Onaylanan" = NULL, "Durum" = NULL
-          WHERE ${conditions};
+          SET "Onaylanan" = NULL, "Durum" = NULL;
         `;
 
-        console.log(`🔍 ${hatAdi} için query:`, query);
+        console.log(`🔍 ${hatAdi} tablosu temizleniyor...`);
         
         const result = await client.query(query);
         updatedCount += result.rowCount;
