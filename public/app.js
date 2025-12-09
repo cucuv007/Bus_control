@@ -2211,7 +2211,7 @@ function startTimer(tableName, hareket) {
   
   timerInterval = setInterval(() => {
     updateTimer(tableName, hareket);
-  }, 1000);
+  }, 3000); // 3 saniyede bir güncelle (bandwidth tasarrufu)
   
   updateTimer(tableName, hareket);
 }
@@ -3513,7 +3513,7 @@ async function startMultipleHatsTimer(hatList, hareket) {
   
   tableRefreshInterval = setInterval(() => {
     refreshTableData(hatList, hareket);
-  }, 5000); // 5 saniyede bir yenile
+  }, 10000); // 10 saniyede bir yenile (bandwidth tasarrufu)
   
   if (timerInterval) {
     clearInterval(timerInterval);
@@ -3523,7 +3523,7 @@ async function startMultipleHatsTimer(hatList, hareket) {
   
   timerInterval = setInterval(() => {
     updateMultipleHatsTimer(hatList, hareket);
-  }, 1000);
+  }, 3000); // 3 saniyede bir güncelle (bandwidth tasarrufu)
   
   updateMultipleHatsTimer(hatList, hareket);
 }
@@ -5755,7 +5755,7 @@ function exportAciklamaToExcel() {
 // ==================== FORCE LOGOUT CHECK ====================
 // Admin bir kullanıcının görevini değiştirdiğinde, o kullanıcıyı otomatik logout yap
 function startForceLogoutCheck() {
-  // Her 5 saniyede bir kontrol et
+  // Her 30 saniyede bir kontrol et (bandwidth tasarrufu)
   setInterval(async () => {
     const userSession = localStorage.getItem('userSession');
     if (!userSession) return;
