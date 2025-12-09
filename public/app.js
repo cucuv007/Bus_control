@@ -2782,7 +2782,10 @@ function handleSelectAllDepolama(e) {
   const isChecked = e.target.checked;
   
   checkboxes.forEach(checkbox => {
-    checkbox.checked = isChecked;
+    // Sadece aktif (disabled olmayan) checkbox'ları seç/kaldır
+    if (!checkbox.disabled) {
+      checkbox.checked = isChecked;
+    }
   });
   
   // Eğer tümü seç kaldırıldıysa, seçili olanları da temizle
@@ -2792,8 +2795,9 @@ function handleSelectAllDepolama(e) {
 }
 
 function updateSelectAllDepolama() {
-  const checkboxes = document.querySelectorAll('.depolama-checkbox');
-  const checkedCount = document.querySelectorAll('.depolama-checkbox:checked').length;
+  const checkboxes = document.querySelectorAll('.depolama-checkbox:not(:disabled)');
+  const checkedCheckboxes = document.querySelectorAll('.depolama-checkbox:not(:disabled):checked');
+  const checkedCount = checkedCheckboxes.length;
   
   if (checkboxes.length === 0) {
     selectAllDepolama.checked = false;
