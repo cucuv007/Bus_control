@@ -49,12 +49,15 @@ export default async function handler(req, res) {
         // WHERE koşullarını oluştur
         const conditions = hatRows.map((row, idx) => {
           const { Tarife, Tarife_Saati, Calisma_Zamani, Hareket } = row;
-          let cond = `("Tarife" = '${Tarife}' AND "Tarife_Saati" = '${Tarife_Saati}'`;
+          // SQL injection'dan korunmak için escape
+          const escapeSql = (val) => val ? val.replace(/'/g, "''") : val;
+          
+          let cond = `("Tarife" = '${escapeSql(Tarife)}' AND "Tarife_Saati" = '${escapeSql(Tarife_Saati)}'`;
           if (Calisma_Zamani) {
-            cond += ` AND "Çalışma_Zamanı" = '${Calisma_Zamani}'`;
+            cond += ` AND "Çalışma_Zamanı" = '${escapeSql(Calisma_Zamani)}'`;
           }
           if (Hareket) {
-            cond += ` AND "Hareket" = '${Hareket}'`;
+            cond += ` AND "Hareket" = '${escapeSql(Hareket)}'`;
           }
           cond += ')';
           return cond;
@@ -66,11 +69,14 @@ export default async function handler(req, res) {
           WHERE ${conditions};
         `;
 
+        console.log(`🔍 ${hatAdi} için query:`, query);
+        
         const result = await client.query(query);
         updatedCount += result.rowCount;
         console.log(`✅ ${hatAdi} - ${result.rowCount} satır temizlendi`);
       } catch (err) {
         console.error(`❌ ${hatAdi} temizlenemedi:`, err.message);
+        console.error(`📄 Hata detayı:`, err);
       }
     }
 
