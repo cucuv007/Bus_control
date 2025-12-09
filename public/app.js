@@ -2715,13 +2715,13 @@ function renderDepolamaCheckboxes() {
   
   if (userSession) {
     const session = JSON.parse(userSession);
-    const gorev = session.gorev;
+    const username = session.username; // Kullanıcı_Verileri tablosundaki "Kullanıcı" sütunu
     
-    console.log('🔍 Kullanıcı görevi:', gorev);
-    console.log('🔍 Görev tipi:', typeof gorev);
-    console.log('🔍 Görev uzunluğu:', gorev ? gorev.length : 0);
+    console.log('🔍 Kullanıcı adı:', username);
+    console.log('🔍 Kullanıcı tipi:', typeof username);
+    console.log('🔍 Kullanıcı uzunluğu:', username ? username.length : 0);
     
-    // Depolama görevine göre izin verilen depolamalar
+    // Kullanıcı adına göre izin verilen depolamalar
     const depolamaAccess = {
       'Aksu Depolama': ['AKSU'],
       'Meydan Depolama': ['MEYDAN'],
@@ -2732,14 +2732,14 @@ function renderDepolamaCheckboxes() {
       'Varsak Altıayak Depolama': ['VARSAK AKTARMA']
     };
     
-    console.log('🔍 Erişim kontrolü:', depolamaAccess[gorev] ? 'Bulundu' : 'Bulunamadı');
+    console.log('🔍 Erişim kontrolü:', depolamaAccess[username] ? 'Bulundu' : 'Bulunamadı');
     
-    // Eğer kullanıcının görevi depolama erişim listesinde varsa
-    if (depolamaAccess[gorev]) {
-      allowedDepolamalar = depolamaAccess[gorev];
-      console.log(`🔒 Depolama kısıtlaması aktif: ${gorev} → ${allowedDepolamalar.join(', ')}`);
+    // Eğer kullanıcı adı depolama erişim listesinde varsa
+    if (depolamaAccess[username]) {
+      allowedDepolamalar = depolamaAccess[username];
+      console.log(`🔒 Depolama kısıtlaması aktif: ${username} → ${allowedDepolamalar.join(', ')}`);
     } else {
-      console.log(`✅ Tüm depolamalara erişim: ${gorev}`);
+      console.log(`✅ Tüm depolamalara erişim: ${username}`);
     }
   }
   
