@@ -2709,6 +2709,34 @@ function renderDepolamaCheckboxes() {
     'DEEPO AVM', 'ŞEHİR HASTANESİ', 'ANTOBÜS'
   ];
   
+  // Kullanıcı bazlı depolama erişim kontrolü
+  const userSession = localStorage.getItem('userSession');
+  let allowedDepolamalar = depolamaTables; // Varsayılan: Tümü
+  
+  if (userSession) {
+    const session = JSON.parse(userSession);
+    const gorev = session.gorev;
+    
+    // Depolama görevine göre izin verilen depolamalar
+    const depolamaAccess = {
+      'Aksu Depolama': ['AKSU'],
+      'Meydan Depolama': ['MEYDAN'],
+      'Otogar Depolama': ['OTOGAR'],
+      'Sarısu Depolama': ['SARISU', 'GÜRSU'],
+      'Ünsal Depolama': ['ÜNSAL'],
+      'Varsak Aktarma Depolama': ['VARSAK ALTIAYAK'],
+      'Varsak Altıayak Depolama': ['VARSAK AKTARMA']
+    };
+    
+    // Eğer kullanıcının görevi depolama erişim listesinde varsa
+    if (depolamaAccess[gorev]) {
+      allowedDepolamalar = depolamaAccess[gorev];
+      console.log(`🔒 Depolama kısıtlaması aktif: ${gorev} → ${allowedDepolamalar.join(', ')}`);
+    } else {
+      console.log(`✅ Tüm depolamalara erişim: ${gorev}`);
+    }
+  }
+  
   depolamaCheckboxList.innerHTML = '';
   
   // Seçimleri sıfırla
@@ -2726,6 +2754,14 @@ function renderDepolamaCheckboxes() {
     checkbox.value = tableName;
     checkbox.className = 'depolama-checkbox';
     checkbox.style.marginRight = '8px';
+    
+    // Erişim kontrolü: Eğer izinli depolamalar listesinde değilse disable et
+    if (!allowedDepolamalar.includes(tableName)) {
+      checkbox.disabled = true;
+      label.style.opacity = '0.4';
+      label.style.cursor = 'not-allowed';
+      label.title = 'Bu depolamaya erişim yetkiniz yok';
+    }
     
     checkbox.addEventListener('change', updateSelectAllDepolama);
     
