@@ -5263,13 +5263,20 @@ async function handleRefreshHats() {
     // 8. Veritabanını temizle
     console.log('🧹 Onaylanan ve Durum sütunları temizleniyor...');
     
-    const clearData = tableData.map(row => ({
-      Hat_Adi: row.Hat_Adi,
-      Tarife: row.Tarife,
-      Tarife_Saati: row.Tarife_Saati,
-      Calisma_Zamani: row['Çalışma_Zamanı'],
-      Hareket: row.Hareket
-    }));
+    // Sadece Onaylanan veya Durum sütunu dolu olan satırları gönder
+    const clearData = tableData
+      .filter(row => row.Onaylanan || row.Durum)
+      .map(row => ({
+        Hat_Adi: row.Hat_Adi,
+        Tarife: row.Tarife,
+        Tarife_Saati: row.Tarife_Saati,
+        Calisma_Zamani: row['Çalışma_Zamanı'],
+        Hareket: row.Hareket,
+        Onaylanan: row.Onaylanan,
+        Durum: row.Durum
+      }));
+
+    console.log(`📊 Temizlenecek satır sayısı: ${clearData.length}`);
 
     const clearRes = await fetch('/api/clear-status', {
       method: 'POST',

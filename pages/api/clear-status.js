@@ -48,7 +48,7 @@ export default async function handler(req, res) {
       try {
         // WHERE koşullarını oluştur
         const conditions = hatRows.map((row, idx) => {
-          const { Tarife, Tarife_Saati, Calisma_Zamani, Hareket } = row;
+          const { Tarife, Tarife_Saati, Calisma_Zamani, Hareket, Onaylanan, Durum } = row;
           // SQL injection'dan korunmak için escape
           const escapeSql = (val) => val ? val.replace(/'/g, "''") : val;
           
@@ -59,6 +59,15 @@ export default async function handler(req, res) {
           if (Hareket) {
             cond += ` AND "Hareket" = '${escapeSql(Hareket)}'`;
           }
+          
+          // Onaylanan veya Durum değerini de WHERE koşuluna ekle
+          if (Onaylanan) {
+            cond += ` AND ("Onaylanan" = '${escapeSql(Onaylanan)}' OR "Onaylanan" IS NOT NULL)`;
+          }
+          if (Durum) {
+            cond += ` AND ("Durum" = '${escapeSql(Durum)}' OR "Durum" IS NOT NULL)`;
+          }
+          
           cond += ')';
           return cond;
         }).join(' OR ');
