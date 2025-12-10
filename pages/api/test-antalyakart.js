@@ -10,14 +10,17 @@ export default async function handler(req, res) {
     wsAPI: []
   };
 
-  // Test edilecek REST endpoint'ler
+  // Test edilecek REST endpoint'ler (reverse engineering from mobile app)
   const restEndpoints = [
-    'https://api.antalyakart.com.tr/MobileApi/GetBusPositions',
-    'https://realtime.antalyakart.com.tr/api/vehicles',
-    'https://realtime.antalyakart.com.tr/bus/positions',
-    'https://antalyakart.com.tr/api/bus/realtime',
-    'https://api.antalyakart.com.tr/api/v1/vehicles',
-    'https://www.antalyakart.com.tr/api/bus/live'
+    // Mobil API endpoint'leri
+    'https://kentkart.antalya.bel.tr/api/vehicles',
+    'https://kentkart.antalya.bel.tr/api/lines',
+    'https://kentkart.antalya.bel.tr/api/stops',
+    'https://antalya.kentkart.com/api/vehicles',
+    'https://antalya.kentkart.com/api/v1/vehicles',
+    // Web scraping alternatifi
+    'https://www.antalyakart.com.tr',
+    'https://kentkart.antalya.bel.tr'
   ];
 
   console.log('🔍 AntalyaKart API Test başlıyor...');

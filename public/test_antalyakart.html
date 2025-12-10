@@ -95,6 +95,24 @@
     <h1>🔍 AntalyaKart API Test</h1>
     
     <div class="section">
+      <h2>🔍 AntalyaKart Endpoint Keşfi</h2>
+      <button onclick="discoverEndpoints()">Endpoint'leri Keşfet</button>
+      <div id="discoverResults"></div>
+    </div>
+
+    <div class="section">
+      <h2>⏱️ Manuel Onaylanan Girişi</h2>
+      <p>AntalyaKart API erişimi olmadığı için manuel test:</p>
+      <div style="margin: 15px 0;">
+        <label>Hat: <input type="text" id="manualHat" value="SA64" style="padding: 8px; margin: 5px;"></label><br>
+        <label>Plaka: <input type="text" id="manualPlaka" value="07EM435" style="padding: 8px; margin: 5px;"></label><br>
+        <label>Zaman: <input type="time" id="manualZaman" style="padding: 8px; margin: 5px;" step="1"></label><br>
+        <button onclick="manualUpdate()">Onaylanan Güncelle</button>
+      </div>
+      <div id="manualResults"></div>
+    </div>
+
+    <div class="section">
       <h2>REST API Test</h2>
       <button onclick="testRestAPI()" id="restBtn">REST API'leri Test Et</button>
       <div id="restResults"></div>
@@ -114,6 +132,95 @@
   </div>
 
   <script>
+    // Sayfa yüklendiğinde şu anki zamanı set et
+    document.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0]; // HH:MM:SS
+      const timeInput = document.getElementById('manualZaman');
+      if (timeInput) timeInput.value = timeStr;
+    });
+
+    async function discoverEndpoints() {
+      const results = document.getElementById('discoverResults');
+      results.innerHTML = '<div class="loading"></div> Endpoint\'ler araştırılıyor...';
+      
+      try {
+        const response = await fetch('/api/scrape-antalyakart');
+        const data = await response.json();
+        
+        let html = '<h3>Keşfedilen Endpoint\'ler:</h3>';
+        
+        if (data.discoveredEndpoints.api.length > 0) {
+          html += '<h4>API Endpoints:</h4><ul>';
+          data.discoveredEndpoints.api.forEach(url => {
+            html += `<li><code>${url}</code></li>`;
+          });
+          html += '</ul>';
+        }
+        
+        if (data.discoveredEndpoints.websocket.length > 0) {
+          html += '<h4>WebSocket Endpoints:</h4><ul>';
+          data.discoveredEndpoints.websocket.forEach(url => {
+            html += `<li><code>${url}</code></li>`;
+          });
+          html += '</ul>';
+        }
+        
+        html += '<h4>Bilinen Endpoint Test Sonuçları:</h4>';
+        data.testResults.forEach(test => {
+          const icon = test.ok ? '✅' : '❌';
+          html += `<div class="endpoint">${icon} ${test.url} - Status: ${test.status}</div>`;
+        });
+        
+        if (data.note) {
+          html += `<div class="ws-test"><strong>Not:</strong> ${data.note}</div>`;
+        }
+        
+        results.innerHTML = html;
+      } catch (err) {
+        results.innerHTML = `<div class="error">❌ Hata: ${err.message}</div>`;
+      }
+    }
+
+    async function manualUpdate() {
+      const hat = document.getElementById('manualHat').value;
+      const plaka = document.getElementById('manualPlaka').value;
+      const zaman = document.getElementById('manualZaman').value;
+      const results = document.getElementById('manualResults');
+      
+      if (!hat || !plaka || !zaman) {
+        results.innerHTML = '<div class="error">❌ Tüm alanları doldurun</div>';
+        return;
+      }
+      
+      results.innerHTML = '<div class="loading"></div> Güncelleniyor...';
+      
+      try {
+        const response = await fetch('/api/update-onaylanan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hat, plaka, onaylananZaman: zaman })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          results.innerHTML = `
+            <div class="success">
+              ✅ Başarılı! ${data.updatedCount} satır güncellendi<br>
+              Hat: ${data.hat}<br>
+              Plaka: ${data.plaka}<br>
+              Onaylanan: ${data.onaylananZaman}
+            </div>
+          `;
+        } else {
+          results.innerHTML = `<div class="error">❌ Hata: ${data.error}</div>`;
+        }
+      } catch (err) {
+        results.innerHTML = `<div class="error">❌ Hata: ${err.message}</div>`;
+      }
+    }
+
     async function testRestAPI() {
       const btn = document.getElementById('restBtn');
       const results = document.getElementById('restResults');
