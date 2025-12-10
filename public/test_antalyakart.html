@@ -95,6 +95,12 @@
     <h1>🔍 AntalyaKart API Test</h1>
     
     <div class="section">
+      <h2>📋 SA64 Plaka Listesi</h2>
+      <button onclick="listSA64Plates()">Tüm Plakaları Listele</button>
+      <div id="plateListResults"></div>
+    </div>
+
+    <div class="section">
       <h2>🚌 SA64 Hattı Araç Takibi</h2>
       <button onclick="getSA64Vehicles()">SA64 Araçlarını Getir</button>
       <div id="sa64VehiclesResults"></div>
@@ -145,6 +151,34 @@
       const timeInput = document.getElementById('manualZaman');
       if (timeInput) timeInput.value = timeStr;
     });
+
+    async function listSA64Plates() {
+      const results = document.getElementById('plateListResults');
+      results.innerHTML = '<div class="loading"></div> SA64 plakaları getiriliyor...';
+      
+      try {
+        const response = await fetch('/api/list-sa64-plates');
+        const data = await response.json();
+        
+        if (data.success) {
+          let html = `<h3>SA64 Tablosundaki Plakalar (${data.totalPlates} adet):</h3>`;
+          html += '<div style="background: white; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">';
+          html += '<ul style="column-count: 3; column-gap: 20px;">';
+          
+          data.plates.forEach(plate => {
+            html += `<li style="padding: 5px; font-family: monospace;">${plate}</li>`;
+          });
+          
+          html += '</ul></div>';
+          
+          results.innerHTML = html;
+        } else {
+          results.innerHTML = `<div class="error">❌ Hata: ${data.error}</div>`;
+        }
+      } catch (err) {
+        results.innerHTML = `<div class="error">❌ Hata: ${err.message}</div>`;
+      }
+    }
 
     async function getSA64Vehicles() {
       const results = document.getElementById('sa64VehiclesResults');
