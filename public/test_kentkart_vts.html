@@ -315,62 +315,41 @@
             const apiStatus = document.getElementById('apiStatus');
             
             try {
-                container.innerHTML = '<div class="loading">🔄 Kentkart VTS üzerinden veriler çekiliyor...</div>';
+                container.innerHTML = '<div class="loading">🔄 Backend API üzerinden veriler çekiliyor...</div>';
                 apiStatus.textContent = '🔄';
 
-                // Kentkart VTS API'ye doğrudan istek at
-                const apiUrl = 'https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get';
-                const params = new URLSearchParams({
-                    fields: 'bus_id,date_time,lat,lon,speed,svcount,status,odometer,car_no,edge_code,bearing,route_color,direction,display_route_code,personel_name,personel_last_name,driver_code,utctime,comp_name,path_code,path_name,sam_id,tags,bus_model,fuel_type,fuel_type_description',
-                    sort: 'bus_id|asc',
-                    stationlist: '',
-                    dc: Date.now()
-                });
+                // Backend proxy kullan (CORS bypass)
+                const response = await fetch('/api/kentkart-vts');
+                const data = await response.json();
 
-                const response = await fetch(`${apiUrl}?${params}`, {
-                    method: 'GET',
-                    credentials: 'include', // Cookie'leri gönder
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                console.log('Backend API Response:', data);
 
-                if (!response.ok) {
-                    throw new Error(`VTS API error: ${response.status}`);
+                if (!data.success) {
+                    throw new Error(data.error || 'API hatası');
                 }
 
-                const data = await response.json();
-                console.log('VTS API Response:', data);
-
-                // SA65 hattındaki araçları filtrele (nested yapı: data.data.data)
-                let sa65Vehicles = [];
-                const allVehicles = data?.data?.data || [];
-                
-                sa65Vehicles = allVehicles.filter(vehicle => 
-                    vehicle.display_route_code === 'SA65' || 
-                    vehicle.display_route_code === 'SA-65' ||
-                    vehicle.path_code === 'SA65' ||
-                    vehicle.path_name?.includes('SA65') ||
-                    vehicle.path_name?.includes('SA-65')
-                );
-
                 // İstatistikleri güncelle
-                document.getElementById('totalVehicles').textContent = allVehicles.length;
-                document.getElementById('sa65Count').textContent = sa65Vehicles.length;
+                document.getElementById('totalVehicles').textContent = data.total_vehicles || 0;
+                document.getElementById('sa65Count').textContent = data.sa65_count || 0;
                 document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('tr-TR');
                 apiStatus.textContent = '✅';
 
                 // Araçları göster
-                if (sa65Vehicles.length > 0) {
-                    displayVehicles(sa65Vehicles);
+                if (data.vehicles && data.vehicles.length > 0) {
+                    displayVehicles(data.vehicles);
+                    
+                    if (data.note) {
+                        container.innerHTML += `
+                            <div class="success" style="margin-top: 20px;">
+                                ℹ️ ${data.note}
+                            </div>
+                        `;
+                    }
                 } else {
-                    const hatKodlari = [...new Set(allVehicles.slice(0, 50).map(v => v.display_route_code))].filter(Boolean);
                     container.innerHTML = `
                         <div class="error">
                             ⚠️ SA65 hattında araç bulunamadı.<br>
-                            Toplam ${allVehicles.length} araç sorgulandı.<br><br>
-                            <strong>Sistemdeki Hat Kodları (ilk 50):</strong><br>
-                            ${hatKodlari.join(', ') || 'Yok'}
+                            ${data.note || 'Veri yok'}
                         </div>
                     `;
                 }
@@ -380,20 +359,15 @@
                 container.innerHTML = `
                     <div class="error">
                         ❌ <strong>Hata:</strong> ${error.message}<br><br>
-                        <strong>Çözüm Adımları:</strong><br>
-                        1. Başka sekmede <a href="https://vts.kentkart.com.tr" target="_blank">vts.kentkart.com.tr</a>'ye giriş yapın<br>
-                        2. Bu sayfayı yenileyin<br>
-                        3. "Verileri Yenile" butonuna tıklayın<br><br>
-                        <strong>CORS Hatası Alıyorsanız:</strong><br>
-                        Tarayıcı konsoluna şu kodu yapıştırın ve Enter'a basın:<br>
-                        <pre style="background:white;padding:10px;border-radius:5px;overflow:auto;">
-// SA65 araçlarını bul ve göster
-fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,path_name&sort=bus_id|asc&dc=' + Date.now())
+                        <strong>Gerçek veri için VTS Console kullanın:</strong><br>
+                        1. <a href="https://vts.kentkart.com.tr" target="_blank">VTS'ye giriş yapın</a><br>
+                        2. F12 → Console'a şu kodu yapıştırın:<br>
+                        <pre style="background:white;padding:10px;border-radius:5px;overflow:auto;font-size:0.85em;">
+fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,path_name,status,comp_name&sort=bus_id|asc&dc=' + Date.now())
   .then(r => r.json())
   .then(d => {
-    const sa65 = d.data.filter(v => v.display_route_code?.includes('SA65') || v.path_name?.includes('SA65'));
+    const sa65 = d.data.data.filter(v => v.display_route_code?.includes('SA65'));
     console.table(sa65);
-    alert('SA65 Araç Sayısı: ' + sa65.length);
   });
                         </pre>
                     </div>
