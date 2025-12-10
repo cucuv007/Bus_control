@@ -161,33 +161,29 @@
             html += '<table style="width:100%; border-collapse: collapse; margin: 10px 0;">';
             html += '<tr style="background: #3498db; color: white;">';
             html += '<th style="padding: 8px; border: 1px solid #ddd;">Plaka</th>';
-            html += '<th style="padding: 8px; border: 1px solid #ddd;">Koordinat</th>';
-            html += '<th style="padding: 8px; border: 1px solid #ddd;">Hız</th>';
-            html += '<th style="padding: 8px; border: 1px solid #ddd;">Durak</th>';
-            html += '<th style="padding: 8px; border: 1px solid #ddd;">Mesafe</th>';
+            html += '<th style="padding: 8px; border: 1px solid #ddd;">Tarife</th>';
+            html += '<th style="padding: 8px; border: 1px solid #ddd;">Tarife Saati</th>';
+            html += '<th style="padding: 8px; border: 1px solid #ddd;">Hareket</th>';
+            html += '<th style="padding: 8px; border: 1px solid #ddd;">Onaylanan</th>';
             html += '<th style="padding: 8px; border: 1px solid #ddd;">Durum</th>';
-            html += '<th style="padding: 8px; border: 1px solid #ddd;">Güncelleme</th>';
             html += '</tr>';
             
             data.vehicles.forEach(v => {
               html += '<tr>';
               html += `<td style="padding: 8px; border: 1px solid #ddd;"><strong>${v.plaka}</strong></td>`;
-              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.lat.toFixed(6)}, ${v.lon.toFixed(6)}</td>`;
-              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.hiz} km/h</td>`;
-              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.durak || '-'}</td>`;
-              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.durakMesafe ? v.durakMesafe + 'm' : '-'}</td>`;
-              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.durum}</td>`;
-              html += `<td style="padding: 8px; border: 1px solid #ddd;">${new Date(v.sonGuncelleme).toLocaleTimeString('tr-TR')}</td>`;
+              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.tarife || '-'}</td>`;
+              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.tarifeSaati || '-'}</td>`;
+              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.hareket || '-'}</td>`;
+              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.onaylanan || '-'}</td>`;
+              html += `<td style="padding: 8px; border: 1px solid #ddd;">${v.durum || '-'}</td>`;
               html += '</tr>';
             });
             
             html += '</table>';
             
-            // Google Maps link
-            const firstVehicle = data.vehicles[0];
-            html += `<div style="margin: 15px 0;">`;
-            html += `<a href="https://www.google.com/maps?q=${firstVehicle.lat},${firstVehicle.lon}" target="_blank" style="color: #3498db;">`;
-            html += `📍 ${firstVehicle.plaka} konumunu Google Maps'te aç</a>`;
+            html += `<div style="margin: 15px 0; padding: 10px; background: #e8f4f8; border-left: 4px solid #3498db;">`;
+            html += `<strong>📊 Toplam ${data.totalVehicles} araç</strong><br>`;
+            html += `Kaynak: ${data.source}`;
             html += `</div>`;
           }
           
