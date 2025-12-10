@@ -342,20 +342,20 @@
                 const data = await response.json();
                 console.log('VTS API Response:', data);
 
-                // SA65 hattındaki araçları filtrele
+                // SA65 hattındaki araçları filtrele (nested yapı: data.data.data)
                 let sa65Vehicles = [];
-                if (data && data.data) {
-                    sa65Vehicles = data.data.filter(vehicle => 
-                        vehicle.display_route_code === 'SA65' || 
-                        vehicle.display_route_code === 'SA-65' ||
-                        vehicle.path_code === 'SA65' ||
-                        vehicle.path_name?.includes('SA65') ||
-                        vehicle.path_name?.includes('SA-65')
-                    );
-                }
+                const allVehicles = data?.data?.data || [];
+                
+                sa65Vehicles = allVehicles.filter(vehicle => 
+                    vehicle.display_route_code === 'SA65' || 
+                    vehicle.display_route_code === 'SA-65' ||
+                    vehicle.path_code === 'SA65' ||
+                    vehicle.path_name?.includes('SA65') ||
+                    vehicle.path_name?.includes('SA-65')
+                );
 
                 // İstatistikleri güncelle
-                document.getElementById('totalVehicles').textContent = data?.data?.length || 0;
+                document.getElementById('totalVehicles').textContent = allVehicles.length;
                 document.getElementById('sa65Count').textContent = sa65Vehicles.length;
                 document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('tr-TR');
                 apiStatus.textContent = '✅';
@@ -364,12 +364,13 @@
                 if (sa65Vehicles.length > 0) {
                     displayVehicles(sa65Vehicles);
                 } else {
+                    const hatKodlari = [...new Set(allVehicles.slice(0, 50).map(v => v.display_route_code))].filter(Boolean);
                     container.innerHTML = `
                         <div class="error">
-                            ⚠️ SA65 hattında aktif araç bulunamadı.<br>
-                            Toplam ${data?.data?.length || 0} araç sorgulandı.<br><br>
-                            <strong>Bulunan Hat Kodları (ilk 20):</strong><br>
-                            ${data?.data?.slice(0, 20).map(v => v.display_route_code || v.path_code).filter(Boolean).join(', ') || 'Yok'}
+                            ⚠️ SA65 hattında araç bulunamadı.<br>
+                            Toplam ${allVehicles.length} araç sorgulandı.<br><br>
+                            <strong>Sistemdeki Hat Kodları (ilk 50):</strong><br>
+                            ${hatKodlari.join(', ') || 'Yok'}
                         </div>
                     `;
                 }
