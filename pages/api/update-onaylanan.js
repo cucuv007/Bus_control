@@ -29,6 +29,14 @@ export default async function handler(req, res) {
 
     const zaman = onaylananZaman || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    // Zaman formatını kontrol et (HH:MM:SS veya HH:MM formatında olmalı)
+    if (!zaman || zaman.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Geçerli bir zaman giriniz (örn: 10:30:00)'
+      });
+    }
+
     console.log(`⏱️ Onaylanan güncelleniyor: Hat=${hat}, Plaka=${plaka}, Zaman=${zaman}`);
 
     client = await pool.connect();
