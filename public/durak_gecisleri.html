@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarısu Depolama Durak Geçişleri</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .crossings-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .crossings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .crossings-header h2 {
+            color: #333;
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .auto-refresh input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .auto-refresh label {
+            color: #666;
+            cursor: pointer;
+        }
+
+        .crossings-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .crossings-table thead {
+            background: #667eea;
+            color: white;
+        }
+
+        .crossings-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .crossings-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .crossings-table tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .plaka-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .time-badge {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .distance-badge {
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-live {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        .status-stale {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚏 Sarısu Depolama Merkezi-1</h1>
+            <p>SA65 Hattı Durak Geçiş Kayıtları</p>
+            <p style="font-size: 12px; margin-top: 5px;">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Bağlanıyor...</span>
+            </p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalCrossings">-</h3>
+                <p>Toplam Geçiş</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="uniqueVehicles">-</h3>
+                <p>Farklı Araç</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="lastCrossingTime">-</h3>
+                <p>Son Geçiş</p>
+            </div>
+        </div>
+
+        <div class="crossings-container">
+            <div class="crossings-header">
+                <h2>Geçiş Kayıtları</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="refresh-btn" onclick="fetchCrossings()">🔄 Yenile</button>
+                    <div class="auto-refresh">
+                        <input type="checkbox" id="autoRefresh" checked>
+                        <label for="autoRefresh">Otomatik Yenile (5sn)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loadingMessage" class="loading">
+                Veriler yükleniyor...
+            </div>
+
+            <table class="crossings-table" id="crossingsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Plaka</th>
+                        <th>Geçiş Saati</th>
+                        <th>Mesafe</th>
+                        <th>Hız</th>
+                        <th>Hat</th>
+                        <th>Sürücü</th>
+                        <th>Şirket</th>
+                    </tr>
+                </thead>
+                <tbody id="crossingsBody">
+                </tbody>
+            </table>
+
+            <div id="noDataMessage" class="no-data" style="display: none;">
+                Henüz geçiş kaydı bulunmuyor.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let allCrossings = [];
+
+        async function fetchCrossings() {
+            try {
+                const response = await fetch('/api/vts-push-data');
+                const data = await response.json();
+
+                if (data && data.gecisler) {
+                    allCrossings = data.gecisler;
+                    updateStats();
+                    updateTable();
+                    updateStatus(data.age_seconds);
+                } else {
+                    document.getElementById('noDataMessage').style.display = 'block';
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('crossingsTable').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Veri çekme hatası:', error);
+                document.getElementById('loadingMessage').textContent = 'Veri yüklenemedi!';
+                updateStatus(999);
+            }
+        }
+
+        function updateStats() {
+            // Toplam geçiş sayısı
+            document.getElementById('totalCrossings').textContent = allCrossings.length;
+
+            // Farklı araç sayısı
+            const uniquePlates = new Set(allCrossings.map(c => c.plaka));
+            document.getElementById('uniqueVehicles').textContent = uniquePlates.size;
+
+            // Son geçiş zamanı
+            if (allCrossings.length > 0) {
+                const lastCrossing = allCrossings[allCrossings.length - 1];
+                const time = new Date(lastCrossing.gecis_zamani);
+                document.getElementById('lastCrossingTime').textContent = 
+                    time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            } else {
+                document.getElementById('lastCrossingTime').textContent = '-';
+            }
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('crossingsBody');
+            tbody.innerHTML = '';
+
+            if (allCrossings.length === 0) {
+                document.getElementById('noDataMessage').style.display = 'block';
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('crossingsTable').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('noDataMessage').style.display = 'none';
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('crossingsTable').style.display = 'table';
+
+            // En son geçişler en üstte
+            const sortedCrossings = [...allCrossings].reverse();
+
+            sortedCrossings.forEach((crossing, index) => {
+                const time = new Date(crossing.gecis_zamani);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${allCrossings.length - index}</td>
+                    <td><span class="plaka-badge">${crossing.plaka}</span></td>
+                    <td><span class="time-badge">${time.toLocaleTimeString('tr-TR')}</span></td>
+                    <td><span class="distance-badge">${crossing.mesafe_metre.toFixed(1)}m</span></td>
+                    <td>${crossing.hiz || 0} km/h</td>
+                    <td>${crossing.hat_kodu || '-'}</td>
+                    <td>${crossing.surucu || '-'}</td>
+                    <td>${crossing.sirket || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateStatus(ageSeconds) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+
+            if (ageSeconds < 30) {
+                indicator.className = 'status-indicator status-live';
+                statusText.textContent = '🟢 Canlı Veri';
+            } else {
+                indicator.className = 'status-indicator status-stale';
+                statusText.textContent = '🔴 Eski Veri';
+            }
+        }
+
+        function setupAutoRefresh() {
+            const checkbox = document.getElementById('autoRefresh');
+            
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+
+            // Başlangıçta otomatik yenileme açık
+            if (checkbox.checked) {
+                startAutoRefresh();
+            }
+        }
+
+        function startAutoRefresh() {
+            stopAutoRefresh(); // Önceki interval'i temizle
+            autoRefreshInterval = setInterval(fetchCrossings, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchCrossings();
+            setupAutoRefresh();
+        });
+    </script>
+</body>
+</html>

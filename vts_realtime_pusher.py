@@ -85,11 +85,19 @@ def fetch_vts_data():
 def push_to_buscontrol(vehicles):
     """Bus Control API'ye veri gönderir"""
     try:
+        # Datetime objelerini string'e çevir
+        serializable_gecisler = []
+        for gecis in gecis_kayitlari:
+            serializable_gecis = gecis.copy()
+            if 'gecis_zamani' in serializable_gecis and serializable_gecis['gecis_zamani']:
+                serializable_gecis['gecis_zamani'] = serializable_gecis['gecis_zamani'].isoformat()
+            serializable_gecisler.append(serializable_gecis)
+        
         payload = {
             'timestamp': datetime.now().isoformat(),
             'vehicles': vehicles,
             'count': len(vehicles),
-            'gecisler': gecis_kayitlari  # Geçiş kayıtlarını da gönder
+            'gecisler': serializable_gecisler  # Serialize edilmiş geçiş kayıtlarını gönder
         }
         
         response = requests.post(
@@ -99,7 +107,7 @@ def push_to_buscontrol(vehicles):
         )
         
         if response.status_code == 200:
-            print(f"✅ Bus Control API: {len(vehicles)} araç, {len(gecis_kayitlari)} geçiş gönderildi")
+            print(f"✅ Bus Control API: {len(vehicles)} araç, {len(serializable_gecisler)} geçiş gönderildi")
             return True
         else:
             print(f"⚠️ Bus Control API: {response.status_code}")
