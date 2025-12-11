@@ -315,41 +315,59 @@
             const apiStatus = document.getElementById('apiStatus');
             
             try {
-                container.innerHTML = '<div class="loading">🔄 Backend API üzerinden veriler çekiliyor...</div>';
+                container.innerHTML = '<div class="loading">🔄 Gerçek zamanlı VTS verisi çekiliyor...</div>';
                 apiStatus.textContent = '🔄';
 
-                // Backend proxy kullan (CORS bypass)
-                const response = await fetch('/api/kentkart-vts');
+                // Real-time push data API'den çek
+                const response = await fetch('/api/vts-push-data');
                 const data = await response.json();
 
-                console.log('Backend API Response:', data);
+                console.log('VTS Push Data Response:', data);
 
                 if (!data.success) {
-                    throw new Error(data.error || 'API hatası');
+                    container.innerHTML = `
+                        <div class="error">
+                            ⚠️ ${data.message || 'Veri yok'}<br><br>
+                            <strong>Python Pusher çalıştırmak için:</strong><br>
+                            1. <code>vts_realtime_pusher.py</code> dosyasını açın<br>
+                            2. VTS cookie'lerini yapıştırın<br>
+                            3. <code>python vts_realtime_pusher.py</code> komutuyla başlatın
+                        </div>
+                    `;
+                    apiStatus.textContent = '❌';
+                    return;
                 }
 
                 // İstatistikleri güncelle
-                document.getElementById('totalVehicles').textContent = data.total_vehicles || 0;
-                document.getElementById('sa65Count').textContent = data.sa65_count || 0;
-                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('tr-TR');
-                apiStatus.textContent = '✅';
+                document.getElementById('totalVehicles').textContent = data.total || 0;
+                document.getElementById('sa65Count').textContent = data.count || 0;
+                
+                const lastUpdate = new Date(data.timestamp);
+                document.getElementById('lastUpdate').textContent = lastUpdate.toLocaleTimeString('tr-TR');
+                
+                // Veri yaşını kontrol et
+                const ageText = data.age_seconds !== undefined ? ` (${data.age_seconds}sn önce)` : '';
+                if (data.is_stale) {
+                    apiStatus.textContent = '⚠️';
+                    apiStatus.title = 'Veri 30 saniyeden eski - Pusher çalışmıyor olabilir';
+                } else {
+                    apiStatus.textContent = '✅';
+                    apiStatus.title = 'Canlı veri' + ageText;
+                }
 
                 // Araçları göster
                 if (data.vehicles && data.vehicles.length > 0) {
                     displayVehicles(data.vehicles);
                     
-                    if (data.note) {
-                        container.innerHTML += `
-                            <div class="success" style="margin-top: 20px;">
-                                ℹ️ ${data.note}
-                            </div>
-                        `;
-                    }
+                    container.innerHTML += `
+                        <div class="success" style="margin-top: 20px;">
+                            ✅ Gerçek zamanlı VTS verisi (${data.source})${ageText}
+                        </div>
+                    `;
                 } else {
                     container.innerHTML = `
                         <div class="error">
-                            ⚠️ SA65 hattında araç bulunamadı.<br>
-                            ${data.note || 'Veri yok'}
+                            ⚠️ SA65 hattında araç bulunamadı.
                         </div>
                     `;
                 }
@@ -359,17 +377,10 @@
                 container.innerHTML = `
                     <div class="error">
                         ❌ <strong>Hata:</strong> ${error.message}<br><br>
-                        <strong>Gerçek veri için VTS Console kullanın:</strong><br>
-                        1. <a href="https://vts.kentkart.com.tr" target="_blank">VTS'ye giriş yapın</a><br>
-                        2. F12 → Console'a şu kodu yapıştırın:<br>
-                        <pre style="background:white;padding:10px;border-radius:5px;overflow:auto;font-size:0.85em;">
-fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,path_name,status,comp_name&sort=bus_id|asc&dc=' + Date.now())
-  .then(r => r.json())
-  .then(d => {
-    const sa65 = d.data.data.filter(v => v.display_route_code?.includes('SA65'));
-    console.table(sa65);
-  });
-                        </pre>
+                        <strong>Python Pusher kurulumu:</strong><br>
+                        1. Python 3 yüklü olmalı<br>
+                        2. <code>pip install requests</code><br>
+                        3. <code>python vts_realtime_pusher.py</code>
                     </div>
                 `;
                 apiStatus.textContent = '❌';
