@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   // POST: Python script'ten veri al
   if (req.method === 'POST') {
     try {
-      const { timestamp, vehicles, count } = req.body;
+      const { timestamp, vehicles, count, gecisler } = req.body;
 
       if (!vehicles || !Array.isArray(vehicles)) {
         return res.status(400).json({ error: 'Invalid data format' });
@@ -28,16 +28,19 @@ export default async function handler(req, res) {
         vehicles,
         count,
         total: vehicles.length,
+        gecisler: gecisler || [],
+        gecis_count: gecisler ? gecisler.length : 0,
         source: 'live-push',
         received_at: new Date().toISOString()
       };
 
-      console.log(`✅ VTS data received: ${count} vehicles at ${timestamp}`);
+      console.log(`✅ VTS data received: ${count} vehicles, ${latestVTSData.gecis_count} crossings at ${timestamp}`);
 
       return res.status(200).json({
         success: true,
         message: 'Data received',
-        count
+        count,
+        gecis_count: latestVTSData.gecis_count
       });
 
     } catch (error) {
