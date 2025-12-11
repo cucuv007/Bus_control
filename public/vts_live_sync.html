@@ -209,12 +209,11 @@
         <div id="alertContainer"></div>
 
         <div class="code-block" id="scriptCode">
-// SA65 verilerini her 5 saniyede LocalStorage'a kaydet
+// SA65 verilerini konsola yazdır ve clipboard'a kopyala
 setInterval(() => {
   fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,status,path_name,comp_name,personel_name,personel_last_name,bearing,date_time,odometer&sort=bus_id|asc&dc=' + Date.now())
     .then(r => r.json())
     .then(d => {
-      // d.data.data nested yapısı
       const allVehicles = d.data?.data || [];
       const sa65 = allVehicles.filter(v => 
         v.display_route_code?.includes('SA65') || 
@@ -223,13 +222,7 @@ setInterval(() => {
         v.path_name?.includes('SA-65')
       );
       
-      localStorage.setItem('vts_sa65_live', JSON.stringify({
-        timestamp: new Date().toISOString(),
-        vehicles: sa65,
-        count: sa65.length,
-        total: allVehicles.length
-      }));
-      
+      // Console'a yazdır
       console.log('✅ SA65 güncellendi:', sa65.length, '/', allVehicles.length, 'araç');
       console.table(sa65.map(v => ({
         Plaka: v.car_no,
@@ -238,6 +231,18 @@ setInterval(() => {
         Hız: v.speed,
         Durum: v.status === 1 ? '🟢 Aktif' : '🔴 Pasif'
       })));
+      
+      // window.vtsData olarak sakla (iframe erişimi için)
+      window.vtsData = {
+        timestamp: new Date().toISOString(),
+        vehicles: sa65,
+        count: sa65.length,
+        total: allVehicles.length
+      };
+      
+      // Broadcast event
+      window.postMessage({type: 'VTS_UPDATE', data: window.vtsData}, '*');
+      
     })
     .catch(e => console.error('❌ VTS sync error:', e));
 }, 5000);
@@ -248,14 +253,25 @@ fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id
   .then(d => {
     const allVehicles = d.data?.data || [];
     const sa65 = allVehicles.filter(v => v.display_route_code?.includes('SA65') || v.path_name?.includes('SA65'));
-    localStorage.setItem('vts_sa65_live', JSON.stringify({timestamp: new Date().toISOString(), vehicles: sa65, count: sa65.length, total: allVehicles.length}));
+    window.vtsData = {timestamp: new Date().toISOString(), vehicles: sa65, count: sa65.length, total: allVehicles.length};
+    window.postMessage({type: 'VTS_UPDATE', data: window.vtsData}, '*');
     console.log('🟢 VTS Live Sync başlatıldı!', sa65.length, 'SA65 araç bulundu.');
+    console.log('📋 Veriyi görmek için: copy(JSON.stringify(window.vtsData))');
   });
         </div>
 
         <div style="text-align: center; margin: 20px 0;">
             <button class="btn" onclick="copyScript()">📋 Kodu Kopyala</button>
-            <button class="btn btn-secondary" onclick="checkData()">🔄 Verileri Kontrol Et</button>
+            <button class="btn btn-secondary" onclick="openVTSIframe()">🔗 VTS'yi İframe'de Aç</button>
+            <button class="btn btn-secondary" onclick="manualPaste()">📥 Manuel Veri Yapıştır</button>
+        </div>
+
+        <div id="iframeContainer" style="display:none; margin: 20px 0;">
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                <strong>⚠️ Dikkat:</strong> Aşağıdaki iframe'de VTS'ye giriş yapın, ardından Console'a kodu yapıştırın.
+                <button class="btn" onclick="closeIframe()" style="float: right; padding: 5px 15px;">❌ Kapat</button>
+            </div>
+            <iframe id="vtsIframe" src="https://vts.kentkart.com.tr" style="width: 100%; height: 600px; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px;"></iframe>
         </div>
 
         <div class="stats">
@@ -286,6 +302,7 @@ fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id
 
     <script>
         let updateInterval = null;
+        let lastData = null;
 
         function copyScript() {
             const code = document.getElementById('scriptCode').textContent;
@@ -293,6 +310,42 @@ fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id
                 showAlert('✅ Kod kopyalandı! Şimdi VTS Console\'a yapıştırın.', 'success');
             });
         }
+
+        function openVTSIframe() {
+            document.getElementById('iframeContainer').style.display = 'block';
+            showAlert('ℹ️ VTS iframe açıldı. Giriş yapıp Console\'a kodu yapıştırın.', 'success');
+        }
+
+        function closeIframe() {
+            document.getElementById('iframeContainer').style.display = 'none';
+        }
+
+        function manualPaste() {
+            const input = prompt('VTS Console\'dan "copy(JSON.stringify(window.vtsData))" komutuyla kopyalanan veriyi buraya yapıştırın:');
+            if (!input) return;
+            
+            try {
+                const data = JSON.parse(input);
+                if (data.vehicles && data.timestamp) {
+                    lastData = data;
+                    displayVehicles(data.vehicles, data.timestamp);
+                    showAlert('✅ Veri başarıyla yüklendi!', 'success');
+                } else {
+                    showAlert('❌ Geçersiz veri formatı!', 'error');
+                }
+            } catch (e) {
+                showAlert('❌ JSON parse hatası: ' + e.message, 'error');
+            }
+        }
+
+        // postMessage ile veri dinle
+        window.addEventListener('message', (event) => {
+            if (event.data?.type === 'VTS_UPDATE' && event.data?.data) {
+                lastData = event.data.data;
+                displayVehicles(lastData.vehicles, lastData.timestamp);
+                console.log('📡 VTS verisi alındı:', lastData.count, 'araç');
+            }
+        });
 
         function showAlert(message, type = 'error') {
             const alertDiv = document.getElementById('alertContainer');
@@ -302,29 +355,22 @@ fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id
         }
 
         function checkData() {
-            const data = localStorage.getItem('vts_sa65_live');
-            
-            if (!data) {
-                showAlert('❌ Veri bulunamadı! VTS Console\'da script çalışıyor mu kontrol edin.', 'error');
+            if (!lastData) {
+                showAlert('❌ Henüz veri yok! VTS Console\'da script çalıştırın veya manuel yapıştırın.', 'error');
                 return;
             }
 
-            try {
-                const parsed = JSON.parse(data);
-                const updateTime = new Date(parsed.timestamp);
-                const now = new Date();
-                const diff = Math.floor((now - updateTime) / 1000);
+            const updateTime = new Date(lastData.timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - updateTime) / 1000);
 
-                if (diff > 30) {
-                    showAlert(`⚠️ Son güncelleme ${diff} saniye önce. VTS sekmesi kapalı olabilir.`, 'error');
-                } else {
-                    showAlert(`✅ Veri güncel! ${parsed.count} araç bulundu.`, 'success');
-                }
-
-                displayVehicles(parsed.vehicles, parsed.timestamp);
-            } catch (e) {
-                showAlert('❌ Veri parse hatası: ' + e.message, 'error');
+            if (diff > 30) {
+                showAlert(`⚠️ Son güncelleme ${diff} saniye önce. VTS script çalışıyor mu?`, 'error');
+            } else {
+                showAlert(`✅ Veri güncel! ${lastData.count} araç bulundu. (${diff}sn önce)`, 'success');
             }
+
+            displayVehicles(lastData.vehicles, lastData.timestamp);
         }
 
         function displayVehicles(vehicles, timestamp) {
@@ -395,27 +441,28 @@ fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id
             document.getElementById('vehiclesContainer').innerHTML = html;
         }
 
-        // Her 5 saniyede bir localStorage'dan oku
+        // Her 2 saniyede bir son veriyi kontrol et
         function startAutoUpdate() {
             if (updateInterval) clearInterval(updateInterval);
             
             updateInterval = setInterval(() => {
-                const data = localStorage.getItem('vts_sa65_live');
-                if (data) {
-                    try {
-                        const parsed = JSON.parse(data);
-                        displayVehicles(parsed.vehicles, parsed.timestamp);
-                    } catch (e) {
-                        console.error('Parse error:', e);
+                if (lastData) {
+                    const updateTime = new Date(lastData.timestamp);
+                    const now = new Date();
+                    const diff = Math.floor((now - updateTime) / 1000);
+                    
+                    // 10 saniyeden eski değilse göster
+                    if (diff < 10) {
+                        displayVehicles(lastData.vehicles, lastData.timestamp);
                     }
                 }
-            }, 5000);
+            }, 2000);
         }
 
         // Sayfa yüklendiğinde başlat
         window.addEventListener('load', () => {
             startAutoUpdate();
-            checkData();
+            showAlert('ℹ️ VTS Console\'da script çalıştırın veya "VTS\'yi İframe\'de Aç" butonuna tıklayın.', 'success');
         });
 
         // Sayfa kapanınca temizle
