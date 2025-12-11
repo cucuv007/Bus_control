@@ -211,24 +211,46 @@
         <div class="code-block" id="scriptCode">
 // SA65 verilerini her 5 saniyede LocalStorage'a kaydet
 setInterval(() => {
-  fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,status,path_name,comp_name,personel_name,personel_last_name,bearing,date_time&sort=bus_id|asc&dc=' + Date.now())
+  fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,status,path_name,comp_name,personel_name,personel_last_name,bearing,date_time,odometer&sort=bus_id|asc&dc=' + Date.now())
     .then(r => r.json())
     .then(d => {
-      const sa65 = d.data.data.filter(v => 
+      // d.data.data nested yapısı
+      const allVehicles = d.data?.data || [];
+      const sa65 = allVehicles.filter(v => 
         v.display_route_code?.includes('SA65') || 
-        v.path_name?.includes('SA65')
+        v.display_route_code?.includes('SA-65') ||
+        v.path_name?.includes('SA65') ||
+        v.path_name?.includes('SA-65')
       );
+      
       localStorage.setItem('vts_sa65_live', JSON.stringify({
         timestamp: new Date().toISOString(),
         vehicles: sa65,
-        count: sa65.length
+        count: sa65.length,
+        total: allVehicles.length
       }));
-      console.log('✅ SA65 data updated:', sa65.length, 'vehicles');
+      
+      console.log('✅ SA65 güncellendi:', sa65.length, '/', allVehicles.length, 'araç');
+      console.table(sa65.map(v => ({
+        Plaka: v.car_no,
+        Lat: v.lat,
+        Lon: v.lon,
+        Hız: v.speed,
+        Durum: v.status === 1 ? '🟢 Aktif' : '🔴 Pasif'
+      })));
     })
     .catch(e => console.error('❌ VTS sync error:', e));
 }, 5000);
 
-console.log('🟢 VTS Live Sync başlatıldı! Her 5 saniyede güncelleniyor...');
+// İlk çalıştırmayı hemen yap
+fetch('https://vts.kentkart.com.tr/api/026/v1/latestdevicedata/get?fields=bus_id,car_no,display_route_code,lat,lon,speed,status,path_name,comp_name,personel_name,personel_last_name,bearing,date_time,odometer&sort=bus_id|asc&dc=' + Date.now())
+  .then(r => r.json())
+  .then(d => {
+    const allVehicles = d.data?.data || [];
+    const sa65 = allVehicles.filter(v => v.display_route_code?.includes('SA65') || v.path_name?.includes('SA65'));
+    localStorage.setItem('vts_sa65_live', JSON.stringify({timestamp: new Date().toISOString(), vehicles: sa65, count: sa65.length, total: allVehicles.length}));
+    console.log('🟢 VTS Live Sync başlatıldı!', sa65.length, 'SA65 araç bulundu.');
+  });
         </div>
 
         <div style="text-align: center; margin: 20px 0;">
@@ -342,11 +364,15 @@ console.log('🟢 VTS Live Sync başlatıldı! Her 5 saniyede güncelleniyor...'
                                 </div>
                                 <div class="info-row">
                                     <span>⚡ Hız:</span>
-                                    <span><strong>${v.speed || 0} km/s</strong></span>
+                                    <span><strong>${v.speed || 0} km/h</strong></span>
                                 </div>
                                 <div class="info-row">
                                     <span>🧭 Yön:</span>
                                     <span>${v.bearing || 0}°</span>
+                                </div>
+                                <div class="info-row">
+                                    <span>📏 KM:</span>
+                                    <span>${v.odometer ? (v.odometer / 1000).toFixed(1) + ' km' : '-'}</span>
                                 </div>
                                 <div class="info-row">
                                     <span>👨‍✈️ Sürücü:</span>
