@@ -1,4 +1,4 @@
-import https from 'https';
+const https = require('https');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,29 +11,38 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing url or token' });
   }
 
-  try {
-    // Vercel'den VTS'ye proxy yap (SSL bypass ile)
-    const agent = new https.Agent({
-      rejectUnauthorized: false
-    });
-
-    const response = await fetch(url, {
+  return new Promise((resolve, reject) => {
+    const options = {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      agent: agent
-    });
+      rejectUnauthorized: false
+    };
 
-    const data = await response.json();
-    return res.status(200).json(data);
+    https.get(url, options, (response) => {
+      let data = '';
 
-  } catch (error) {
-    console.error('VTS proxy error:', error);
-    return res.status(500).json({ 
-      error: 'VTS proxy failed', 
-      details: error.message 
+      response.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      response.on('end', () => {
+        try {
+          const jsonData = JSON.parse(data);
+          res.status(200).json(jsonData);
+          resolve();
+        } catch (error) {
+          console.error('JSON parse error:', error);
+          res.status(500).json({ error: 'Invalid JSON response', details: error.message });
+          resolve();
+        }
+      });
+    }).on('error', (error) => {
+      console.error('VTS proxy error:', error);
+      res.status(500).json({ error: 'VTS proxy failed', details: error.message });
+      resolve();
     });
-  }
+  });
 }

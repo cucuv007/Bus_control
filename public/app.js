@@ -3218,21 +3218,6 @@ async function handleApplyHatSelection() {
   applyHatSelection.disabled = true;
   
   try {
-    // SA65 seçiliyse VTS otomatik onaylama işlemini başlat
-    if (selectedHats.includes('SA65')) {
-      console.log('🚍 SA65 tespit edildi, VTS otomatik onaylama başlatılıyor...');
-      statusEl.textContent = '🔍 VTS verisi kontrol ediliyor...';
-      
-      try {
-        // VTS çağrısını client-side'dan yap (CORS yok, direkt bağlantı)
-        await fetchAndProcessVTSData();
-      } catch (vtsError) {
-        console.error('❌ VTS otomatik onaylama hatası:', vtsError);
-        // VTS hatası olsa bile tablo yüklensin
-      }
-      
-      statusEl.textContent = `${selectedHats.length} hat yükleniyor...`;
-    }
     // Tüm seçili hatlardan verileri çek
     const allData = [];
     
@@ -3553,6 +3538,23 @@ async function handleApplyHatSelection() {
       await startMultipleHatsTimer(selectedHats, currentHareket);
     } else {
       updateReopenTimerIcon();
+    }
+
+    // SA65 seçiliyse VTS otomatik onaylama işlemini başlat (tablo yüklendikten SONRA)
+    if (selectedHats.includes('SA65')) {
+      console.log('🚍 SA65 tespit edildi, VTS otomatik onaylama başlatılıyor...');
+      statusEl.textContent = '🔍 VTS verisi kontrol ediliyor...';
+      
+      try {
+        await fetchAndProcessVTSData();
+        // VTS işlemi başarılı olduysa tabloyu yenile
+        statusEl.innerHTML = `✅ VTS işlemi tamamlandı - Tablo yenileniyor... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
+        // Tabloyu yenile (VTS güncellemelerini göster)
+        applyHatSelection.click();
+      } catch (vtsError) {
+        console.error('❌ VTS otomatik onaylama hatası:', vtsError);
+        statusEl.innerHTML = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg} <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
+      }
     }
     
     // Arızalı filtresi aktifse uygula
