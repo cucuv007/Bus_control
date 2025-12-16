@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { tableName, hatAdi, calismaZamani, tarife, tarifeSaati, hareket } = req.body;
+    const { tableName, hatAdi, calismaZamani, tarife, tarifeSaati, hareket, manualApprovalTime } = req.body;
 
     if (!tableName || !hatAdi || !tarife || !tarifeSaati) {
       return res.status(400).json({ 
@@ -20,12 +20,18 @@ export default async function handler(req, res) {
       });
     }
 
-    // Türkiye saatini al (UTC+3)
-    const now = new Date();
-    const turkeyTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
-    const hours = String(turkeyTime.getHours()).padStart(2, '0');
-    const minutes = String(turkeyTime.getMinutes()).padStart(2, '0');
-    const approvalTime = `${hours}:${minutes}:00`; // Saniyeyi 00 olarak ekle
+    // Manuel zaman verilmişse onu kullan, yoksa mevcut saat
+    let approvalTime;
+    if (manualApprovalTime) {
+      approvalTime = manualApprovalTime;
+    } else {
+      // Türkiye saatini al (UTC+3)
+      const now = new Date();
+      const turkeyTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+      const hours = String(turkeyTime.getHours()).padStart(2, '0');
+      const minutes = String(turkeyTime.getMinutes()).padStart(2, '0');
+      approvalTime = `${hours}:${minutes}:00`; // Saniyeyi 00 olarak ekle
+    }
 
     console.log('Row approval request:', {
       tableName,
