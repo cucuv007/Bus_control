@@ -48,9 +48,10 @@ function getTimeDifferenceMinutes(time1, time2) {
 function findBestMatch(crossing, scheduleRows) {
   const toleranceMinutes = 30;
   
-  // 1. Önce plaka eşleşmesi dene
+  // 1. Önce plaka eşleşmesi dene (sadece boş Onaylanan satırları)
   const plateMatches = scheduleRows.filter(row => {
     if (row.Plaka !== crossing.plaka) return false;
+    if (row.Onaylanan && row.Onaylanan.trim() !== '') return false; // Zaten dolu ise atla
     
     const timeDiff = getTimeDifferenceMinutes(row.Tarife_Saati, crossing.gecis_zamani);
     return timeDiff !== null && timeDiff <= toleranceMinutes;
@@ -121,11 +122,13 @@ export default async function handler(req, res) {
     const scheduleRows = result.rows;
     
     console.log(`📋 Veritabanında ${scheduleRows.length} Kalkış satırı bulundu`);
+    console.log(`📋 Boş Onaylanan: ${scheduleRows.filter(r => !r.Onaylanan || r.Onaylanan.trim() === '').length}`);
     
     // Her geçişi en uygun tarife saatine eşleştir
     const updates = [];
     
     for (const crossing of crossings) {
+      console.log(`🔍 Geçiş kontrol: ${crossing.plaka} @ ${crossing.gecis_zamani}`);
       const matchedRow = findBestMatch(crossing, scheduleRows);
       
       if (matchedRow) {
@@ -138,6 +141,8 @@ export default async function handler(req, res) {
         });
         
         console.log(`   ✓ Eşleşme: ${crossing.plaka} ${crossing.gecis_zamani} → Tarife ${matchedRow.Tarife_Saati} (${matchedRow.Plaka})`);
+      } else {
+        console.log(`   ✗ Eşleşme bulunamadı: ${crossing.plaka} ${crossing.gecis_zamani}`);
       }
     }
     
