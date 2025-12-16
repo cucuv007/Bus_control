@@ -3543,14 +3543,32 @@ async function handleApplyHatSelection() {
     // SA65 seçiliyse VTS otomatik onaylama işlemini başlat (tablo yüklendikten SONRA)
     if (selectedHats.includes('SA65')) {
       console.log('🚍 SA65 tespit edildi, VTS otomatik onaylama başlatılıyor...');
-      statusEl.textContent = '🔍 VTS verisi kontrol ediliyor...';
       
       try {
-        await fetchAndProcessVTSData();
-        // VTS işlemi başarılı olduysa tabloyu yenile
-        statusEl.innerHTML = `✅ VTS işlemi tamamlandı - Tablo yenileniyor... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
-        // Tabloyu yenile (VTS güncellemelerini göster)
-        applyHatSelection.click();
+        statusEl.innerHTML = `🔍 VTS verisi kontrol ediliyor... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
+        
+        const vtsResponse = await fetch('/api/vts-auto-populate-onaylanan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hat: 'SA65' })
+        });
+        
+        const vtsResult = await vtsResponse.json();
+        
+        if (vtsResult.success && vtsResult.updated > 0) {
+          const detailsMsg = vtsResult.details
+            ? vtsResult.details.map(d => `${d.plaka} - ${d.tarife_saati} → ${d.gerceklesen}`).join('\n')
+            : '';
+          alert(`✅ VTS Otomatik Onay\n\n${vtsResult.updated} satır otomatik onaylandı\n\nDetaylar:\n${detailsMsg}`);
+          
+          // Tabloyu yenile (VTS güncellemelerini göster)
+          statusEl.innerHTML = `✅ VTS tamamlandı - Yenileniyor... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
+          applyHatSelection.click();
+        } else if (vtsResult.success) {
+          console.log('⚠️ VTS: Eşleşen tarife saati bulunamadı');
+        } else {
+          console.error('❌ VTS hatası:', vtsResult.error);
+        }
       } catch (vtsError) {
         console.error('❌ VTS otomatik onaylama hatası:', vtsError);
         statusEl.innerHTML = `✅ ${selectedHats.length} hattan ${allData.length} kayıt birleştirildi${filterMsg} <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
