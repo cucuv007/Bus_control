@@ -1,5 +1,5 @@
-import axios from 'axios';
 import https from 'https';
+import { URL } from 'url';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -12,28 +12,70 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing url or token' });
   }
 
-  try {
-    const agent = new https.Agent({
-      rejectUnauthorized: false
-    });
+  return new Promise((resolve) => {
+    try {
+      const parsedUrl = new URL(url);
+      
+      const options = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || 443,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        rejectUnauthorized: false
+      };
 
-    const response = await axios.get(url, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      httpsAgent: agent,
-      timeout: 30000
-    });
+      const request = https.request(options, (response) => {
+        let data = '';
 
-    return res.status(200).json(response.data);
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
 
-  } catch (error) {
-    console.error('VTS proxy error:', error.message);
-    return res.status(500).json({ 
-      error: 'VTS proxy failed', 
-      details: error.message,
-      url: url.substring(0, 100)
-    });
-  }
+        response.on('end', () => {
+          try {
+            const jsonData = JSON.parse(data);
+            res.status(200).json(jsonData);
+            resolve();
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError.message, 'Data:', data.substring(0, 200));
+            res.status(500).json({ 
+              error: 'Invalid JSON response', 
+              details: parseError.message,
+              preview: data.substring(0, 200)
+            });
+            resolve();
+          }
+        });
+      });
+
+      request.on('error', (error) => {
+        console.error('VTS proxy request error:', error.message);
+        res.status(500).json({ 
+          error: 'VTS proxy failed', 
+          details: error.message 
+        });
+        resolve();
+      });
+
+      request.setTimeout(30000, () => {
+        request.destroy();
+        res.status(500).json({ error: 'Request timeout' });
+        resolve();
+      });
+
+      request.end();
+
+    } catch (error) {
+      console.error('VTS proxy setup error:', error.message);
+      res.status(500).json({ 
+        error: 'VTS proxy setup failed', 
+        details: error.message 
+      });
+      resolve();
+    }
+  });
 }
