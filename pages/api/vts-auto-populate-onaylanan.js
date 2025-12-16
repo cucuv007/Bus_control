@@ -2,6 +2,7 @@
 // SA65 hattı için VTS geçiş verilerini çekip Onaylanan sütununu otomatik doldurur
 
 import { Pool } from 'pg';
+import fetch from 'node-fetch';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -350,6 +351,11 @@ export default async function handler(req, res) {
   let client;
   try {
     console.log('🚌 VTS Auto-Populate başlatıldı...');
+    console.log('Environment check:', {
+      hasDatabase: !!process.env.DATABASE_URL,
+      hasVTSToken: !!VTS_TOKEN,
+      nodeEnv: process.env.NODE_ENV
+    });
     
     const { hat } = req.body;
     const targetHat = hat || 'SA65';
@@ -471,9 +477,11 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('❌ VTS Auto-Populate hatası:', err);
+    console.error('Stack trace:', err.stack);
     return res.status(500).json({
       success: false,
-      error: err.message
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   } finally {
     if (client) {
