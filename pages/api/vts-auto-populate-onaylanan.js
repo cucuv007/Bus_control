@@ -4,6 +4,7 @@
 import { Pool } from 'pg';
 import axios from 'axios';
 import https from 'https';
+import { URL } from 'url';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -19,12 +20,16 @@ const pool = new Pool({
 const VTS_BASE_URL = "https://vts.kentkart.com.tr/api/026/v1";
 const VTS_TOKEN = process.env.VTS_ACCESS_TOKEN || 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrZW50a2FydC5jb20iLCJzdWIiOjM1MTIsImF1ZCI6IjMiLCJleHAiOjE3NjU5NTA2NTQsIm5iZiI6MTc2NTc3Nzg1NCwiaWF0IjoxNzY1Nzc3ODU0LCJqdGkiOiIiLCJhdXRob3JpemVkQ2xpZW50SWRzIjpbImIzQTRrIiwiYjNBNFZUUyJdLCJleHQiOm51bGwsImlzU3VwZXJBZG1pbiI6MCwiaXAiOiIxMC4wLjQwLjgiLCJsb2dpbm1ldGhvZCI6bnVsbCwiYWNjcm9sZSI6bnVsbCwicm9sZSI6WyJ2dHNhZG1pbiJdLCJuZXRzIjpbeyJOSUQiOiIwMjYiLCJEIjoiMSIsIk5BTUUiOiJBTlRBTFlBIn1dLCJsYW5nIjoidHIiLCJ1c2VybmFtZSI6InVndXIueWlsbWF6Iiwic2lkIjo1MTEwNTgyfQ.Z37r5Lssp5Lbed8zf4QY3-Eccj8F0Ydg9rnTHfd7386p3AROgOAaj1VgAT9n-Zhi3TWWtVyWAS2HbA_xVgCB07HmHJ-o_MxrBQslEXRk-vaEJaefF0XtcqQwuZtTShevMFO8TdtkObAZPbYhdZ4a-t3GeIKxSVO25u0rzlaOuAAU5qCF4qFz1Hteqs5rkesdgpHkVYzqrG448Mo7PwpsLhj-pM0Fv81jptVEnYurkWFCenlJtUOHDO89GlhBwLKAGOIuseybkqm1QunsHzUVduaNAyzxioZauv25qinUY_5WA-MVVn2l5K9adqj42RWMSoPmecXV-3b7C9ohRnaq5A';
 
-// Axios instance with SSL bypass
+// Axios instance with SSL bypass and additional configs
 const axiosInstance = axios.create({
   httpsAgent: new https.Agent({
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    keepAlive: true,
+    maxSockets: 50
   }),
-  timeout: 30000
+  timeout: 30000,
+  maxRedirects: 5,
+  validateStatus: (status) => status < 500
 });
 
 // Durak koordinatları (Sarısu Depolama Merkezi-1)
@@ -33,6 +38,52 @@ const DURAK_CONFIG = {
   enlem: 36.830802,
   boylam: 30.596277
 };
+
+/**
+ * Manuel HTTPS request (axios fallback için)
+ */
+function httpsRequest(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    
+    const reqOptions = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || 443,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      rejectUnauthorized: false
+    };
+    
+    const req = https.request(reqOptions, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const jsonData = JSON.parse(data);
+          resolve({ status: res.statusCode, data: jsonData });
+        } catch (e) {
+          resolve({ status: res.statusCode, data: data });
+        }
+      });
+    });
+    
+    req.on('error', (error) => {
+      reject(error);
+    });
+    
+    req.setTimeout(30000, () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    
+    req.end();
+  });
+}
 
 /**
  * Haversine mesafe hesaplama (metre)
@@ -58,22 +109,29 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
  */
 async function getSA65Vehicles() {
   try {
-    const url = `${VTS_BASE_URL}/latestdevicedata/get`;
+    const params = new URLSearchParams({
+      fields: 'bus_id,car_no,display_route_code',
+      sort: 'bus_id|asc',
+      dc: Date.now()
+    });
     
-    const response = await axiosInstance.get(url, {
-      params: {
-        fields: 'bus_id,car_no,display_route_code',
-        sort: 'bus_id|asc',
-        dc: Date.now()
-      },
+    const url = `${VTS_BASE_URL}/latestdevicedata/get?${params}`;
+    
+    console.log('📡 VTS Request URL:', url);
+    
+    // Manuel HTTPS request kullan
+    const response = await httpsRequest(url, {
+      method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${VTS_TOKEN}`,
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': 'https://vts.kentkart.com.tr/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://vts.kentkart.com.tr/',
+        'Accept-Language': 'tr-TR,tr;q=0.9'
       }
     });
     
+    console.log('✅ VTS Response Status:', response.status);
     const data = response.data;
     
     // İç içe data yapısını çöz
@@ -115,23 +173,27 @@ async function getVehicleHistory(busId, startTime, endTime) {
       return `${year}${month}${day}${hours}${minutes}${seconds}`;
     };
     
-    const url = `${VTS_BASE_URL}/historicdevicedata/get`;
+    const params = new URLSearchParams({
+      fields: 'date_time,lat,lon,speed,car_no,bus_id',
+      filters: '',
+      sort: 'date_time|asc',
+      bus_list: busId,
+      start_date_time: formatTime(startTime),
+      end_date_time: formatTime(endTime),
+      dc: Date.now()
+    });
     
-    const response = await axiosInstance.get(url, {
-      params: {
-        fields: 'date_time,lat,lon,speed,car_no,bus_id',
-        filters: '',
-        sort: 'date_time|asc',
-        bus_list: busId,
-        start_date_time: formatTime(startTime),
-        end_date_time: formatTime(endTime),
-        dc: Date.now()
-      },
+    const url = `${VTS_BASE_URL}/historicdevicedata/get?${params}`;
+    
+    // Manuel HTTPS request kullan
+    const response = await httpsRequest(url, {
+      method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${VTS_TOKEN}`,
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': 'https://vts.kentkart.com.tr/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://vts.kentkart.com.tr/',
+        'Accept-Language': 'tr-TR,tr;q=0.9'
       }
     });
     
