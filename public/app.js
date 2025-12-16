@@ -6701,15 +6701,14 @@ function analyzeCrossingsLinear(tracks, plaka) {
 }
 
 async function fetchAndProcessVTSData() {
-  console.log('🔍 VTS client-side işlem başlatıldı...');
+  console.log('🔍 VTS işlem başlatıldı (backend proxy üzerinden)...');
 
   try {
     const vehiclesUrl = `${VTS_CONFIG.BASE_URL}/latestdevicedata/get?fields=bus_id,car_no,display_route_code&sort=bus_id|asc&dc=${Date.now()}`;
-    const vehiclesResponse = await fetch(vehiclesUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${VTS_CONFIG.TOKEN}`
-      }
+    const vehiclesResponse = await fetch('/api/vts-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: vehiclesUrl, token: VTS_CONFIG.TOKEN })
     });
 
     const vehiclesData = await vehiclesResponse.json();
@@ -6741,11 +6740,10 @@ async function fetchAndProcessVTSData() {
     for (const vehicle of sa65Vehicles) {
       const historyUrl = `${VTS_CONFIG.BASE_URL}/historicdevicedata/get?fields=date_time,lat,lon,speed,car_no,bus_id&filters=&sort=date_time|asc&bus_list=${vehicle.bus_id}&start_date_time=${formatTime(startTime)}&end_date_time=${formatTime(now)}&dc=${Date.now()}`;
 
-      const historyResponse = await fetch(historyUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${VTS_CONFIG.TOKEN}`
-        }
+      const historyResponse = await fetch('/api/vts-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: historyUrl, token: VTS_CONFIG.TOKEN })
       });
 
       const historyData = await historyResponse.json();
