@@ -3224,30 +3224,8 @@ async function handleApplyHatSelection() {
       statusEl.textContent = 'ðŸ” VTS verisi kontrol ediliyor...';
       
       try {
-        const vtsResponse = await fetch('/api/vts-auto-populate-onaylanan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hat: 'SA65' })
-        });
-        
-        if (vtsResponse.ok) {
-          const vtsResult = await vtsResponse.json();
-          
-          if (vtsResult.success && vtsResult.updated > 0) {
-            console.log(`âœ… VTS: ${vtsResult.updated} satÄ±r otomatik onaylandÄ±`);
-            
-            // KullanÄ±cÄ±ya bilgi gÃ¶ster
-            const detailsMsg = vtsResult.details
-              ? vtsResult.details.map(d => `${d.plaka} - ${d.tarife} â†’ ${d.gerceklesen}`).join('\n')
-              : '';
-            
-            alert(`âœ… VTS Otomatik Onay\n\n${vtsResult.message}\n\nDetaylar:\n${detailsMsg}`);
-          } else {
-            console.log('âš ï¸ VTS: Onaylanacak satÄ±r bulunamadÄ±');
-          }
-        } else {
-          console.error('âŒ VTS API hatasÄ±:', vtsResponse.status);
-        }
+        // VTS Ã§aÄŸrÄ±sÄ±nÄ± client-side'dan yap (CORS yok, direkt baÄŸlantÄ±)
+        await fetchAndProcessVTSData();
       } catch (vtsError) {
         console.error('âŒ VTS otomatik onaylama hatasÄ±:', vtsError);
         // VTS hatasÄ± olsa bile tablo yÃ¼klensin
@@ -6626,3 +6604,17 @@ async function updateBosDoluCountdowns() {
     }
   });
 }
+
+// ==================== VTS AUTO-POPULATE FUNCTIONS ====================
+
+const VTS_CONFIG = {
+  BASE_URL: 'https://vts.kentkart.com.tr/api/026/v1',
+  TOKEN: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrZW50a2FydC5jb20iLCJzdWIiOjM1MTIsImF1ZCI6IjMiLCJleHAiOjE3NjU5NTA2NTQsIm5iZiI6MTc2NTc3Nzg1NCwiaWF0IjoxNzY1Nzc3ODU0LCJqdGkiOiIiLCJhdXRob3JpemVkQ2xpZW50SWRzIjpbImIzQTRrIiwiYjNBNFZUUyJdLCJleHQiOm51bGwsImlzU3VwZXJBZG1pbiI6MCwiaXAiOiIxMC4wLjQwLjgiLCJsb2dpbm1ldGhvZCI6bnVsbCwiYWNjcm9sZSI6bnVsbCwicm9sZSI6WyJ2dHNhZG1pbiJdLCJuZXRzIjpbeyJOSUQiOiIwMjYiLCJEIjoiMSIsIk5BTUUiOiJBTlRBTFlBIn1dLCJsYW5nIjoidHIiLCJ1c2VybmFtZSI6InVndXIueWlsbWF6Iiwic2lkIjo1MTEwNTgyfQ.Z37r5Lssp5Lbed8zf4QY3-Eccj8F0Ydg9rnTHfd7386p3AROgOAaj1VgAT9n-Zhi3TWWtVyWAS2HbA_xVgCB07HmHJ-o_MxrBQslEXRk-vaEJaefF0XtcqQwuZtTShevMFO8TdtkObAZPbYhdZ4a-t3GeIKxSVO25u0rzlaOuAAU5qCF4qFz1Hteqs5rkesdgpHkVYzqrG448Mo7PwpsLhj-pM0Fv81jptVEnYurkWFCenlJtUOHDO89GlhBwLKAGOIuseybkqm1QunsHzUVduaNAyzxioZauv25qinUY_5WA-MVVn2l5K9adqj42RWMSoPmecXV-3b7C9ohRnaq5A',
+  DURAK: { adi: 'Sarýsu Depolama Merkezi-1', enlem: 36.830802, boylam: 30.596277 }
+};
+
+function haversineDistance(lat1, lon1, lat2, lon2) { const toRad = (deg) => (deg * Math.PI) / 180; const R = 6371000; const dLat = toRad(lat2 - lat1); const dLon = toRad(lon2 - lon1); const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2); const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); return R * c; }
+
+function analyzeCrossingsLinear(tracks, plaka) { const gecisler = []; let previousDistance = null, minDistance = null, minDistanceTime = null, isApproaching = false, isLeaving = false, crossed500m = false; for (const point of tracks) { if (!point.lat || !point.lon || point.lat === 0 || point.lon === 0) continue; const distance = haversineDistance(VTS_CONFIG.DURAK.enlem, VTS_CONFIG.DURAK.boylam, point.lat, point.lon); if (previousDistance === null) { previousDistance = distance; if (distance < 200) { minDistance = distance; minDistanceTime = point.date_time; } continue; } const distanceChange = distance - previousDistance; if (distanceChange < -5) { if (!isApproaching) { isApproaching = true; isLeaving = false; crossed500m = false; } if (minDistance === null || distance < minDistance) { minDistance = distance; minDistanceTime = point.date_time; } } else if (distanceChange > 5) { if (!isLeaving && isApproaching && minDistance !== null) { isLeaving = true; isApproaching = false; } if (isLeaving && minDistance !== null && !crossed500m && distance > 500 && minDistance < 500) { crossed500m = true; const timeStr = minDistanceTime.substring(0, 14); const hours = parseInt(timeStr.substring(8, 10)); const minutes = parseInt(timeStr.substring(10, 12)); const seconds = parseInt(timeStr.substring(12, 14)); gecisler.push({ plaka: plaka, gecis_zamani: \:\:\, min_mesafe: Math.round(minDistance * 10) / 10 }); minDistance = null; minDistanceTime = null; isLeaving = false; } } previousDistance = distance; } return gecisler; }
+
+async function fetchAndProcessVTSData() { console.log('?? VTS client-side iþlem baþlatýldý...'); try { const vehiclesUrl = \/latestdevicedata/get?fields=bus_id,car_no,display_route_code&sort=bus_id|asc&dc=\; const vehiclesResponse = await fetch(vehiclesUrl, { headers: { 'Accept': 'application/json', 'Authorization': Bearer \ } }); const vehiclesData = await vehiclesResponse.json(); let vehicles = vehiclesData?.data?.data || vehiclesData?.data || []; const sa65Vehicles = vehicles.filter(v => v.display_route_code === 'SA65'); console.log(? \ SA65 aracý bulundu); if (sa65Vehicles.length === 0) { alert('?? SA65 araçlarý bulunamadý'); return; } const now = new Date(); const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0); const formatTime = (date) => { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); const hours = String(date.getHours()).padStart(2, '0'); const minutes = String(date.getMinutes()).padStart(2, '0'); const seconds = String(date.getSeconds()).padStart(2, '0'); return \\\\\\; }; const allCrossings = []; for (const vehicle of sa65Vehicles) { const historyUrl = \/historicdevicedata/get?fields=date_time,lat,lon,speed,car_no,bus_id&filters=&sort=date_time|asc&bus_list=\&start_date_time=\&end_date_time=\&dc=\; const historyResponse = await fetch(historyUrl, { headers: { 'Accept': 'application/json', 'Authorization': Bearer \ } }); const historyData = await historyResponse.json(); let tracks = historyData?.data?.data || historyData?.data || []; const crossings = analyzeCrossingsLinear(tracks, vehicle.car_no); allCrossings.push(...crossings); console.log(  \: \ geçiþ); } console.log(?? Toplam \ geçiþ tespit edildi); if (allCrossings.length === 0) { alert('?? Bugün henüz geçiþ tespit edilmedi'); return; } const response = await fetch('/api/vts-process-crossings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ crossings: allCrossings, hat: 'SA65' }) }); const result = await response.json(); if (result.success && result.updated > 0) { const detailsMsg = result.details ? result.details.map(d => \ - \ › \).join('\n') : ''; alert(? VTS Otomatik Onay\n\n\\n\nDetaylar:\n\); } else { alert('?? Eþleþen tarife saati bulunamadý'); } } catch (error) { console.error('? VTS iþlem hatasý:', error); alert('? VTS baðlantý hatasý: ' + error.message); } }
