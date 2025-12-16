@@ -6,7 +6,9 @@ import fetch from 'node-fetch';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: {
+    rejectUnauthorized: false
+  },
   connectionTimeoutMillis: 60000,
   idleTimeoutMillis: 30000,
   max: 20
@@ -408,7 +410,9 @@ export default async function handler(req, res) {
     }
     
     // 4. Veritabanından SA65 Kalkış satırlarını çek
+    console.log('📊 Veritabanına bağlanılıyor...');
     client = await pool.connect();
+    console.log('✅ Database bağlantısı başarılı');
     
     const query = `
       SELECT id, "Hat_Adi", "Tarife_Saati", "Plaka", "Onaylanan", "Hareket"
@@ -417,6 +421,7 @@ export default async function handler(req, res) {
       ORDER BY "Tarife_Saati" ASC;
     `;
     
+    console.log('📋 Query çalıştırılıyor:', query);
     const result = await client.query(query);
     const scheduleRows = result.rows;
     
