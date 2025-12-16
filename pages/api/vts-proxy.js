@@ -1,4 +1,5 @@
-const https = require('https');
+import axios from 'axios';
+import https from 'https';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,38 +12,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing url or token' });
   }
 
-  return new Promise((resolve, reject) => {
-    const options = {
-      method: 'GET',
+  try {
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+
+    const response = await axios.get(url, {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      rejectUnauthorized: false
-    };
-
-    https.get(url, options, (response) => {
-      let data = '';
-
-      response.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      response.on('end', () => {
-        try {
-          const jsonData = JSON.parse(data);
-          res.status(200).json(jsonData);
-          resolve();
-        } catch (error) {
-          console.error('JSON parse error:', error);
-          res.status(500).json({ error: 'Invalid JSON response', details: error.message });
-          resolve();
-        }
-      });
-    }).on('error', (error) => {
-      console.error('VTS proxy error:', error);
-      res.status(500).json({ error: 'VTS proxy failed', details: error.message });
-      resolve();
+      httpsAgent: agent,
+      timeout: 30000
     });
-  });
+
+    return res.status(200).json(response.data);
+
+  } catch (error) {
+    console.error('VTS proxy error:', error.message);
+    return res.status(500).json({ 
+      error: 'VTS proxy failed', 
+      details: error.message,
+      url: url.substring(0, 100)
+    });
+  }
 }
