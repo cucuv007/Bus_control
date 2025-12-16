@@ -3545,27 +3545,26 @@ async function handleApplyHatSelection() {
       console.log('🚍 SA65 tespit edildi, VTS otomatik onaylama başlatılıyor...');
       
       try {
-        statusEl.innerHTML = `🔍 VTS verisi kontrol ediliyor... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
+        statusEl.innerHTML = `🔍 VTS verisi kontrol ediliyor (son 3 saat)... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
         
-        const vtsResponse = await fetch('/api/vts-auto-populate-onaylanan', {
+        const vtsResponse = await fetch('/api/vts-quick-populate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hat: 'SA65' })
+          headers: { 'Content-Type': 'application/json' }
         });
         
         const vtsResult = await vtsResponse.json();
         
         if (vtsResult.success && vtsResult.updated > 0) {
           const detailsMsg = vtsResult.details
-            ? vtsResult.details.map(d => `${d.plaka} - ${d.tarife_saati} → ${d.gerceklesen}`).join('\n')
+            ? vtsResult.details.slice(0, 10).map(d => `${d.plaka} - ${d.tarife_saati} → ${d.gerceklesen}`).join('\n')
             : '';
-          alert(`✅ VTS Otomatik Onay\n\n${vtsResult.updated} satır otomatik onaylandı\n\nDetaylar:\n${detailsMsg}`);
+          alert(`✅ VTS Otomatik Onay\n\n${vtsResult.updated} satır otomatik onaylandı\n${vtsResult.crossings} geçiş tespit edildi\n\nİlk 10 detay:\n${detailsMsg}`);
           
           // Tabloyu yenile (VTS güncellemelerini göster)
           statusEl.innerHTML = `✅ VTS tamamlandı - Yenileniyor... <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
           applyHatSelection.click();
         } else if (vtsResult.success) {
-          console.log('⚠️ VTS: Eşleşen tarife saati bulunamadı');
+          console.log('⚠️ VTS: Geçiş bulunamadı veya eşleşme yok');
         } else {
           console.error('❌ VTS hatası:', vtsResult.error);
         }
