@@ -3218,6 +3218,43 @@ async function handleApplyHatSelection() {
   applyHatSelection.disabled = true;
   
   try {
+    // SA65 seçiliyse VTS otomatik onaylama işlemini başlat
+    if (selectedHats.includes('SA65')) {
+      console.log('🚍 SA65 tespit edildi, VTS otomatik onaylama başlatılıyor...');
+      statusEl.textContent = '🔍 VTS verisi kontrol ediliyor...';
+      
+      try {
+        const vtsResponse = await fetch('/api/vts-auto-populate-onaylanan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hat: 'SA65' })
+        });
+        
+        if (vtsResponse.ok) {
+          const vtsResult = await vtsResponse.json();
+          
+          if (vtsResult.success && vtsResult.updated > 0) {
+            console.log(`✅ VTS: ${vtsResult.updated} satır otomatik onaylandı`);
+            
+            // Kullanıcıya bilgi göster
+            const detailsMsg = vtsResult.details
+              ? vtsResult.details.map(d => `${d.plaka} - ${d.tarife} → ${d.gerceklesen}`).join('\n')
+              : '';
+            
+            alert(`✅ VTS Otomatik Onay\n\n${vtsResult.message}\n\nDetaylar:\n${detailsMsg}`);
+          } else {
+            console.log('⚠️ VTS: Onaylanacak satır bulunamadı');
+          }
+        } else {
+          console.error('❌ VTS API hatası:', vtsResponse.status);
+        }
+      } catch (vtsError) {
+        console.error('❌ VTS otomatik onaylama hatası:', vtsError);
+        // VTS hatası olsa bile tablo yüklensin
+      }
+      
+      statusEl.textContent = `${selectedHats.length} hat yükleniyor...`;
+    }
     // Tüm seçili hatlardan verileri çek
     const allData = [];
     
