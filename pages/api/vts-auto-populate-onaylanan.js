@@ -2,7 +2,8 @@
 // SA65 hattı için VTS geçiş verilerini çekip Onaylanan sütununu otomatik doldurur
 
 import { Pool } from 'pg';
-import fetch from 'node-fetch';
+import axios from 'axios';
+import https from 'https';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -17,6 +18,14 @@ const pool = new Pool({
 // VTS API Configuration
 const VTS_BASE_URL = "https://vts.kentkart.com.tr/api/026/v1";
 const VTS_TOKEN = process.env.VTS_ACCESS_TOKEN || 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrZW50a2FydC5jb20iLCJzdWIiOjM1MTIsImF1ZCI6IjMiLCJleHAiOjE3NjU5NTA2NTQsIm5iZiI6MTc2NTc3Nzg1NCwiaWF0IjoxNzY1Nzc3ODU0LCJqdGkiOiIiLCJhdXRob3JpemVkQ2xpZW50SWRzIjpbImIzQTRrIiwiYjNBNFZUUyJdLCJleHQiOm51bGwsImlzU3VwZXJBZG1pbiI6MCwiaXAiOiIxMC4wLjQwLjgiLCJsb2dpbm1ldGhvZCI6bnVsbCwiYWNjcm9sZSI6bnVsbCwicm9sZSI6WyJ2dHNhZG1pbiJdLCJuZXRzIjpbeyJOSUQiOiIwMjYiLCJEIjoiMSIsIk5BTUUiOiJBTlRBTFlBIn1dLCJsYW5nIjoidHIiLCJ1c2VybmFtZSI6InVndXIueWlsbWF6Iiwic2lkIjo1MTEwNTgyfQ.Z37r5Lssp5Lbed8zf4QY3-Eccj8F0Ydg9rnTHfd7386p3AROgOAaj1VgAT9n-Zhi3TWWtVyWAS2HbA_xVgCB07HmHJ-o_MxrBQslEXRk-vaEJaefF0XtcqQwuZtTShevMFO8TdtkObAZPbYhdZ4a-t3GeIKxSVO25u0rzlaOuAAU5qCF4qFz1Hteqs5rkesdgpHkVYzqrG448Mo7PwpsLhj-pM0Fv81jptVEnYurkWFCenlJtUOHDO89GlhBwLKAGOIuseybkqm1QunsHzUVduaNAyzxioZauv25qinUY_5WA-MVVn2l5K9adqj42RWMSoPmecXV-3b7C9ohRnaq5A';
+
+// Axios instance with SSL bypass
+const axiosInstance = axios.create({
+  httpsAgent: new https.Agent({
+    rejectUnauthorized: false
+  }),
+  timeout: 30000
+});
 
 // Durak koordinatları (Sarısu Depolama Merkezi-1)
 const DURAK_CONFIG = {
@@ -50,14 +59,13 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 async function getSA65Vehicles() {
   try {
     const url = `${VTS_BASE_URL}/latestdevicedata/get`;
-    const params = new URLSearchParams({
-      fields: 'bus_id,car_no,display_route_code',
-      sort: 'bus_id|asc',
-      dc: Date.now()
-    });
     
-    const response = await fetch(`${url}?${params}`, {
-      method: 'GET',
+    const response = await axiosInstance.get(url, {
+      params: {
+        fields: 'bus_id,car_no,display_route_code',
+        sort: 'bus_id|asc',
+        dc: Date.now()
+      },
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${VTS_TOKEN}`,
@@ -66,11 +74,7 @@ async function getSA65Vehicles() {
       }
     });
     
-    if (!response.ok) {
-      throw new Error(`VTS API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const data = response.data;
     
     // İç içe data yapısını çöz
     let vehicles = [];
@@ -112,18 +116,17 @@ async function getVehicleHistory(busId, startTime, endTime) {
     };
     
     const url = `${VTS_BASE_URL}/historicdevicedata/get`;
-    const params = new URLSearchParams({
-      fields: 'date_time,lat,lon,speed,car_no,bus_id',
-      filters: '',
-      sort: 'date_time|asc',
-      bus_list: busId,
-      start_date_time: formatTime(startTime),
-      end_date_time: formatTime(endTime),
-      dc: Date.now()
-    });
     
-    const response = await fetch(`${url}?${params}`, {
-      method: 'GET',
+    const response = await axiosInstance.get(url, {
+      params: {
+        fields: 'date_time,lat,lon,speed,car_no,bus_id',
+        filters: '',
+        sort: 'date_time|asc',
+        bus_list: busId,
+        start_date_time: formatTime(startTime),
+        end_date_time: formatTime(endTime),
+        dc: Date.now()
+      },
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${VTS_TOKEN}`,
@@ -132,12 +135,7 @@ async function getVehicleHistory(busId, startTime, endTime) {
       }
     });
     
-    if (!response.ok) {
-      throw new Error(`VTS history error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data;
+    return response.data;
     
   } catch (error) {
     console.error(`VTS history error for bus ${busId}:`, error);
