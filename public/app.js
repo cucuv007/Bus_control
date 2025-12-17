@@ -3262,23 +3262,75 @@ async function handleRunVtsUpdate() {
     runVtsUpdateBtn.disabled = true;
     runVtsUpdateBtn.innerHTML = '⏳ VTS açılıyor...';
     vtsStatus.style.display = 'block';
+    
+    // Token extraction kodu
+    const tokenExtractionCode = `(function(){const t=localStorage.getItem('access_token')||localStorage.getItem('token')||localStorage.getItem('vts_token')||sessionStorage.getItem('access_token');if(t){window.open('${window.location.origin}/code.html?vtsToken='+encodeURIComponent(t),'_self');}else{alert('❌ Token bulunamadı!');}})();`;
+    
+    // Otomatik kopyala
+    try {
+      await navigator.clipboard.writeText(tokenExtractionCode);
+      console.log('✅ Token extraction kodu otomatik kopyalandı!');
+    } catch (e) {
+      console.log('⚠️ Otomatik kopyalama başarısız, manuel kopyalayın');
+    }
+    
     vtsStatus.innerHTML = `
-      <strong>🌐 VTS Login Penceresi Açılıyor...</strong><br>
-      1️⃣ Açılan pencerede VTS'ye giriş yapın<br>
-      2️⃣ Giriş yaptıktan sonra bu pencereye dönün<br>
-      3️⃣ Geri kalan her şey otomatik!
+      <strong>🚀 VTS Token Alma - SUPER KOLAY!</strong><br><br>
+      <div style="background: linear-gradient(135deg, #3498db, #2980b9); padding: 20px; border-radius: 10px; text-align: left; margin-bottom: 15px;">
+        <strong style="font-size: 18px; color: #f1c40f;">📋 3 ADIM - 30 SANİYE!</strong><br><br>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <strong style="color: #2ecc71;">1️⃣ VTS'YE GİRİŞ YAP</strong><br>
+          <button onclick="window.open('https://vts.kentkart.com.tr', '_blank')" 
+                  style="margin-top: 8px; background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            🌐 VTS'yi Aç
+          </button>
+        </div>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <strong style="color: #f39c12;">2️⃣ F12 BASIP CONSOLE AÇIN</strong><br>
+          <small style="opacity: 0.8;">VTS sayfasında F12 tuşuna basın ve Console sekmesini seçin</small>
+        </div>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <strong style="color: #e74c3c;">3️⃣ KODU YAPISTIR VE ENTER</strong><br>
+          <small style="opacity: 0.8;">Aşağıdaki kod OTOMATIK KOPYALANDI! Console'a Ctrl+V yapıp Enter'a basın:</small><br><br>
+          <textarea readonly onclick="this.select(); navigator.clipboard.writeText(this.value);" 
+                    style="width: 100%; height: 80px; background: #000; color: #0f0; padding: 10px; border: 2px solid #27ae60; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 8px;">${tokenExtractionCode}</textarea>
+          <button onclick="navigator.clipboard.writeText(\`${tokenExtractionCode}\`); alert('✅ Kod kopyalandı! Şimdi VTS console\\'una Ctrl+V yapıp Enter\\'a basın.');" 
+                  style="margin-top: 8px; background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            📋 Tekrar Kopyala
+          </button>
+        </div>
+      </div>
+      
+      <div style="background: rgba(39, 174, 96, 0.2); border-left: 4px solid #27ae60; padding: 15px; border-radius: 5px; margin-top: 15px;">
+        <strong>💡 NE OLACAK?</strong><br>
+        Kodu çalıştırdığınızda token otomatik alınacak ve bu sayfaya geri dönülecek.<br>
+        Sonra otomatik olarak 14 hat işlenecek! ✨
+      </div>
+      
+      <div style="margin-top: 15px;">
+        <button onclick="document.getElementById('vtsStatus').style.display='none'; document.getElementById('runVtsUpdateBtn').disabled=false; document.getElementById('runVtsUpdateBtn').innerHTML='🚍 VTS\\'den Onay Zamanlarını Getir';" 
+                style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+          ↩️ İptal Et
+        </button>
+      </div>
     `;
 
-    // VTS penceresini aç
-    vtsWindow = window.open(
-      'https://vts.kentkart.com.tr',
-      'VTS_Login',
-      'width=1200,height=800,menubar=no,toolbar=no,location=yes,status=yes,scrollbars=yes'
-    );
-
-    if (!vtsWindow) {
-      throw new Error('Popup penceresi açılamadı! Lütfen popup blocker\'ı devre dışı bırakın.');
+    // URL'den token kontrol et (redirect sonrası)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('vtsToken');
+    
+    if (urlToken) {
+      // Token URL'den geldi, temizle ve kullan
+      window.history.replaceState({}, document.title, window.location.pathname);
+      vtsStatus.innerHTML = '✅ Token başarıyla alındı! İşlem başlıyor...';
+      return urlToken;
     }
+
+    // Manuel token girişi için de bekle
+    vtsWindow = null;
 
     // Kullanıcının login olmasını bekle
     vtsStatus.innerHTML = `
@@ -3293,174 +3345,23 @@ async function handleRunVtsUpdate() {
     `;
 
     // VTS penceresine token extraction button inject et (DOM injection)
-    // IFRAME + BUTTON INJECTION yaklaşımı
-    // Modal oluştur
-    const modal = document.createElement('div');
-    modal.id = 'vtsModal';
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.9);
-      z-index: 99999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    `;
-    
-    modal.innerHTML = `
-      <div style="width: 95%; max-width: 1400px; height: 90%; background: #2c3e50; border-radius: 15px; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 10px 50px rgba(0,0,0,0.5);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h2 style="margin: 0; color: white; font-size: 24px;">🚍 VTS Giriş - Token Alma</h2>
-          <button id="closeVtsModal" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">✖ Kapat</button>
-        </div>
-        
-        <div id="vtsInstructions" style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
-          <strong style="font-size: 18px;">📋 Adımlar:</strong><br><br>
-          <strong style="color: #f1c40f;">1️⃣</strong> Aşağıdaki iframe'de VTS'ye <strong>normal şekilde giriş yapın</strong><br>
-          <strong style="color: #f1c40f;">2️⃣</strong> Giriş yaptıktan sonra <strong>"🚀 TOKEN AL VE ÇALIŞTIR"</strong> butonuna basın<br>
-          <strong style="color: #f1c40f;">3️⃣</strong> Token otomatik alınacak ve işlem başlayacak!<br><br>
-          <small style="opacity: 0.8;">💡 Konsol açmanıza gerek yok, her şey otomatik!</small>
-        </div>
-        
-        <div style="position: relative; flex: 1; background: white; border-radius: 10px; overflow: hidden;">
-          <iframe id="vtsIframe" src="https://vts.kentkart.com.tr" style="width: 100%; height: 100%; border: none;"></iframe>
-          
-          <button id="extractTokenBtn" style="
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-            color: white;
-            border: none;
-            padding: 18px 35px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 6px 25px rgba(39, 174, 96, 0.5);
-            transition: all 0.3s;
-            animation: pulse 2s infinite;
-          " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 8px 30px rgba(39, 174, 96, 0.7)';" 
-             onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 6px 25px rgba(39, 174, 96, 0.5)';">
-            🚀 TOKEN AL VE ÇALIŞTIR
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // CSS animasyonu ekle
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    vtsStatus.innerHTML = `
-      <strong>✅ VTS Modal Açıldı!</strong><br>
-      Lütfen açılan pencerede VTS'ye giriş yapın ve yeşil butona basın.
-    `;
-
-    // Buton event listener
-    const extractBtn = document.getElementById('extractTokenBtn');
-    const closeBtn = document.getElementById('closeVtsModal');
-    const vtsIframe = document.getElementById('vtsIframe');
-    
-    // Token alma promise
+    // URL'den token bekle veya timeout
     const vtsToken = await new Promise((resolve, reject) => {
-      extractBtn.onclick = async () => {
-        try {
-          extractBtn.disabled = true;
-          extractBtn.innerHTML = '⏳ Token alınıyor...';
-          
-          // Iframe'den token al - JavaScript ile
-          const script = `
-            (function() {
-              const token = localStorage.getItem('access_token') || 
-                           localStorage.getItem('token') ||
-                           localStorage.getItem('vts_token') ||
-                           sessionStorage.getItem('access_token');
-              return token;
-            })();
-          `;
-          
-          // Console'a komut gönder
-          const tokenExtractionScript = document.createElement('script');
-          tokenExtractionScript.textContent = `
-            window.addEventListener('message', function(e) {
-              if (e.data.action === 'getVtsToken') {
-                const token = localStorage.getItem('access_token') || 
-                             localStorage.getItem('token') ||
-                             localStorage.getItem('vts_token') ||
-                             sessionStorage.getItem('access_token');
-                e.source.postMessage({ type: 'VTS_TOKEN_RESPONSE', token: token }, '*');
-              }
-            });
-          `;
-          
-          // Iframe'e mesaj gönder
-          vtsIframe.contentWindow.postMessage({ action: 'getVtsToken' }, '*');
-          
-          // Response dinle
-          const responseHandler = (event) => {
-            if (event.data && event.data.type === 'VTS_TOKEN_RESPONSE') {
-              window.removeEventListener('message', responseHandler);
-              
-              if (event.data.token) {
-                extractBtn.innerHTML = '✅ TOKEN ALINDI!';
-                extractBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
-                
-                // Instructions güncelle
-                document.getElementById('vtsInstructions').innerHTML = `
-                  <strong style="font-size: 18px;">✅ Token Başarıyla Alındı!</strong><br><br>
-                  <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">
-                    Token: <code style="color: #f1c40f;">${event.data.token.substring(0, 40)}...</code>
-                  </div><br>
-                  🚀 Şimdi VTS geçişleri işlenecek...
-                `;
-                
-                // Modal'ı kapat
-                setTimeout(() => {
-                  modal.remove();
-                  resolve(event.data.token);
-                }, 2000);
-              } else {
-                throw new Error('Token bulunamadı! Lütfen VTS\'ye giriş yaptığınızdan emin olun.');
-              }
-            }
-          };
-          
-          window.addEventListener('message', responseHandler);
-          
-          // 10 saniye timeout
-          setTimeout(() => {
-            window.removeEventListener('message', responseHandler);
-            reject(new Error('Token alınamadı - CORS hatası. Lütfen konsolu kullanın veya manuel token girin.'));
-          }, 10000);
-          
-        } catch (error) {
-          extractBtn.innerHTML = '❌ HATA';
-          extractBtn.style.background = '#e74c3c';
-          reject(error);
+      // URL parametresini sürekli kontrol et
+      const checkInterval = setInterval(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('vtsToken');
+        
+        if (token) {
+          clearInterval(checkInterval);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          resolve(token);
         }
-      };
-      
-      closeBtn.onclick = () => {
-        modal.remove();
-        reject(new Error('Kullanıcı işlemi iptal etti'));
-      };
+      }, 1000);
       
       // 10 dakika timeout
       setTimeout(() => {
+        clearInterval(checkInterval);
         reject(new Error('Token alma zaman aşımına uğradı'));
       }, 600000);
     });
