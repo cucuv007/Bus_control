@@ -116,6 +116,10 @@ const refreshHatsBtn = document.getElementById('refreshHatsBtn');
 const setDangerTimeBtn = document.getElementById('setDangerTime');
 const dangerTimeInput = document.getElementById('dangerTimeInput');
 
+// VTS elements
+const runVtsUpdateBtn = document.getElementById('runVtsUpdateBtn');
+const vtsStatus = document.getElementById('vtsStatus');
+
 // State variables
 let selectedFiles = [];
 let currentTable = null;
@@ -641,6 +645,11 @@ if (applyHatSelection) {
 }
 if (setDangerTimeBtn) {
   setDangerTimeBtn.addEventListener('click', handleSetDangerTime);
+}
+
+// VTS Update button
+if (runVtsUpdateBtn) {
+  runVtsUpdateBtn.addEventListener('click', handleRunVtsUpdate);
 }
 
 // Auto-format time input (MM:SS) with auto-complete for 2-digit input
@@ -3161,6 +3170,118 @@ async function handleSetDangerTime() {
   } finally {
     setDangerTimeBtn.disabled = false;
     setDangerTimeBtn.textContent = '⚙️ Set Time';
+  }
+}
+
+// Handle VTS Update button click
+async function handleRunVtsUpdate() {
+  try {
+    runVtsUpdateBtn.disabled = true;
+    runVtsUpdateBtn.innerHTML = '⏳ Token alınıyor...';
+    vtsStatus.style.display = 'block';
+    vtsStatus.innerHTML = '📡 VTS sitesinden token çekiliyor...';
+
+    // VTS access_token'ı çek
+    // Kullanıcı https://vts.kentkart.com.tr'ye giriş yapmış olmalı
+    let vtsToken = null;
+
+    // Method 1: Try to get token from localStorage (if VTS stores it there)
+    try {
+      const vtsData = localStorage.getItem('vts_token') || localStorage.getItem('access_token');
+      if (vtsData) {
+        vtsToken = vtsData;
+        console.log('✅ Token localStorage\'dan alındı');
+      }
+    } catch (e) {
+      console.warn('localStorage erişim hatası:', e);
+    }
+
+    // Method 2: Try to get from cookies
+    if (!vtsToken) {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'access_token' || name === 'vts_token' || name === 'token') {
+          vtsToken = value;
+          console.log('✅ Token cookie\'den alındı');
+          break;
+        }
+      }
+    }
+
+    // Method 3: Prompt user to enter token manually
+    if (!vtsToken) {
+      vtsStatus.innerHTML = '❌ Token otomatik bulunamadı. Lütfen manuel girin.';
+      
+      // Show instructions
+      const instructions = `
+VTS Token'ı Nasıl Alınır:
+
+1. https://vts.kentkart.com.tr adresine gidin ve giriş yapın
+2. F12 tuşuna basın (Developer Tools)
+3. "Network" sekmesini seçin
+4. Sayfayı yenileyin (F5)
+5. "v1" veya "api" gibi bir istekte Authorization başlığını bulun
+6. Bearer token'ı kopyalayın (eyJhbG... ile başlar)
+      `.trim();
+      
+      alert(instructions);
+      
+      vtsToken = prompt('VTS Access Token\'ı yapıştırın (eyJhbG... ile başlar):');
+      
+      if (!vtsToken) {
+        throw new Error('Token girilmedi');
+      }
+      
+      // Remove "Bearer " prefix if exists
+      vtsToken = vtsToken.replace(/^Bearer\s+/i, '').trim();
+      
+      console.log('✅ Token manuel girildi');
+    }
+
+    // Send token to API
+    vtsStatus.innerHTML = '🚀 VTS verisi işleniyor...';
+    
+    const response = await fetch('/api/run-vts-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ vtsToken })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'VTS update başarısız');
+    }
+
+    // Script hazır - download seçeneği sun
+    vtsStatus.innerHTML = `
+      ✅ Script hazırlandı! Token başarıyla eklendi.<br><br>
+      <strong>Çalıştırma Seçenekleri:</strong><br>
+      1. <a href="data:text/plain;base64,${result.scriptBase64}" download="vts_history_scraper_v2.py" style="color: white; text-decoration: underline;">📥 Script'i İndir</a><br>
+      2. Terminalden çalıştır: <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 3px;">python vts_history_scraper_v2.py</code><br><br>
+      <small>Token preview: ${result.tokenPreview}</small>
+    `;
+
+    // Alternatif: Script içeriğini göster
+    console.log('📄 VTS Script hazır:', result.instructions);
+    
+    alert('✅ VTS script token ile hazırlandı!\n\nScript\'i indirip çalıştırabilirsiniz:\npython vts_history_scraper_v2.py\n\n14 hat için tüm geçişler otomatik onaylanacak.');
+
+  } catch (error) {
+    console.error('VTS update error:', error);
+    vtsStatus.innerHTML = `❌ Hata: ${error.message}`;
+    alert('❌ VTS update hatası: ' + error.message);
+  } finally {
+    runVtsUpdateBtn.disabled = false;
+    runVtsUpdateBtn.innerHTML = '🚍 VTS\'den Onay Zamanlarını Getir';
+    
+    // Hide status after 10 seconds
+    setTimeout(() => {
+      vtsStatus.style.display = 'none';
+    }, 10000);
   }
 }
 

@@ -579,6 +579,14 @@
         <input type="text" id="dangerTimeInput" value="00:00" placeholder="35:00" pattern="[0-5]?[0-9]:[0-5][0-9]" maxlength="5" title="Dakika:Saniye (örn: 35:00 = 35 dakika)" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 80px; text-align: center; font-size: 14px; font-weight: bold;">
         <button id="setDangerTime" class="btn" style="margin: 0; background: #3498db; white-space: nowrap;">⚙️ Set Time</button>
       </div>
+
+      <!-- VTS Auto Update Section -->
+      <div style="margin-top: 10px; padding: 10px; background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); border-radius: 4px;">
+        <button id="runVtsUpdateBtn" class="btn" style="margin: 0; width: 100%; background: white; color: #00b09b; font-weight: bold; border: 2px solid #00b09b;">
+          🚍 VTS'den Onay Zamanlarını Getir
+        </button>
+        <div id="vtsStatus" style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.9); border-radius: 4px; font-size: 12px; display: none;"></div>
+      </div>
       
       <button id="applyHatSelection" class="btn" style="margin-top: 10px; width: 100%;">⏱️ Seçili Hatları Takip Et</button>
       <button id="refreshHatsBtn" class="btn" style="margin-top: 10px; width: 100%; background: #e74c3c;">🔄 Hatları Yenile</button>
