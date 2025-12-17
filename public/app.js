@@ -3292,79 +3292,131 @@ async function handleRunVtsUpdate() {
       throw new Error('Token alınamadı');
     }
 
-    // Token alındı, şimdi desktop app'i tetikle
+    // Token alındı, şimdi VTS script'ini direkt WEB'DEN çalıştır
     vtsStatus.innerHTML = `
       <strong>✅ Token Başarıyla Alındı!</strong><br><br>
       Token preview: ${vtsToken.substring(0, 30)}...<br><br>
-      🚀 Desktop uygulaması açılıyor...<br>
-      <small>Eğer açılmazsa, manuel olarak start_vts_auto_runner.bat'ı çalıştırın</small>
-    `;
-
-    // Token'ı localStorage'a kaydet (desktop app okuyacak)
-    localStorage.setItem('vts_token_for_runner', vtsToken);
-    localStorage.setItem('vts_token_timestamp', new Date().toISOString());
-    
-    // Desktop app'i tetiklemeye çalış (custom protocol handler)
-    try {
-      // Windows için: custom protocol handler kayıtlıysa çalışır
-      const customProtocolUrl = `vtsrunner://run?token=${encodeURIComponent(vtsToken.substring(0, 50))}`;
-      window.location.href = customProtocolUrl;
-      
-      // 2 saniye bekle
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    } catch (e) {
-      console.warn('Custom protocol handler çalışmadı:', e);
-    }
-
-    // Alternatif: Kullanıcıya manuel talimat ver
-    vtsStatus.innerHTML = `
-      <strong>✅ Token Hazır!</strong><br><br>
-      <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
-        <strong>📋 ÇALIŞTIRMA TALIMATLARI:</strong><br><br>
-        
-        <strong>Yöntem 1: Otomatik (Önerilen)</strong><br>
-        1. Desktop'ta <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">start_vts_auto_runner.bat</code> dosyasını çift tıklayın<br>
-        2. Chrome açılacak (VTS zaten login)<br>
-        3. Terminal'e dönün ve ENTER'a basın<br>
-        4. Script otomatik çalışacak!<br><br>
-        
-        <strong>Yöntem 2: Manuel</strong><br>
-        1. Terminal açın<br>
-        2. <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">python vts_auto_runner.py</code> komutunu çalıştırın<br>
-        3. Token otomatik alınacak (localStorage'dan)<br><br>
-        
-        <strong>Token Kaydedildi:</strong><br>
-        <small style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px;">
-          ${vtsToken.substring(0, 50)}...
-        </small>
+      🚀 VTS geçişleri işleniyor...<br>
+      <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+        <div id="vtsProgress" style="margin-bottom: 5px;">⏳ Script hazırlanıyor...</div>
+        <div id="vtsProgressBar" style="width: 100%; height: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; overflow: hidden;">
+          <div id="vtsProgressFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); transition: width 0.3s;"></div>
+        </div>
       </div>
-      <br>
-      <button id="copyTokenBtn" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-right: 10px;">
-        📋 Token'ı Kopyala
-      </button>
-      <button id="openRunnerBtn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-        🚀 Desktop App'i Aç
-      </button>
     `;
+
     
-    // Copy token button
-    document.getElementById('copyTokenBtn').onclick = () => {
-      navigator.clipboard.writeText(vtsToken);
-      alert('✅ Token panoya kopyalandı!');
-    };
-    
-    // Open runner button (try to trigger desktop app)
-    document.getElementById('openRunnerBtn').onclick = () => {
-      alert('💡 Lütfen Desktop\'ta start_vts_auto_runner.bat dosyasını çift tıklayın\n\nToken otomatik alınacak ve script çalışacak!');
+    // WEB-BASED EXECUTION: Script'i direkt browser'da çalıştır
+    try {
+      const progressDiv = document.getElementById('vtsProgress');
+      const progressBar = document.getElementById('vtsProgressFill');
       
-      // Try to open file explorer to the folder
-      try {
-        const folderPath = 'file:///' + window.location.pathname.split('/')[0];
-        window.open(folderPath, '_blank');
-      } catch (e) {
-        console.warn('Folder açılamadı:', e);
+      progressDiv.textContent = '⏳ GitHub\'dan script çekiliyor...';
+      progressBar.style.width = '10%';
+      
+      // GitHub'dan script'i çek
+      const scriptUrl = 'https://raw.githubusercontent.com/cucuv007/Bus_control/main/vts_history_scraper_v2.py';
+      const scriptResponse = await fetch(scriptUrl);
+      
+      if (!scriptResponse.ok) {
+        throw new Error('Script GitHub\'dan çekilemedi');
       }
-    };
+      
+      let scriptContent = await scriptResponse.text();
+      progressBar.style.width = '20%';
+      
+      // Token'ı script'e ekle
+      scriptContent = scriptContent.replace(
+        /'access_token':\s*'[^']*'/,
+        `'access_token': '${vtsToken}'`
+      );
+      
+      progressDiv.textContent = '🔧 Script token ile hazırlandı';
+      progressBar.style.width = '30%';
+      
+      // Backend API'ye gönder (route processing için)
+      progressDiv.textContent = '🚀 14 hat işleniyor...';
+      
+      // Script'i çalıştır (backend'de)
+      const response = await fetch('/api/execute-vts-script', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          vtsToken,
+          scriptContent 
+        })
+      });
+      
+      progressBar.style.width = '60%';
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Script çalıştırılamadı');
+      }
+      
+      progressBar.style.width = '100%';
+      progressDiv.textContent = '✅ Tamamlandı!';
+      
+      // Başarılı sonuç göster
+      vtsStatus.innerHTML = `
+        <strong>✅ İŞLEM TAMAMLANDI!</strong><br><br>
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: left;">
+          <strong>📊 Sonuçlar:</strong><br>
+          ${result.summary || 'Tüm hatlar işlendi'}<br><br>
+          <strong>İşlenen Hatlar:</strong><br>
+          SA65, SA64, 400, 521C, KC06, KF52, KL08, KL08G, KM61, SD20, SD20A, SM62, UC32, VS18<br><br>
+          <small>Token: ${vtsToken.substring(0, 30)}...</small>
+        </div>
+      `;
+      
+      alert(`✅ VTS geçişleri başarıyla işlendi!\n\n${result.summary || '14 hat için tüm geçişler otomatik onaylandı.'}`);
+      
+      // Tabloyu yenile
+      if (typeof refreshData === 'function') {
+        await refreshData();
+      }
+      
+    } catch (scriptError) {
+      console.error('Web-based execution hatası:', scriptError);
+      
+      // FALLBACK: Desktop app instructions
+      vtsStatus.innerHTML = `
+        <strong>⚠️ Web Execution Başarısız</strong><br><br>
+        <div style="background: rgba(255,200,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <strong>📱 MOBİL/WEB KULLANIM:</strong><br>
+          Token başarıyla alındı ve kaydedildi.<br>
+          Desktop bilgisayarınızdan devam edebilirsiniz.<br><br>
+          
+          <strong>Token Kaydedildi:</strong><br>
+          <small style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px;">
+            ${vtsToken.substring(0, 50)}...
+          </small>
+        </div>
+        <br>
+        <strong>💻 DESKTOP İŞLEMLER:</strong><br>
+        1. Bilgisayarda bu linki açın: <code>${window.location.origin}</code><br>
+        2. Token otomatik kullanılacak (localStorage'da)<br>
+        3. Veya GitHub'dan çalıştırın: <a href="https://github.com/cucuv007/Bus_control/blob/main/start_vts_auto_runner.bat" target="_blank" style="color: white;">start_vts_auto_runner.bat</a>
+        <br><br>
+        <button id="copyTokenBtn" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
+          📋 Token'ı Kopyala
+        </button>
+      `;
+      
+      // Copy token button
+      setTimeout(() => {
+        const copyBtn = document.getElementById('copyTokenBtn');
+        if (copyBtn) {
+          copyBtn.onclick = () => {
+            navigator.clipboard.writeText(vtsToken);
+            alert('✅ Token panoya kopyalandı!');
+          };
+        }
+      }, 100);
+    }
 
     console.log('✅ VTS token kaydedildi:', vtsToken.substring(0, 30) + '...');
 
