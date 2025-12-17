@@ -107,13 +107,22 @@ def open_vts_and_wait_login(driver):
                 cookie_names = [c['name'] for c in cookies]
                 print(f"🔍 Cookie names: {cookie_names}")
             
-            # Token'ı bul - localStorage
-            token = driver.execute_script(
-                "return localStorage.getItem('access_token') || "
-                "localStorage.getItem('token') || "
-                "localStorage.getItem('vts_token') || "
-                "sessionStorage.getItem('access_token');"
-            )
+            # ÖNCE COOKIE'LERDE TOKEN ARA (VTS burada saklıyor!)
+            cookies = driver.get_cookies()
+            for cookie in cookies:
+                if cookie['name'] == 'access_token':
+                    token = cookie['value']
+                    print(f"🔍 Token cookie'de bulundu!")
+                    break
+            
+            # Cookie'de yoksa localStorage'a bak
+            if not token:
+                token = driver.execute_script(
+                    "return localStorage.getItem('access_token') || "
+                    "localStorage.getItem('token') || "
+                    "localStorage.getItem('vts_token') || "
+                    "sessionStorage.getItem('access_token');"
+                )
             
             # Eğer localStorage'da yoksa, network request'lerden yakala
             if not token and check_count > 3:
