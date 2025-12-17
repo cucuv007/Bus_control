@@ -3264,15 +3264,7 @@ async function handleRunVtsUpdate() {
     vtsStatus.style.display = 'block';
     
     // Token extraction kodu - Prompt ile manuel giriş
-    const tokenExtractionCode = `(function(){
-      const token = prompt('🔑 VTS Token Girin:\\n\\nF12 → Application → Local Storage → https://vts.kentkart.com.tr\\n→ access_token değerini kopyalayıp buraya yapıştırın:');
-      if(token && token.length > 20){
-        alert('✅ Token alındı! Ana sayfaya dönülüyor...');
-        window.open('${window.location.origin}/code.html?vtsToken='+encodeURIComponent(token),'_self');
-      }else{
-        alert('❌ Geçersiz token! Lütfen tekrar deneyin.');
-      }
-    })();`;
+    const tokenExtractionCode = `(function(){var token=prompt('TOKEN GIRIN:\\n\\nF12 -> Application -> Local Storage -> vts.kentkart.com.tr\\naccess_token degerini kopyala yapistir:');if(token&&token.length>20){alert('Token alindi!');window.open('${window.location.origin}/code.html?vtsToken='+encodeURIComponent(token),'_self');}else{alert('Gecersiz token!');}})();`;
     
     // Otomatik kopyala
     try {
