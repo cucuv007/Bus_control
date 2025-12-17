@@ -3255,32 +3255,104 @@ async function handleRunVtsUpdate() {
       }
     }
 
-    // Hala token bulunamadıysa, manuel giriş iste
-    if (!vtsToken) {
-      vtsStatus.innerHTML = `
-        <strong>⚠️ Token Otomatik Alınamadı</strong><br><br>
-        <small>VTS penceresinde şu adımları izleyin:</small><br>
-        1. F12 tuşuna basın<br>
-        2. Application > Local Storage > vts.kentkart.com.tr<br>
-        3. "access_token" değerini kopyalayın<br><br>
-        <input type="text" id="manualTokenInput" placeholder="Token'ı buraya yapıştırın..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
-        <button id="submitManualToken" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
-          ✅ Token'ı Kullan
-        </button>
-      `;
+    // Hala token bulunamadıysa, VTS penceresine script inject et
+    if (!vtsToken && vtsWindow && !vtsWindow.closed) {
+      try {
+        // VTS penceresine kod inject ederek token'ı al
+        vtsStatus.innerHTML = '🔍 Token VTS penceresinde aranıyor (advanced method)...';
+        
+        // Kullanıcıdan VTS penceresinde console'a bakmasını iste
+        const scriptCode = `
+          (function() {
+            // LocalStorage'dan al
+            const token = localStorage.getItem('access_token') || 
+                         localStorage.getItem('token') ||
+                         localStorage.getItem('vts_token');
+            
+            if (token) {
+              console.log('VTS_TOKEN_FOUND:', token);
+              return token;
+            }
+            
+            // Session storage'dan al
+            const sessionToken = sessionStorage.getItem('access_token') ||
+                                sessionStorage.getItem('token');
+            if (sessionToken) {
+              console.log('VTS_TOKEN_FOUND:', sessionToken);
+              return sessionToken;
+            }
+            
+            // Cookies'den al
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+              const [name, value] = cookie.trim().split('=');
+              if (name.includes('token') || name.includes('access')) {
+                console.log('VTS_TOKEN_FOUND:', value);
+                return value;
+              }
+            }
+            
+            console.log('VTS_TOKEN_NOT_FOUND');
+            return null;
+          })();
+        `;
+        
+        // Alternatif: Kullanıcıya talimat ver ve console'dan token'ı kopyalasın
+        vtsStatus.innerHTML = `
+          <strong>🔍 Token Bulunamadı - Manuel Adım Gerekli</strong><br><br>
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: left;">
+            <strong>VTS penceresinde şu adımları yapın:</strong><br><br>
+            1️⃣ VTS penceresinde <kbd>F12</kbd> tuşuna basın<br>
+            2️⃣ <strong>Console</strong> sekmesine gidin<br>
+            3️⃣ Şu komutu yazıp ENTER'a basın:<br>
+            <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; margin: 10px 0; border-radius: 4px; font-size: 12px; word-break: break-all;">
+              localStorage.getItem('access_token')
+            </code>
+            4️⃣ Çıkan token'ı (tırnak işaretleri olmadan) kopyalayın<br>
+            5️⃣ Aşağıya yapıştırıp "Token'ı Kullan" butonuna tıklayın<br>
+          </div>
+          <br>
+          <input type="text" id="manualTokenInput" placeholder="Token'ı buraya yapıştırın (eyJhbG... ile başlar)" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px;">
+          <button id="submitManualToken" style="background: #3498db; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
+            ✅ Token'ı Kullan ve Devam Et
+          </button>
+        `;
 
-      vtsToken = await new Promise((resolve) => {
-        const submitBtn = document.getElementById('submitManualToken');
-        submitBtn.onclick = () => {
+        vtsToken = await new Promise((resolve) => {
+          const submitBtn = document.getElementById('submitManualToken');
           const input = document.getElementById('manualTokenInput');
-          const token = input.value.trim().replace(/^Bearer\s+/i, '');
-          if (token) {
-            resolve(token);
-          } else {
-            alert('❌ Lütfen geçerli bir token girin!');
-          }
-        };
-      });
+          
+          // Enter tuşu ile de gönderebilsin
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              submitBtn.click();
+            }
+          });
+          
+          submitBtn.onclick = () => {
+            let token = input.value.trim();
+            
+            // Temizle
+            token = token.replace(/^Bearer\s+/i, '');
+            token = token.replace(/^["']/, '').replace(/["']$/, ''); // Tırnak işaretlerini kaldır
+            
+            if (token && token.length > 50 && token.startsWith('eyJ')) {
+              resolve(token);
+            } else {
+              alert('❌ Geçersiz token! Token "eyJ" ile başlamalı ve en az 50 karakter olmalıdır.');
+              input.focus();
+            }
+          };
+        });
+        
+      } catch (e) {
+        console.error('Token injection hatası:', e);
+      }
+    }
+    
+    // Hala token yoksa iptal et
+    if (!vtsToken) {
+      throw new Error('Token alınamadı. Lütfen VTS\'ye giriş yapıp tekrar deneyin.');
     }
 
     // VTS penceresini kapat
@@ -3311,27 +3383,7 @@ async function handleRunVtsUpdate() {
       const progressDiv = document.getElementById('vtsProgress');
       const progressBar = document.getElementById('vtsProgressFill');
       
-      progressDiv.textContent = '⏳ GitHub\'dan script çekiliyor...';
-      progressBar.style.width = '10%';
-      
-      // GitHub'dan script'i çek
-      const scriptUrl = 'https://raw.githubusercontent.com/cucuv007/Bus_control/main/vts_history_scraper_v2.py';
-      const scriptResponse = await fetch(scriptUrl);
-      
-      if (!scriptResponse.ok) {
-        throw new Error('Script GitHub\'dan çekilemedi');
-      }
-      
-      let scriptContent = await scriptResponse.text();
-      progressBar.style.width = '20%';
-      
-      // Token'ı script'e ekle
-      scriptContent = scriptContent.replace(
-        /'access_token':\s*'[^']*'/,
-        `'access_token': '${vtsToken}'`
-      );
-      
-      progressDiv.textContent = '🔧 Script token ile hazırlandı';
+      progressDiv.textContent = '✅ Token alındı, işlem başlıyor...';
       progressBar.style.width = '30%';
       
       // Backend API'ye gönder (route processing için)
@@ -3344,12 +3396,12 @@ async function handleRunVtsUpdate() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          vtsToken,
-          scriptContent 
+          vtsToken
         })
       });
       
       progressBar.style.width = '60%';
+      progressDiv.textContent = '⏳ Geçişler analiz ediliyor...';
       
       const result = await response.json();
       
@@ -3376,7 +3428,7 @@ async function handleRunVtsUpdate() {
       
       // Tabloyu yenile
       if (typeof refreshData === 'function') {
-        await refreshData();
+        setTimeout(() => refreshData(), 1000);
       }
       
     } catch (scriptError) {
@@ -3386,23 +3438,20 @@ async function handleRunVtsUpdate() {
       vtsStatus.innerHTML = `
         <strong>⚠️ Web Execution Başarısız</strong><br><br>
         <div style="background: rgba(255,200,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
-          <strong>📱 MOBİL/WEB KULLANIM:</strong><br>
-          Token başarıyla alındı ve kaydedildi.<br>
-          Desktop bilgisayarınızdan devam edebilirsiniz.<br><br>
+          <strong>Hata:</strong> ${scriptError.message}<br><br>
+          Token başarıyla alındı ve kaydedildi.<br><br>
           
-          <strong>Token Kaydedildi:</strong><br>
-          <small style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px;">
-            ${vtsToken.substring(0, 50)}...
+          <strong>Token:</strong><br>
+          <small style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; word-break: break-all;">
+            ${vtsToken}
           </small>
         </div>
         <br>
-        <strong>💻 DESKTOP İŞLEMLER:</strong><br>
-        1. Bilgisayarda bu linki açın: <code>${window.location.origin}</code><br>
-        2. Token otomatik kullanılacak (localStorage'da)<br>
-        3. Veya GitHub'dan çalıştırın: <a href="https://github.com/cucuv007/Bus_control/blob/main/start_vts_auto_runner.bat" target="_blank" style="color: white;">start_vts_auto_runner.bat</a>
-        <br><br>
-        <button id="copyTokenBtn" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
+        <button id="copyTokenBtn" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;">
           📋 Token'ı Kopyala
+        </button>
+        <button id="retryBtn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
+          🔄 Tekrar Dene
         </button>
       `;
       
@@ -3413,6 +3462,13 @@ async function handleRunVtsUpdate() {
           copyBtn.onclick = () => {
             navigator.clipboard.writeText(vtsToken);
             alert('✅ Token panoya kopyalandı!');
+          };
+        }
+        
+        const retryBtn = document.getElementById('retryBtn');
+        if (retryBtn) {
+          retryBtn.onclick = () => {
+            handleRunVtsUpdate();
           };
         }
       }, 100);
