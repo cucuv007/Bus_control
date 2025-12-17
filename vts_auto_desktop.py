@@ -243,29 +243,16 @@ def run_vts_script(token):
             env = os.environ.copy()
             env['VTS_TOKEN'] = token
             
-            # Script'i çalıştır
+            # Script'i çalıştır (GERÇEK ZAMANLI ÇIKTI - capture_output=False)
             result = subprocess.run(
                 ['python', script_path],
                 env=env,
-                capture_output=True,
-                text=True,
                 timeout=600  # 10 dakika timeout
             )
             
-            # Output'u göster
-            if result.stdout:
-                print(result.stdout)
-            
-            if result.stderr:
-                print("Errors:", result.stderr)
-            
             if result.returncode == 0:
                 print("\n✅ Script başarıyla tamamlandı!")
-                # Output'tan güncellenen kayıt sayısını çıkar
-                import re
-                matches = re.findall(r'(\d+)\s+rows?\s+updated', result.stdout, re.IGNORECASE)
-                total = sum(int(m) for m in matches) if matches else 0
-                return total
+                return 1  # Başarı
             else:
                 print(f"\n⚠️ Script hata kodu {result.returncode} ile sonlandı")
                 return 0

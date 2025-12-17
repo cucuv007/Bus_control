@@ -398,14 +398,15 @@ def main():
         vehicles = get_route_vehicles(route_code)
         
         if not vehicles:
-            print(f"HATA: {route_code} araci bulunamadi!")
+            print(f"❌ HATA: {route_code} araci bulunamadi!")
             continue
         
-        print(f"Bulunan {route_code} araclari: {len(vehicles)}\n")
+        print(f"✅ Bulunan {route_code} araclari: {len(vehicles)}\n")
         for v in vehicles:
             print(f"  - {v['plaka']} (bus_id: {v['bus_id']})")
         
         print("\n" + "-" * 70)
+        print(f"🔍 Araç tarihçeleri çekiliyor ve geçişler analiz ediliyor...\n")
         
         tum_gecisler = []
     
@@ -414,16 +415,22 @@ def main():
             plaka = vehicle['plaka']
             bus_id = vehicle['bus_id']
             
-            print(f"\n{plaka} analiz ediliyor...")
+            print(f"\n🚌 {plaka} (Bus ID: {bus_id})")
+            print(f"   📡 VTS API'den tarihçe çekiliyor...")
             
             history = get_vehicle_history(bus_id, baslangic, bitis)
             
             if history:
+                print(f"   ✅ {len(history)} konum verisi alındı")
+                print(f"   🔍 Geçişler analiz ediliyor...")
                 gecisler = analyze_crossings_linear(history, plaka)
                 tum_gecisler.extend(gecisler)
-                print(f"   Tespit edilen gecis: {len(gecisler)}")
+                if len(gecisler) > 0:
+                    print(f"   ✅ {len(gecisler)} geçiş tespit edildi")
+                else:
+                    print(f"   ⚠️  Geçiş tespit edilemedi")
             else:
-                print(f"   Veri alinamadi")
+                print(f"   ❌ VTS verisi alınamadı")
         
         # Sonuçlar
         print("\n" + "="*70)
@@ -458,8 +465,11 @@ def main():
             toplam_guncellenen = 0
             
             for tum_gecisler, route_code in all_results:
-                print(f"\n{route_code} için database güncelleniyor...")
+                print(f"\n{'='*70}")
+                print(f"💾 {route_code} için database güncelleniyor...")
+                print(f"{'='*70}")
                 
+                print(f"\n📡 Tarife bilgileri çekiliyor (API: get-table-data)...")
                 # Tarife bilgilerini al (Kalkış satırları)
                 db_response = requests.post(
                     'https://bus-control-4i5o.vercel.app/api/get-table-data',
@@ -474,14 +484,17 @@ def main():
                     continue
                 
                 tarife_rows = db_result.get('data', [])
-                print(f"📋 {len(tarife_rows)} Kalkış satırı alındı")
+                print(f"✅ {len(tarife_rows)} Kalkış satırı alındı\n")
+                print(f"🔄 {len(tum_gecisler)} VTS geçişi ile eşleştiriliyor...\n")
                 
                 guncellenen = 0
                 
                 # Her geçişi tarife ile eşleştir
-                for gecis in tum_gecisler:
+                for idx, gecis in enumerate(tum_gecisler, 1):
                     plaka = gecis['plaka']
                     gecis_zamani = gecis['gecis_zamani'].strftime('%H:%M:%S')
+                    
+                    print(f"\n[{idx}/{len(tum_gecisler)}] {plaka} - {gecis_zamani}")
                     
                     # Zaman parse
                     def time_to_minutes(t):
@@ -496,6 +509,8 @@ def main():
                     # En yakın tarife satırını bul (±30 dakika)
                     best_match = None
                     best_diff = 9999
+                    
+                    print(f"   🔍 Tarife satırlarında eşleşme aranıyor...")
                     
                     for row in tarife_rows:
                         # Plaka eşleşmesi
@@ -514,7 +529,9 @@ def main():
                             best_match = row
                     
                     if best_match:
+                        print(f"   ✅ Eşleşme bulundu: Tarife {best_match.get('Tarife_Saati')} (Fark: {best_diff} dk)")
                         # approve-row API ile güncelle (VTS geçiş zamanını kullan)
+                        print(f"   📡 Database güncelleniyor (API: approve-row)...")
                         try:
                             update_response = requests.post(
                                 'https://bus-control-4i5o.vercel.app/api/approve-row',
@@ -534,17 +551,25 @@ def main():
                             
                             if update_response.status_code == 200 and update_result.get('success'):
                                 guncellenen += 1
-                                print(f"  ✓ {plaka} - {best_match.get('Tarife_Saati')} → {gecis_zamani}")
+                                print(f"   ✅ BAŞARILI: {plaka} - Tarife {best_match.get('Tarife_Saati')} → Onaylanan {gecis_zamani}")
                             else:
-                                print(f"  ✗ {plaka} - API hatası: {update_result.get('error', 'Bilinmeyen hata')}")
+                                print(f"   ❌ API HATASI: {update_result.get('error', 'Bilinmeyen hata')}")
                         except Exception as e:
-                            print(f"  ✗ {plaka} - İstek hatası: {e}")
+                            print(f"   ❌ İSTEK HATASI: {e}")
+                    else:
+                        print(f"   ⚠️  Eşleşme bulunamadı (±30 dk içinde uygun tarife yok)")
                 
-                print(f"✅ {route_code}: {guncellenen} satır güncellendi")
+                print(f"\n{'='*70}")
+                print(f"✅ {route_code} TAMAMLANDI: {guncellenen}/{len(tum_gecisler)} geçiş güncellendi")
+                print(f"{'='*70}")
                 toplam_guncellenen += guncellenen
             
-            print(f"\n✅ TOPLAM {toplam_guncellenen} satır VTS geçiş zamanı ile güncellendi!")
-            print(f"🔄 Vercel'deki tabloları yenileyin ve Onaylanan sütununu kontrol edin.")
+            print(f"\n{'='*70}")
+            print(f"✅ İŞLEM TAMAMLANDI!")
+            print(f"{'='*70}")
+            print(f"📊 TOPLAM: {toplam_guncellenen} satır VTS geçiş zamanı ile güncellendi!")
+            print(f"🔄 Vercel'deki tabloları yenileyin ve 'Onaylanan' sütununu kontrol edin.")
+            print(f"{'='*70}")
             
         except Exception as e:
             print(f"\n❌ API hatası: {e}")
