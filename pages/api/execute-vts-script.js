@@ -1,7 +1,7 @@
 // Execute VTS Script API - Pure JavaScript implementation
 // Replaces Python logic with Node.js for web/mobile compatibility
 
-import fetch from 'node-fetch';
+// Next.js has built-in fetch, no need to import
 
 export const config = {
   maxDuration: 300, // 5 minutes
