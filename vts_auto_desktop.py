@@ -44,6 +44,9 @@ def setup_chrome_driver():
     chrome_options.add_argument('--start-maximized')
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
     
+    # Enable performance logging to capture network requests
+    chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
+    
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
@@ -87,8 +90,24 @@ def open_vts_and_wait_login(driver):
             # Debug: localStorage içeriğini göster
             if check_count == 1 or check_count % 10 == 0:
                 print(f"🔍 localStorage keys: {list(all_local_storage.keys())}")
+                
+                # SessionStorage'ı da kontrol et
+                all_session_storage = driver.execute_script("""
+                    let items = {};
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        let key = sessionStorage.key(i);
+                        items[key] = sessionStorage.getItem(key);
+                    }
+                    return items;
+                """)
+                print(f"🔍 sessionStorage keys: {list(all_session_storage.keys())}")
+                
+                # Cookies'i kontrol et
+                cookies = driver.get_cookies()
+                cookie_names = [c['name'] for c in cookies]
+                print(f"🔍 Cookie names: {cookie_names}")
             
-            # Token'ı bul
+            # Token'ı bul - localStorage
             token = driver.execute_script(
                 "return localStorage.getItem('access_token') || "
                 "localStorage.getItem('token') || "
@@ -96,16 +115,71 @@ def open_vts_and_wait_login(driver):
                 "sessionStorage.getItem('access_token');"
             )
             
+            # Eğer localStorage'da yoksa, network request'lerden yakala
+            if not token and check_count > 3:
+                # Performance logs'dan token çek
+                try:
+                    logs = driver.get_log('performance')
+                    for log in logs:
+                        message = json.loads(log['message'])
+                        method = message.get('message', {}).get('method', '')
+                        
+                        if method == 'Network.responseReceived':
+                            response = message.get('message', {}).get('params', {}).get('response', {})
+                            headers = response.get('headers', {})
+                            
+                            # Authorization header'ı kontrol et
+                            auth_header = headers.get('authorization') or headers.get('Authorization')
+                            if auth_header and 'Bearer' in auth_header:
+                                token = auth_header.replace('Bearer ', '').strip()
+                                print(f"🔍 Token network request'ten bulundu!")
+                                break
+                except Exception as e:
+                    pass
+            
+            # Token yoksa, tüm window objelerini kontrol et
+            if not token and check_count % 5 == 0:
+                # Angular, Vue veya başka framework'lerde token farklı yerlerde olabilir
+                token = driver.execute_script("""
+                    // Try different possible locations
+                    return window.token || 
+                           window.accessToken || 
+                           window.vtsToken ||
+                           window.__VTS_TOKEN__ ||
+                           (window.localStorage && localStorage.getItem('access_token')) ||
+                           (window.sessionStorage && sessionStorage.getItem('access_token'));
+                """)
+                
+                if token:
+                    print(f"🔍 Token window objesinde bulundu!")
+            
             if token:
                 print(f"✅ Giriş başarılı! Token bulundu: {token[:30]}...")
                 return token
             
             # URL değişikliğini kontrol et (login sayfasından çıktı mı?)
             current_url = driver.current_url
-            if 'login' not in current_url.lower():
-                print(f"ℹ️  URL değişti: {current_url}")
-                # Biraz daha bekle, token henüz kaydedilmemiş olabilir
-                time.sleep(3)
+            if 'login' not in current_url.lower() and check_count == 1:
+                print(f"ℹ️  Ana sayfaya yönlendirildi: {current_url}")
+            
+            # 2 dakika beklediyse, manuel token gir
+            if check_count > 60:  # 60 * 2 saniye = 120 saniye = 2 dakika
+                print("\n" + "="*60)
+                print("⚠️  Token otomatik algılanamadı!")
+                print("="*60)
+                print("\nMANUEL TOKEN GİRİŞİ:")
+                print("1. VTS sayfasında F12 basın")
+                print("2. Application → Local Storage → vts.kentkart.com.tr")
+                print("3. 'access_token' değerini kopyalayın")
+                print("4. Buraya yapıştırın\n")
+                
+                manual_token = input("Token girin: ").strip()
+                if manual_token and len(manual_token) > 20:
+                    print(f"✅ Manuel token alındı!")
+                    return manual_token
+                else:
+                    print("❌ Geçersiz token, tekrar deneniyor...")
+                    check_count = 0  # Reset counter
             
         except Exception as e:
             print(f"⚠️  Kontrol hatası: {str(e)}")
