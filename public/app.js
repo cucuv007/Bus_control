@@ -3173,108 +3173,211 @@ async function handleSetDangerTime() {
   }
 }
 
-// Handle VTS Update button click
+// Handle VTS Update button click - TAM OTOMATİK
 async function handleRunVtsUpdate() {
+  let vtsWindow = null;
+  
   try {
     runVtsUpdateBtn.disabled = true;
-    runVtsUpdateBtn.innerHTML = '⏳ Token alınıyor...';
+    runVtsUpdateBtn.innerHTML = '⏳ VTS açılıyor...';
     vtsStatus.style.display = 'block';
-    vtsStatus.innerHTML = '📡 VTS sitesinden token çekiliyor...';
-
-    // VTS access_token'ı çek
-    // Kullanıcı https://vts.kentkart.com.tr'ye giriş yapmış olmalı
-    let vtsToken = null;
-
-    // Method 1: Try to get token from localStorage (if VTS stores it there)
-    try {
-      const vtsData = localStorage.getItem('vts_token') || localStorage.getItem('access_token');
-      if (vtsData) {
-        vtsToken = vtsData;
-        console.log('✅ Token localStorage\'dan alındı');
-      }
-    } catch (e) {
-      console.warn('localStorage erişim hatası:', e);
-    }
-
-    // Method 2: Try to get from cookies
-    if (!vtsToken) {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'access_token' || name === 'vts_token' || name === 'token') {
-          vtsToken = value;
-          console.log('✅ Token cookie\'den alındı');
-          break;
-        }
-      }
-    }
-
-    // Method 3: Prompt user to enter token manually
-    if (!vtsToken) {
-      vtsStatus.innerHTML = '❌ Token otomatik bulunamadı. Lütfen manuel girin.';
-      
-      // Show instructions
-      const instructions = `
-VTS Token'ı Nasıl Alınır:
-
-1. https://vts.kentkart.com.tr adresine gidin ve giriş yapın
-2. F12 tuşuna basın (Developer Tools)
-3. "Network" sekmesini seçin
-4. Sayfayı yenileyin (F5)
-5. "v1" veya "api" gibi bir istekte Authorization başlığını bulun
-6. Bearer token'ı kopyalayın (eyJhbG... ile başlar)
-      `.trim();
-      
-      alert(instructions);
-      
-      vtsToken = prompt('VTS Access Token\'ı yapıştırın (eyJhbG... ile başlar):');
-      
-      if (!vtsToken) {
-        throw new Error('Token girilmedi');
-      }
-      
-      // Remove "Bearer " prefix if exists
-      vtsToken = vtsToken.replace(/^Bearer\s+/i, '').trim();
-      
-      console.log('✅ Token manuel girildi');
-    }
-
-    // Send token to API
-    vtsStatus.innerHTML = '🚀 VTS verisi işleniyor...';
-    
-    const response = await fetch('/api/run-vts-update', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ vtsToken })
-    });
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'VTS update başarısız');
-    }
-
-    // Script hazır - download seçeneği sun
     vtsStatus.innerHTML = `
-      ✅ Script hazırlandı! Token başarıyla eklendi.<br><br>
-      <strong>Çalıştırma Seçenekleri:</strong><br>
-      1. <a href="data:text/plain;base64,${result.scriptBase64}" download="vts_history_scraper_v2.py" style="color: white; text-decoration: underline;">📥 Script'i İndir</a><br>
-      2. Terminalden çalıştır: <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 3px;">python vts_history_scraper_v2.py</code><br><br>
-      <small>Token preview: ${result.tokenPreview}</small>
+      <strong>🌐 VTS Login Penceresi Açılıyor...</strong><br>
+      1️⃣ Açılan pencerede VTS'ye giriş yapın<br>
+      2️⃣ Giriş yaptıktan sonra bu pencereye dönün<br>
+      3️⃣ Geri kalan her şey otomatik!
     `;
 
-    // Alternatif: Script içeriğini göster
-    console.log('📄 VTS Script hazır:', result.instructions);
+    // VTS penceresini aç
+    vtsWindow = window.open(
+      'https://vts.kentkart.com.tr',
+      'VTS_Login',
+      'width=1200,height=800,menubar=no,toolbar=no,location=yes,status=yes,scrollbars=yes'
+    );
+
+    if (!vtsWindow) {
+      throw new Error('Popup penceresi açılamadı! Lütfen popup blocker\'ı devre dışı bırakın.');
+    }
+
+    // Kullanıcının login olmasını bekle
+    vtsStatus.innerHTML = `
+      <strong>⏳ VTS'ye Giriş Yapmanız Bekleniyor...</strong><br><br>
+      📍 Açılan pencerede:<br>
+      • Kullanıcı adınızı girin<br>
+      • Şifrenizi girin<br>
+      • Login butonuna tıklayın<br><br>
+      <button id="vtsLoginDoneBtn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+        ✅ Giriş Yaptım, Devam Et
+      </button>
+    `;
+
+    // "Giriş Yaptım" butonuna event listener ekle
+    await new Promise((resolve) => {
+      const loginDoneBtn = document.getElementById('vtsLoginDoneBtn');
+      loginDoneBtn.onclick = () => {
+        resolve();
+      };
+    });
+
+    vtsStatus.innerHTML = '🔍 Token çekiliyor...';
+
+    // VTS penceresinden token çek
+    let vtsToken = null;
     
-    alert('✅ VTS script token ile hazırlandı!\n\nScript\'i indirip çalıştırabilirsiniz:\npython vts_history_scraper_v2.py\n\n14 hat için tüm geçişler otomatik onaylanacak.');
+    try {
+      // VTS penceresinin localStorage'ından token al
+      vtsToken = vtsWindow.localStorage.getItem('access_token') || 
+                 vtsWindow.localStorage.getItem('token') ||
+                 vtsWindow.localStorage.getItem('vts_token');
+      
+      if (vtsToken) {
+        console.log('✅ Token VTS penceresinden alındı');
+      }
+    } catch (e) {
+      console.warn('VTS penceresi localStorage erişim hatası:', e);
+    }
+
+    // Token bulunamadıysa, cookie'leri kontrol et
+    if (!vtsToken) {
+      try {
+        const vtsCookies = vtsWindow.document.cookie;
+        const cookies = vtsCookies.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'access_token' || name === 'vts_token' || name === 'token') {
+            vtsToken = value;
+            console.log('✅ Token VTS cookie\'sinden alındı');
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn('VTS penceresi cookie erişim hatası:', e);
+      }
+    }
+
+    // Hala token bulunamadıysa, manuel giriş iste
+    if (!vtsToken) {
+      vtsStatus.innerHTML = `
+        <strong>⚠️ Token Otomatik Alınamadı</strong><br><br>
+        <small>VTS penceresinde şu adımları izleyin:</small><br>
+        1. F12 tuşuna basın<br>
+        2. Application > Local Storage > vts.kentkart.com.tr<br>
+        3. "access_token" değerini kopyalayın<br><br>
+        <input type="text" id="manualTokenInput" placeholder="Token'ı buraya yapıştırın..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+        <button id="submitManualToken" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
+          ✅ Token'ı Kullan
+        </button>
+      `;
+
+      vtsToken = await new Promise((resolve) => {
+        const submitBtn = document.getElementById('submitManualToken');
+        submitBtn.onclick = () => {
+          const input = document.getElementById('manualTokenInput');
+          const token = input.value.trim().replace(/^Bearer\s+/i, '');
+          if (token) {
+            resolve(token);
+          } else {
+            alert('❌ Lütfen geçerli bir token girin!');
+          }
+        };
+      });
+    }
+
+    // VTS penceresini kapat
+    if (vtsWindow && !vtsWindow.closed) {
+      vtsWindow.close();
+    }
+
+    if (!vtsToken) {
+      throw new Error('Token alınamadı');
+    }
+
+    // Token alındı, şimdi desktop app'i tetikle
+    vtsStatus.innerHTML = `
+      <strong>✅ Token Başarıyla Alındı!</strong><br><br>
+      Token preview: ${vtsToken.substring(0, 30)}...<br><br>
+      🚀 Desktop uygulaması açılıyor...<br>
+      <small>Eğer açılmazsa, manuel olarak start_vts_auto_runner.bat'ı çalıştırın</small>
+    `;
+
+    // Token'ı localStorage'a kaydet (desktop app okuyacak)
+    localStorage.setItem('vts_token_for_runner', vtsToken);
+    localStorage.setItem('vts_token_timestamp', new Date().toISOString());
+    
+    // Desktop app'i tetiklemeye çalış (custom protocol handler)
+    try {
+      // Windows için: custom protocol handler kayıtlıysa çalışır
+      const customProtocolUrl = `vtsrunner://run?token=${encodeURIComponent(vtsToken.substring(0, 50))}`;
+      window.location.href = customProtocolUrl;
+      
+      // 2 saniye bekle
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (e) {
+      console.warn('Custom protocol handler çalışmadı:', e);
+    }
+
+    // Alternatif: Kullanıcıya manuel talimat ver
+    vtsStatus.innerHTML = `
+      <strong>✅ Token Hazır!</strong><br><br>
+      <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <strong>📋 ÇALIŞTIRMA TALIMATLARI:</strong><br><br>
+        
+        <strong>Yöntem 1: Otomatik (Önerilen)</strong><br>
+        1. Desktop'ta <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">start_vts_auto_runner.bat</code> dosyasını çift tıklayın<br>
+        2. Chrome açılacak (VTS zaten login)<br>
+        3. Terminal'e dönün ve ENTER'a basın<br>
+        4. Script otomatik çalışacak!<br><br>
+        
+        <strong>Yöntem 2: Manuel</strong><br>
+        1. Terminal açın<br>
+        2. <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">python vts_auto_runner.py</code> komutunu çalıştırın<br>
+        3. Token otomatik alınacak (localStorage'dan)<br><br>
+        
+        <strong>Token Kaydedildi:</strong><br>
+        <small style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px;">
+          ${vtsToken.substring(0, 50)}...
+        </small>
+      </div>
+      <br>
+      <button id="copyTokenBtn" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-right: 10px;">
+        📋 Token'ı Kopyala
+      </button>
+      <button id="openRunnerBtn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+        🚀 Desktop App'i Aç
+      </button>
+    `;
+    
+    // Copy token button
+    document.getElementById('copyTokenBtn').onclick = () => {
+      navigator.clipboard.writeText(vtsToken);
+      alert('✅ Token panoya kopyalandı!');
+    };
+    
+    // Open runner button (try to trigger desktop app)
+    document.getElementById('openRunnerBtn').onclick = () => {
+      alert('💡 Lütfen Desktop\'ta start_vts_auto_runner.bat dosyasını çift tıklayın\n\nToken otomatik alınacak ve script çalışacak!');
+      
+      // Try to open file explorer to the folder
+      try {
+        const folderPath = 'file:///' + window.location.pathname.split('/')[0];
+        window.open(folderPath, '_blank');
+      } catch (e) {
+        console.warn('Folder açılamadı:', e);
+      }
+    };
+
+    console.log('✅ VTS token kaydedildi:', vtsToken.substring(0, 30) + '...');
 
   } catch (error) {
     console.error('VTS update error:', error);
     vtsStatus.innerHTML = `❌ Hata: ${error.message}`;
     alert('❌ VTS update hatası: ' + error.message);
   } finally {
+    // VTS penceresini kapat (hala açıksa)
+    if (vtsWindow && !vtsWindow.closed) {
+      vtsWindow.close();
+    }
+    
     runVtsUpdateBtn.disabled = false;
     runVtsUpdateBtn.innerHTML = '🚍 VTS\'den Onay Zamanlarını Getir';
     

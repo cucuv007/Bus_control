@@ -65,7 +65,18 @@ def extract_vts_token(driver):
     print("\n📡 VTS token'ı çekiliyor...")
     
     try:
-        # Method 1: localStorage'dan token al
+        # Method 0: Web app'ten kaydedilen token'ı kontrol et (en öncelikli)
+        token_from_webapp = driver.execute_script("""
+            return localStorage.getItem('vts_token_for_runner');
+        """)
+        
+        if token_from_webapp:
+            print("✅ Token web app'ten alındı (vts_token_for_runner)")
+            # Token kullanıldı, temizle
+            driver.execute_script("localStorage.removeItem('vts_token_for_runner');")
+            return token_from_webapp
+        
+        # Method 1: localStorage'dan token al (VTS'nin kendi token'ı)
         token = driver.execute_script("""
             return localStorage.getItem('access_token') || 
                    localStorage.getItem('token') || 
