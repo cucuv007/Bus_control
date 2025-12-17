@@ -3329,23 +3329,7 @@ async function handleRunVtsUpdate() {
       return urlToken;
     }
 
-    // Manuel token girişi için de bekle
-    vtsWindow = null;
-
-    // Kullanıcının login olmasını bekle
-    vtsStatus.innerHTML = `
-      <strong>⏳ VTS'ye Giriş Yapmanız Bekleniyor...</strong><br><br>
-      📍 Açılan pencerede:<br>
-      • Kullanıcı adınızı girin<br>
-      • Şifrenizi girin<br>
-      • Login butonuna tıklayın<br><br>
-      <button id="vtsLoginDoneBtn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-        ✅ Giriş Yaptım, Devam Et
-      </button>
-    `;
-
-    // VTS penceresine token extraction button inject et (DOM injection)
-    // URL'den token bekle veya timeout
+    // URL'den token bekle
     const vtsToken = await new Promise((resolve, reject) => {
       // URL parametresini sürekli kontrol et
       const checkInterval = setInterval(() => {
