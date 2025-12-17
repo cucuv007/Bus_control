@@ -24,3 +24,7 @@ dist/
 .env
 .env.local
 .env.*.local
+
+# VTS credentials & cache
+vts_token_cache.txt
+vts_credentials.json
