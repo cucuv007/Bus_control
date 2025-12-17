@@ -3263,8 +3263,16 @@ async function handleRunVtsUpdate() {
     runVtsUpdateBtn.innerHTML = '⏳ VTS açılıyor...';
     vtsStatus.style.display = 'block';
     
-    // Token extraction kodu
-    const tokenExtractionCode = `(function(){const t=localStorage.getItem('access_token')||localStorage.getItem('token')||localStorage.getItem('vts_token')||sessionStorage.getItem('access_token');if(t){window.open('${window.location.origin}/code.html?vtsToken='+encodeURIComponent(t),'_self');}else{alert('❌ Token bulunamadı!');}})();`;
+    // Token extraction kodu - Prompt ile manuel giriş
+    const tokenExtractionCode = `(function(){
+      const token = prompt('🔑 VTS Token Girin:\\n\\nF12 → Application → Local Storage → https://vts.kentkart.com.tr\\n→ access_token değerini kopyalayıp buraya yapıştırın:');
+      if(token && token.length > 20){
+        alert('✅ Token alındı! Ana sayfaya dönülüyor...');
+        window.open('${window.location.origin}/code.html?vtsToken='+encodeURIComponent(token),'_self');
+      }else{
+        alert('❌ Geçersiz token! Lütfen tekrar deneyin.');
+      }
+    })();`;
     
     // Otomatik kopyala
     try {
@@ -3277,7 +3285,7 @@ async function handleRunVtsUpdate() {
     vtsStatus.innerHTML = `
       <strong>🚀 VTS Token Alma - SUPER KOLAY!</strong><br><br>
       <div style="background: linear-gradient(135deg, #3498db, #2980b9); padding: 20px; border-radius: 10px; text-align: left; margin-bottom: 15px;">
-        <strong style="font-size: 18px; color: #f1c40f;">📋 3 ADIM - 30 SANİYE!</strong><br><br>
+        <strong style="font-size: 18px; color: #f1c40f;">📋 4 ADIM - 1 DAKİKA!</strong><br><br>
         
         <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
           <strong style="color: #2ecc71;">1️⃣ VTS'YE GİRİŞ YAP</strong><br>
@@ -3288,15 +3296,25 @@ async function handleRunVtsUpdate() {
         </div>
         
         <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
-          <strong style="color: #f39c12;">2️⃣ F12 BASIP CONSOLE AÇIN</strong><br>
-          <small style="opacity: 0.8;">VTS sayfasında F12 tuşuna basın ve Console sekmesini seçin</small>
+          <strong style="color: #f39c12;">2️⃣ TOKEN'I KOPYALA</strong><br>
+          VTS sayfasında:<br>
+          • <strong>F12</strong> bas<br>
+          • <strong>Application</strong> sekmesine git<br>
+          • Sol menüden <strong>Local Storage → https://vts.kentkart.com.tr</strong><br>
+          • <strong>access_token</strong> değerini kopyala (sağ tık → copy value)
         </div>
         
         <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
-          <strong style="color: #e74c3c;">3️⃣ KODU YAPISTIR VE ENTER</strong><br>
-          <small style="opacity: 0.8;">Aşağıdaki kod OTOMATIK KOPYALANDI! Console'a Ctrl+V yapıp Enter'a basın:</small><br><br>
+          <strong style="color: #9b59b6;">3️⃣ CONSOLE'A GİT</strong><br>
+          <small style="opacity: 0.8;">F12'de <strong>Console</strong> sekmesine geç</small>
+        </div>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <strong style="color: #e74c3c;">4️⃣ KODU ÇALIŞTIR</strong><br>
+          <small style="opacity: 0.8;">Aşağıdaki kod OTOMATIK KOPYALANDI! Console'a Ctrl+V yapıp Enter'a basın.<br>
+          Açılan pencereye kopyaladığınız token'ı yapıştırın:</small><br><br>
           <textarea readonly onclick="this.select(); navigator.clipboard.writeText(this.value);" 
-                    style="width: 100%; height: 80px; background: #000; color: #0f0; padding: 10px; border: 2px solid #27ae60; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 8px;">${tokenExtractionCode}</textarea>
+                    style="width: 100%; height: 60px; background: #000; color: #0f0; padding: 10px; border: 2px solid #27ae60; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 8px;">${tokenExtractionCode}</textarea>
           <button onclick="navigator.clipboard.writeText(\`${tokenExtractionCode}\`); alert('✅ Kod kopyalandı! Şimdi VTS console\\'una Ctrl+V yapıp Enter\\'a basın.');" 
                   style="margin-top: 8px; background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
             📋 Tekrar Kopyala
@@ -3306,8 +3324,8 @@ async function handleRunVtsUpdate() {
       
       <div style="background: rgba(39, 174, 96, 0.2); border-left: 4px solid #27ae60; padding: 15px; border-radius: 5px; margin-top: 15px;">
         <strong>💡 NE OLACAK?</strong><br>
-        Kodu çalıştırdığınızda token otomatik alınacak ve bu sayfaya geri dönülecek.<br>
-        Sonra otomatik olarak 14 hat işlenecek! ✨
+        Kod çalıştığında token girmeniz istenecek. Token'ı yapıştırıp OK deyin.<br>
+        Sonra otomatik olarak bu sayfaya dönülecek ve 14 hat işlenecek! ✨
       </div>
       
       <div style="margin-top: 15px;">
