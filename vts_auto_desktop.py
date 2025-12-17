@@ -199,7 +199,17 @@ def extract_token_with_devtools(driver):
     """Extract token using Chrome DevTools Protocol"""
     print_step("3/6", "Token otomatik alınıyor...")
     
-    # F12 açmaya gerek yok, JavaScript ile direkt localStorage'dan alalım
+    # ÖNCE COOKIE'LERDEN AL (VTS burada saklıyor!)
+    cookies = driver.get_cookies()
+    token = None
+    
+    for cookie in cookies:
+        if cookie['name'] == 'access_token':
+            token = cookie['value']
+            print(f"✅ Token cookie'den alındı: {token[:30]}...")
+            return token
+    
+    # Cookie'de yoksa localStorage'a bak
     token = driver.execute_script("""
         return localStorage.getItem('access_token') || 
                localStorage.getItem('token') ||
@@ -208,10 +218,10 @@ def extract_token_with_devtools(driver):
     """)
     
     if token:
-        print(f"✅ Token alındı: {token[:30]}...")
+        print(f"✅ Token localStorage'dan alındı: {token[:30]}...")
         return token
     else:
-        raise Exception("Token bulunamadı!")
+        raise Exception("Token bulunamadı! Cookie ve localStorage boş.")
 
 def run_vts_script(token):
     """Run VTS update script"""
@@ -288,8 +298,12 @@ def main():
         # Open VTS and wait for login
         token = open_vts_and_wait_login(driver)
         
-        # Extract token (additional check)
-        token = extract_token_with_devtools(driver)
+        # Token validation
+        if not token or len(token) < 20:
+            print("⚠️  Token validation başarısız, tekrar deneniyor...")
+            token = extract_token_with_devtools(driver)
+        
+        print(f"✅ Final token: {token[:30]}...")
         
         print_step("5/6", "VTS penceresi kapatılıyor...")
         driver.quit()
