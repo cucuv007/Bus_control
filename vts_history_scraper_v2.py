@@ -8,6 +8,14 @@ Gelişmiş Geçiş Tespit Mantığı:
 - Geçiş: Uzaklaşırken 100m'yi geçtiğinde sayılır (lineer artış)
 """
 
+import sys
+import io
+
+# Windows console encoding fix
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import requests
 import json
 from datetime import datetime
@@ -36,9 +44,9 @@ VTS_HEADERS = {
 
 # Debug: Token kaynağını göster
 if AUTO_TOKEN:
-    print(f"✅ Token environment variable'dan alındı: {AUTO_TOKEN[:30]}...")
+    print(f"[OK] Token environment variable'dan alindi: {AUTO_TOKEN[:30]}...")
 else:
-    print("⚠️  Token hardcoded değer kullanılıyor (manuel çalıştırma)")
+    print("[INFO] Token hardcoded deger kullaniliyor (manuel calistirma)")
 
 # Durak koordinatları
 DURAK_CONFIG = {
