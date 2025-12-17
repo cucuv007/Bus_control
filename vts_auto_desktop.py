@@ -65,9 +65,30 @@ def open_vts_and_wait_login(driver):
     print("\n⏳ Giriş yapmanız bekleniyor...\n")
     
     # Login olduğunu kontrol et (localStorage'da token var mı?)
+    check_count = 0
     while True:
         try:
-            # localStorage'dan token oku
+            check_count += 1
+            
+            # Her 10 saniyede bir durum bilgisi ver
+            if check_count % 5 == 0:
+                print(f"⏳ Hala bekleniyor... ({check_count * 2} saniye)")
+            
+            # localStorage'dan token oku - TÜM KEY'LERI kontrol et
+            all_local_storage = driver.execute_script("""
+                let items = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    let key = localStorage.key(i);
+                    items[key] = localStorage.getItem(key);
+                }
+                return items;
+            """)
+            
+            # Debug: localStorage içeriğini göster
+            if check_count == 1 or check_count % 10 == 0:
+                print(f"🔍 localStorage keys: {list(all_local_storage.keys())}")
+            
+            # Token'ı bul
             token = driver.execute_script(
                 "return localStorage.getItem('access_token') || "
                 "localStorage.getItem('token') || "
@@ -76,11 +97,18 @@ def open_vts_and_wait_login(driver):
             )
             
             if token:
-                print("✅ Giriş başarılı! Token bulundu.")
+                print(f"✅ Giriş başarılı! Token bulundu: {token[:30]}...")
                 return token
             
+            # URL değişikliğini kontrol et (login sayfasından çıktı mı?)
+            current_url = driver.current_url
+            if 'login' not in current_url.lower():
+                print(f"ℹ️  URL değişti: {current_url}")
+                # Biraz daha bekle, token henüz kaydedilmemiş olabilir
+                time.sleep(3)
+            
         except Exception as e:
-            pass
+            print(f"⚠️  Kontrol hatası: {str(e)}")
         
         time.sleep(2)
 
