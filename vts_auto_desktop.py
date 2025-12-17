@@ -108,6 +108,7 @@ def open_vts_and_wait_login(driver):
                 print(f"🔍 Cookie names: {cookie_names}")
             
             # ÖNCE COOKIE'LERDE TOKEN ARA (VTS burada saklıyor!)
+            token = None  # Initialize token variable
             cookies = driver.get_cookies()
             for cookie in cookies:
                 if cookie['name'] == 'access_token':
@@ -228,32 +229,55 @@ def run_vts_script(token):
     print_step("4/6", "VTS geçişleri işleniyor...")
     print(f"Token: {token[:30]}...")
     
-    # Import vts_history_scraper_v2
-    try:
-        import vts_history_scraper_v2 as vts_script
+    # Direkt Python scriptini subprocess ile çalıştır
+    import subprocess
+    import os
+    
+    script_path = os.path.join(os.path.dirname(__file__), 'vts_history_scraper_v2.py')
+    
+    if os.path.exists(script_path):
+        print(f"\n🚀 vts_history_scraper_v2.py çalıştırılıyor...\n")
         
-        # Override token
-        vts_script.VTS_TOKEN = token
-        
-        # Run main script
-        print("\n🚀 14 hat işleniyor...\n")
-        
-        total_updated = 0
-        for route in ROUTES:
-            print(f"📍 {route} hattı işleniyor...")
-            try:
-                # Process route (simplified - call main functions)
-                updated = vts_script.process_route(route, token)
-                total_updated += updated
-                print(f"✅ {route}: {updated} kayıt güncellendi")
-            except Exception as e:
-                print(f"❌ {route} hatası: {str(e)}")
-        
-        print(f"\n✅ Toplam {total_updated} kayıt güncellendi!")
-        return total_updated
-        
-    except ImportError:
-        print("⚠️  vts_history_scraper_v2.py bulunamadı, alternatif yöntem kullanılıyor...")
+        try:
+            # Token'ı environment variable olarak geç
+            env = os.environ.copy()
+            env['VTS_TOKEN'] = token
+            
+            # Script'i çalıştır
+            result = subprocess.run(
+                ['python', script_path],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 dakika timeout
+            )
+            
+            # Output'u göster
+            if result.stdout:
+                print(result.stdout)
+            
+            if result.stderr:
+                print("Errors:", result.stderr)
+            
+            if result.returncode == 0:
+                print("\n✅ Script başarıyla tamamlandı!")
+                # Output'tan güncellenen kayıt sayısını çıkar
+                import re
+                matches = re.findall(r'(\d+)\s+rows?\s+updated', result.stdout, re.IGNORECASE)
+                total = sum(int(m) for m in matches) if matches else 0
+                return total
+            else:
+                print(f"\n⚠️ Script hata kodu {result.returncode} ile sonlandı")
+                return 0
+                
+        except subprocess.TimeoutExpired:
+            print("\n⏱️ Script timeout! 10 dakikadan uzun sürdü.")
+            return 0
+        except Exception as e:
+            print(f"\n❌ Script çalıştırma hatası: {str(e)}")
+            return 0
+    else:
+        print(f"\n⚠️ {script_path} bulunamadı, direkt API çağrısı yapılıyor...\n")
         return run_vts_api_directly(token)
 
 def run_vts_api_directly(token):
