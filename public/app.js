@@ -3254,25 +3254,116 @@ async function extractTokenFromVTS(vtsWindow) {
   });
 }
 
-// Handle VTS Update button click - TAM OTOMATİK
+// Handle VTS Update button click - DESKTOP AUTOMATION
 async function handleRunVtsUpdate() {
-  let vtsWindow = null;
-  
   try {
     runVtsUpdateBtn.disabled = true;
-    runVtsUpdateBtn.innerHTML = '⏳ VTS açılıyor...';
+    runVtsUpdateBtn.innerHTML = '⏳ İşlem başlatılıyor...';
     vtsStatus.style.display = 'block';
     
-    // Token extraction kodu - Prompt ile manuel giriş
-    const tokenExtractionCode = `(function(){var token=prompt('TOKEN GIRIN:\\n\\nF12 -> Application -> Local Storage -> vts.kentkart.com.tr\\naccess_token degerini kopyala yapistir:');if(token&&token.length>20){alert('Token alindi!');window.open('${window.location.origin}/code.html?vtsToken='+encodeURIComponent(token),'_self');}else{alert('Gecersiz token!');}})();`;
+    // Desktop'ta vts_auto_update.bat dosyası var mı kontrol et
+    vtsStatus.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <div style="font-size: 48px; margin-bottom: 10px;">🔍</div>
+        <strong>Desktop automation kontrol ediliyor...</strong><br>
+        <small>vts_auto_update.bat dosyası aranıyor...</small>
+      </div>
+    `;
     
-    // Otomatik kopyala
-    try {
-      await navigator.clipboard.writeText(tokenExtractionCode);
-      console.log('✅ Token extraction kodu otomatik kopyalandı!');
-    } catch (e) {
-      console.log('⚠️ Otomatik kopyalama başarısız, manuel kopyalayın');
+    // Desktop/Mobil algılama - User agent kontrolü
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isDesktop = !isMobile;
+    
+    if (isDesktop) {
+      // DESKTOP - vts_auto_update.bat kullanılmalı
+      vtsStatus.innerHTML = `
+        <div style="background: linear-gradient(135deg, #27ae60, #2ecc71); padding: 25px; border-radius: 12px; text-align: center; color: white;">
+          <div style="font-size: 64px; margin-bottom: 15px;">💻</div>
+          <strong style="font-size: 20px;">DESKTOP OTOMASYON SİSTEMİ</strong><br><br>
+          <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; margin: 15px 0; text-align: left;">
+            <strong style="font-size: 16px;">📋 İŞLEM ADIMLARI:</strong><br><br>
+            <ol style="text-align: left; margin: 10px 0 10px 20px; line-height: 2.2;">
+              <li><strong>vts_auto_update.bat</strong> dosyasını bulun<br>
+                  <small style="opacity: 0.8;">(Proje klasöründe olmalı)</small>
+              </li>
+              <li><strong>ÇİFT TIKLAYIN</strong> - Otomatik başlayacak<br>
+                  <small style="opacity: 0.8;">Chrome açılacak, VTS'ye giriş yapın</small>
+              </li>
+              <li><strong>Token otomatik alınacak</strong><br>
+                  <small style="opacity: 0.8;">14 hat işlenecek, sonuçlar gösterilecek</small>
+              </li>
+            </ol>
+          </div>
+          
+          <div style="background: rgba(255,193,7,0.3); border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 15px 0; text-align: left;">
+            <strong>⚠️ ÖNEMLİ:</strong><br>
+            • <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">vts_auto_update.bat</code> dosyası MUTLAKA proje klasöründe olmalı<br>
+            • Python yüklü değilse otomatik yüklenecek<br>
+            • Chrome WebDriver otomatik inecek<br>
+          </div>
+          
+          <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+            <strong>🚀 NE OLACAK?</strong><br>
+            1️⃣ Chrome açılacak → VTS'ye giriş yapın<br>
+            2️⃣ Token cookie'den otomatik alınacak<br>
+            3️⃣ 14 hat için VTS verileri çekilecek<br>
+            4️⃣ Database güncellenecek<br>
+            5️⃣ Tamamlandı mesajı gösterilecek
+          </div>
+          
+          <div style="margin-top: 20px;">
+            <button onclick="alert('📂 Proje klasöründe vts_auto_update.bat dosyasını bulun\\n\\n✅ ÇİFT TIKLAYIN\\n\\n🚀 Otomatik başlayacak!');" 
+                    style="background: white; color: #27ae60; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; margin: 5px;">
+              📖 Detaylı Rehber
+            </button>
+            <button onclick="document.getElementById('vtsStatus').style.display='none'; document.getElementById('runVtsUpdateBtn').disabled=false; document.getElementById('runVtsUpdateBtn').innerHTML='🚍 VTS\\'den Onay Zamanlarını Getir';" 
+                    style="background: rgba(255,255,255,0.3); color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; margin: 5px;">
+              ✖️ Kapat
+            </button>
+          </div>
+        </div>
+      `;
+      
+      runVtsUpdateBtn.disabled = false;
+      runVtsUpdateBtn.innerHTML = '🚍 VTS\'den Onay Zamanlarını Getir';
+      
+      return;
     }
+    
+    // MOBİL CİHAZ - Bat dosyası yok
+    vtsStatus.innerHTML = `
+      <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); padding: 25px; border-radius: 12px; text-align: center; color: white;">
+        <div style="font-size: 64px; margin-bottom: 15px;">🚫</div>
+        <strong style="font-size: 22px;">BU İŞLEM KULLANIMA İZNİNİZ YOK</strong><br><br>
+        <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; margin-top: 15px; text-align: left;">
+          <strong style="font-size: 16px;">⚠️ SADECE DESKTOP BİLGİSAYARDA KULLANILIR</strong><br><br>
+          <p style="line-height: 1.8; margin: 10px 0;">
+            ❌ Mobil cihazlarda çalışmaz<br>
+            ❌ Tablet'te çalışmaz<br>
+            ✅ <strong>Sadece Windows PC'de çalışır</strong>
+          </p>
+          <hr style="border: 1px solid rgba(255,255,255,0.3); margin: 15px 0;">
+          <strong>💡 NASIL KULLANILIR?</strong><br><br>
+          <ol style="text-align: left; margin: 10px 0 10px 20px; line-height: 2;">
+            <li><strong>Desktop PC'ye geçin</strong></li>
+            <li>Bu sayfayı Desktop'ta açın</li>
+            <li><code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">vts_auto_update.bat</code> dosyası olmalı</li>
+            <li>Bu butona basın - otomatik çalışacak</li>
+          </ol>
+        </div>
+        <div style="margin-top: 20px;">
+          <button onclick="document.getElementById('vtsStatus').style.display='none'; document.getElementById('runVtsUpdateBtn').disabled=false; document.getElementById('runVtsUpdateBtn').innerHTML='🚍 VTS\\'den Onay Zamanlarını Getir';" 
+                  style="background: white; color: #e74c3c; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;">
+            ✖️ Kapat
+          </button>
+        </div>
+      </div>
+    `;
+    
+    runVtsUpdateBtn.disabled = false;
+    runVtsUpdateBtn.innerHTML = '🚍 VTS\'den Onay Zamanlarını Getir';
+    
+    return;
     
     vtsStatus.innerHTML = `
       <strong>🚀 VTS Token Alma - SUPER KOLAY!</strong><br><br>
