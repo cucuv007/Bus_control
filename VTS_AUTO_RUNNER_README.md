@@ -1,11 +1,11 @@
-# 🚍 VTS Otomatik Runner
+# 🚍 VTS Otomatik Runner - Basit Versiyon
 
-VTS sistemine otomatik login yapıp, token'ı çekip, `vts_history_scraper_v2.py` script'ini otomatik çalıştıran sistem.
+Kullanıcı manuel VTS'ye login olur, script otomatik token çekip `vts_history_scraper_v2.py`'yi çalıştırır.
 
 ## 🎯 Özellikler
 
-✅ **Tam Otomatik**: Tek tıkla tüm işlem
-✅ **VTS Otomatik Login**: Kullanıcı adı/şifre ile otomatik giriş
+✅ **Kolay Kurulum**: Şifre gerekmez, manuel login
+✅ **Güvenli**: Credentials kod içinde tutulmaz
 ✅ **Token Otomatik Çekme**: localStorage, Cookie veya Network'ten token yakalar
 ✅ **Script Otomatik Güncelleme**: Token'ı script'e otomatik yazar
 ✅ **Script Otomatik Çalıştırma**: 14 hat için tüm geçişleri otomatik onaylar
@@ -23,20 +23,15 @@ pip install selenium webdriver-manager requests psycopg2-binary
 
 ## ⚙️ Kurulum
 
-### 1. VTS Bilgilerinizi Girin
+### 1. Gereksinimler
 
-`vts_auto_runner.py` dosyasını açın ve şu satırları düzenleyin:
-
-```python
-VTS_USERNAME = "utku.kurucu"  # Sizin kullanıcı adınız
-VTS_PASSWORD = "SIFRENIZ"     # Sizin şifreniz
+```bash
+pip install -r vts_auto_requirements.txt
 ```
 
-**GÜVENLİK NOTU**: Şifrenizi güvenli tutun! Alternatif olarak environment variable kullanabilirsiniz:
-
-```python
-import os
-VTS_PASSWORD = os.getenv('VTS_PASSWORD', '')  # Windows'ta: set VTS_PASSWORD=sifreniz
+Veya manuel:
+```bash
+pip install selenium webdriver-manager
 ```
 
 ### 2. Chrome Tarayıcı
@@ -44,50 +39,72 @@ VTS_PASSWORD = os.getenv('VTS_PASSWORD', '')  # Windows'ta: set VTS_PASSWORD=sif
 Google Chrome tarayıcısı bilgisayarınızda kurulu olmalıdır.
 ChromeDriver otomatik indirilecektir.
 
+**ÖNEMLİ**: Şifre veya kullanıcı adı gerekmez! Manuel login yapacaksınız.
+
 ## 🚀 Kullanım
 
-### Windows:
+### Yöntem 1: Otomatik (Önerilen)
 
 Çift tıklayın:
 ```
 start_vts_auto_runner.bat
 ```
 
-Veya komut satırından:
-```bash
-python vts_auto_runner.py
-```
+**Ne olacak:**
+1. ✅ Chrome debug modda açılır
+2. ✅ VTS login sayfası açılır
+3. ⏸️ SİZ LOGIN YAPIN (kullanıcı adı + şifre)
+4. ⏸️ Bu pencereye dönün ve ENTER'a basın
+5. ✅ Token otomatik çekilir
+6. ✅ Script otomatik çalışır
+7. ✅ 14 hat işlenir
 
-### Manuel:
+### Yöntem 2: Manuel
 
 ```bash
+# 1. Chrome'u debug modda başlatın
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
+
+# 2. VTS'ye gidin ve login olun
+# https://vts.kentkart.com.tr
+
+# 3. Script'i çalıştırın
 python vts_auto_runner.py
 ```
 
 ## 📊 İşlem Akışı
 
 ```
-1. 🌐 Chrome tarayıcı açılır
+[BAT DOSYASI ÇALIŞTIR]
+   ↓
+1. 🌐 Chrome debug modda açılır
    └─> https://vts.kentkart.com.tr
    
-2. 🔐 Otomatik login
-   └─> Kullanıcı adı ve şifre girilir
+2. 👤 SİZ LOGIN YAPIN
+   ├─> Kullanıcı adı girin
+   ├─> Şifre girin
+   └─> Login butonuna tıklayın
    
-3. 📡 Token çekilir
+3. ⏸️ ENTER tuşuna basın (bat dosyasında)
+   
+4. 🔗 Script Chrome'a bağlanır
+   └─> Debug port: 9222
+   
+5. 📡 Token otomatik çekilir
    ├─> localStorage kontrol
    ├─> Cookie kontrol
-   └─> Network monitoring
+   └─> Manuel input (gerekirse)
    
-4. 🔧 Script güncellenir
+6. 🔧 Script güncellenir
    └─> vts_history_scraper_v2.py token'ı yazılır
    
-5. 🚀 Script çalıştırılır
+7. 🚀 Script otomatik çalıştırılır
    └─> 14 hat için tüm geçişler işlenir
    
-6. ✅ Sonuçlar gösterilir
+8. ✅ Sonuçlar gösterilir
    └─> Kaç satır güncellendi
    
-7. 🔒 Tarayıcı kapanır
+9. 💡 Chrome açık kalır (isterseniz kapatın)
 ```
 
 ## 📝 İşlenen Hatlar
@@ -136,19 +153,17 @@ pip install --upgrade webdriver-manager
 
 ## 🔒 Güvenlik
 
-⚠️ **ÖNEMLİ**: 
-- Şifrenizi kodda saklamayın
-- Environment variable kullanın
-- `.env` dosyası kullanabilirsiniz
-- Script'i GitHub'a yüklerken `.gitignore`'a ekleyin
+✅ **GÜVENLİ**: 
+- Şifre kodda tutulmaz
+- Manuel login yaparsınız
+- Token sadece geçici çekilir
+- Credentials GitHub'a yüklenmez
 
-Örnek `.env` kullanımı:
-```python
-from dotenv import load_dotenv
-load_dotenv()
-
-VTS_PASSWORD = os.getenv('VTS_PASSWORD')
-```
+**Avantajlar:**
+- Şifre unutma riski yok
+- Şifre değişirse kod güncelleme gerekmez
+- Multi-factor authentication (MFA) destekler
+- Daha güvenli ve esnek
 
 ## 📈 Performans
 

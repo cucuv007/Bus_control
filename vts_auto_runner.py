@@ -1,6 +1,7 @@
 """
-VTS Otomatik Çalıştırıcı
-- VTS'ye otomatik login yapar
+VTS Otomatik Çalıştırıcı - Basitleştirilmiş Versiyon
+- Kullanıcı VTS'ye manuel login yapar
+- Script açık Chrome tarayıcısına bağlanır
 - Token'ı otomatik çeker
 - vts_history_scraper_v2.py'yi otomatik çalıştırır
 """
@@ -13,81 +14,51 @@ import re
 import subprocess
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-# VTS Login Bilgileri
+# VTS URL
 VTS_URL = "https://vts.kentkart.com.tr"
-VTS_USERNAME = "utku.kurucu"  # Kullanıcı adınızı buraya yazın
-VTS_PASSWORD = ""  # ŞİFRENİZİ BURAYA YAZIN (güvenlik için environment variable kullanabilirsiniz)
 
-def get_chrome_driver():
-    """Chrome WebDriver'ı hazırla"""
+def connect_to_existing_chrome():
+    """Açık Chrome tarayıcısına bağlan"""
     chrome_options = Options()
     
-    # Tarayıcı ayarları
-    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    # Headless mode (arka planda çalışsın mı?)
-    # chrome_options.add_argument('--headless')  # İsterseniz açın
-    
-    # User agent
-    chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
-    
-    # ChromeDriver otomatik yüklensin
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    return driver
-
-def login_to_vts(driver):
-    """VTS'ye otomatik login yap"""
-    print("🔐 VTS'ye giriş yapılıyor...")
+    # Mevcut Chrome'a bağlan (debug port üzerinden)
+    chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
     
     try:
-        driver.get(VTS_URL)
-        time.sleep(2)
-        
-        # Login sayfasını bekle
-        wait = WebDriverWait(driver, 10)
-        
-        # Kullanıcı adı alanını bul ve doldur
-        username_input = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='text'], input[name='username'], input[id*='username'], input[id*='user']"))
-        )
-        username_input.clear()
-        username_input.send_keys(VTS_USERNAME)
-        print(f"✅ Kullanıcı adı girildi: {VTS_USERNAME}")
-        
-        # Şifre alanını bul ve doldur
-        password_input = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
-        password_input.clear()
-        password_input.send_keys(VTS_PASSWORD)
-        print("✅ Şifre girildi")
-        
-        # Login butonunu bul ve tıkla
-        login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], button.login, input[type='submit']")
-        login_button.click()
-        print("🔄 Login butonuna tıklandı...")
-        
-        # Login işleminin tamamlanmasını bekle
-        time.sleep(5)
-        
-        # URL kontrolü ile login başarılı mı?
-        if "login" not in driver.current_url.lower():
-            print("✅ VTS'ye başarıyla giriş yapıldı!")
-            return True
-        else:
-            print("❌ Login başarısız olabilir, kontrol ediliyor...")
-            return False
-            
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("✅ Açık Chrome tarayıcısına bağlanıldı!")
+        return driver
     except Exception as e:
-        print(f"❌ Login hatası: {e}")
-        return False
+        print(f"❌ Chrome'a bağlanılamadı: {e}")
+        print("\n💡 ÇÖZÜM:")
+        print("Chrome'u şu şekilde başlatın:")
+        print('chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\\selenium\\chrome_profile"')
+        print("\nVEYA Windows için:")
+        print('"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\\selenium\\chrome_profile"')
+        return None
+
+def wait_for_vts_login(driver):
+    """Kullanıcının VTS'ye login olmasını bekle"""
+    print("\n⏳ VTS'ye login olmanız bekleniyor...")
+    print(f"📍 Lütfen şu adrese gidin: {VTS_URL}")
+    print("🔐 Kullanıcı adı ve şifrenizle giriş yapın")
+    print("\n✋ Giriş yaptıktan sonra ENTER tuşuna basın...")
+    
+    input()  # Kullanıcının ENTER'a basmasını bekle
+    
+    # URL kontrolü
+    current_url = driver.current_url
+    if VTS_URL in current_url and "login" not in current_url.lower():
+        print("✅ VTS'de oturum açık görünüyor!")
+        return True
+    else:
+        print("⚠️ VTS'de login olduğunuzdan emin olun")
+        return True  # Yine de devam et, token kontrolü yapacağız
 
 def extract_vts_token(driver):
     """VTS token'ını otomatik çek"""
@@ -222,42 +193,52 @@ def run_vts_scraper():
         return False
 
 def main():
-    """Ana fonksiyon - tam otomatik süreç"""
+    """Ana fonksiyon - basitleştirilmiş otomatik süreç"""
     print("=" * 60)
-    print("🚍 VTS OTOMATIK RUNNER")
+    print("🚍 VTS OTOMATIK RUNNER - Basit Versiyon")
     print("=" * 60)
     print()
-    
-    # Şifre kontrolü
-    if not VTS_PASSWORD:
-        print("❌ HATA: VTS_PASSWORD boş!")
-        print("Lütfen script'in başındaki VTS_PASSWORD değişkenine şifrenizi yazın.")
-        return
+    print("📋 ADIMLAR:")
+    print("1. Chrome'u debug modda başlatın")
+    print("2. VTS'ye manuel login yapın")
+    print("3. Script otomatik token çekip çalıştırır")
+    print()
     
     driver = None
     
     try:
-        # 1. Chrome WebDriver'ı başlat
-        print("🌐 Chrome tarayıcı açılıyor...")
-        driver = get_chrome_driver()
+        # 1. Açık Chrome'a bağlan
+        print("🌐 Chrome'a bağlanılıyor...")
+        driver = connect_to_existing_chrome()
         
-        # 2. VTS'ye login yap
-        login_success = login_to_vts(driver)
-        
-        if not login_success:
-            print("❌ Login başarısız, işlem durduruluyor.")
+        if not driver:
+            print("\n❌ Chrome'a bağlanılamadı!")
+            print("\n📝 NASIL YAPILIR:")
+            print("1. Tüm Chrome pencerelerini kapatın")
+            print("2. Şu komutu çalıştırın:")
+            print('   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=9222')
+            print("3. Bu script'i tekrar çalıştırın")
             return
         
+        # 2. Kullanıcının VTS'ye login olmasını bekle
+        wait_for_vts_login(driver)
+        
         # 3. Token'ı çek
+        print("\n📡 Token çekiliyor...")
         token = extract_vts_token(driver)
         
         if not token:
-            print("❌ Token alınamadı, işlem durduruluyor.")
-            print("\n💡 Manuel Token Alma Yöntemi:")
-            print("1. VTS'ye giriş yapın")
-            print("2. F12 > Application > Local Storage > access_token'ı kopyalayın")
-            print("3. vts_history_scraper_v2.py'deki token'ı manuel güncelleyin")
-            return
+            print("❌ Token alınamadı!")
+            print("\n💡 Manuel Token Alma:")
+            print("1. VTS'de F12 tuşuna basın")
+            print("2. Application > Local Storage > access_token'ı kopyalayın")
+            print("3. Aşağıya yapıştırın")
+            print()
+            token = input("Token'ı buraya yapıştırın: ").strip()
+            
+            if not token:
+                print("❌ Token girilmedi, işlem durduruluyor.")
+                return
         
         print(f"\n✅ Token başarıyla alındı!")
         print(f"Token uzunluğu: {len(token)} karakter")
@@ -270,8 +251,8 @@ def main():
             print("❌ Token güncelleme başarısız, işlem durduruluyor.")
             return
         
-        print("\n⏳ 3 saniye bekleniyor...")
-        time.sleep(3)
+        print("\n⏳ 2 saniye bekleniyor...")
+        time.sleep(2)
         
         # 5. VTS History Scraper'ı çalıştır
         run_vts_scraper()
@@ -289,12 +270,8 @@ def main():
         traceback.print_exc()
         
     finally:
-        # Tarayıcıyı kapat
-        if driver:
-            print("\n🔒 Tarayıcı kapatılıyor...")
-            time.sleep(2)
-            driver.quit()
-            print("✅ Tarayıcı kapatıldı.")
+        # Chrome'u açık bırak (kullanıcı kapatsın)
+        print("\n💡 Chrome penceresi açık bırakıldı. İsterseniz kapatabilirsiniz.")
 
 if __name__ == "__main__":
     main()
