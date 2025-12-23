@@ -219,7 +219,7 @@ def analyze_crossings_linear(history_data, plaka):
     Mantık:
     1. START_POINT'e yaklaşır (mesafe azalır)
     2. START_POINT'ten geçer (min mesafe)
-    3. START_POINT'ten 600m uzaklaşırsa (lineer artış) → GEÇERLİ GEÇİŞ
+    3. START_POINT'ten 500m uzaklaşırsa (lineer artış) → GEÇERLİ GEÇİŞ
     
     Bu sayede sadece START_POINT → DURAK yönünde hareket eden otobüsler tespit edilir.
     """
@@ -256,7 +256,7 @@ def analyze_crossings_linear(history_data, plaka):
     leaving_start_time = None
     leaving_start_lat = None
     leaving_start_lon = None
-    crossed_600m = False  # Bu uzaklaşma için 600m geçildi mi?
+    crossed_500m = False  # Bu uzaklaşma için 500m geçildi mi?
     
     for point in tracks:
         lat = point.get('lat')
@@ -290,14 +290,14 @@ def analyze_crossings_linear(history_data, plaka):
                 leaving_start_time = time_str
                 leaving_start_lat = lat
                 leaving_start_lon = lon
-                crossed_600m = False
+                crossed_500m = False
             
-            # UZAKLAŞMA DEVAM EDİYOR: 600m kontrolü
-            if is_leaving_start and not crossed_600m:
-                # Başlangıç mesafesi kaydedilmiş ve şimdi 600m'yi geçtik mi?
-                if leaving_start_distance is not None and distance_to_start > 600:
-                    # Başlangıç mesafesi 100-600m arası olmalı (çok yakın değil)
-                    if 100 <= leaving_start_distance < 600:
+            # UZAKLAŞMA DEVAM EDİYOR: 500m kontrolü
+            if is_leaving_start and not crossed_500m:
+                # Başlangıç mesafesi kaydedilmiş ve şimdi 500m'yi geçtik mi?
+                if leaving_start_distance is not None and distance_to_start > 500:
+                    # Başlangıç mesafesi 100-500m arası olmalı (çok yakın değil)
+                    if 100 <= leaving_start_distance < 500:
                         # DURAK'a yakınlık kontrolü
                         if leaving_start_lat and leaving_start_lon:
                             distance_to_durak = haversine_distance(
@@ -317,7 +317,7 @@ def analyze_crossings_linear(history_data, plaka):
                             
                             # DURAK'a makul mesafede mi?
                             if distance_to_durak < (start_durak_distance + 100):
-                                crossed_600m = True
+                                crossed_500m = True
                                 
                                 # Geçiş zamanı = UZAKLAŞMA BAŞLANGICI
                                 if leaving_start_time and len(leaving_start_time) >= 14:
@@ -336,7 +336,7 @@ def analyze_crossings_linear(history_data, plaka):
                             else:
                                 # DURAK'tan çok uzak
                                 print(f"      SKIP (Duraktan uzak: {distance_to_durak:.1f}m)")
-                                crossed_600m = True
+                                crossed_500m = True
         
         # YAKLAŞMA: START_POINT'e yaklaşıyor (giriş yapıyor - IGNORE)
         elif distance_change < -5:
@@ -347,7 +347,7 @@ def analyze_crossings_linear(history_data, plaka):
                 leaving_start_time = None
                 leaving_start_lat = None
                 leaving_start_lon = None
-                crossed_600m = False
+                crossed_500m = False
         
         # Mesafe sabit - değişiklik yok
         else:
@@ -517,7 +517,7 @@ def main():
                             })
                             break  # Bu geçiş için ilk uygun tarife bulundu
                 
-                # ADIM 2: Her grup için EN ERKEN geçişi seç (600m+ lineer artış sonrası ilk geçiş)
+                # ADIM 2: Her grup için EN ERKEN geçişi seç (500m+ lineer artış sonrası ilk geçiş)
                 filtered_gecisler = []
                 
                 for key, matches in gecis_grouped.items():
