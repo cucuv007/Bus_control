@@ -2737,8 +2737,8 @@ function renderDepolamaCheckboxes() {
       'Otogar Depolama': ['OTOGAR'],
       'Sarısu Depolama': ['SARISU', 'GÜRSU'],
       'Ünsal Depolama': ['ÜNSAL'],
-      'Varsak Aktarma Depolama': ['VARSAK ALTIAYAK'],
-      'Varsak Altıayak Depolama': ['VARSAK AKTARMA']
+      'Varsak Aktarma Depolama': ['VARSAK AKTARMA'],
+      'Varsak Altıayak Depolama': ['VARSAK ALTIAYAK']
     };
     
     console.log('🔍 Erişim kontrolü:', depolamaAccess[username] ? 'Bulundu' : 'Bulunamadı');
