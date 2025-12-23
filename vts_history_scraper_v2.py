@@ -298,7 +298,6 @@ def analyze_crossings_linear(history_data, plaka):
                 if leaving_start_distance is not None and distance_to_start > 600:
                     # Başlangıç mesafesi 100-600m arası olmalı (çok yakın değil)
                     if 100 <= leaving_start_distance < 600:
-                    if 100 <= leaving_start_distance < 600:
                         # DURAK'a yakınlık kontrolü
                         if leaving_start_lat and leaving_start_lon:
                             distance_to_durak = haversine_distance(
