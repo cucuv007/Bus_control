@@ -489,31 +489,24 @@ def main():
                 
                 guncellenen = 0
                 
-                # Her geçişi tarife ile eşleştir
-                for idx, gecis in enumerate(tum_gecisler, 1):
+                # Zaman parse fonksiyonu
+                def time_to_minutes(t):
+                    if isinstance(t, str):
+                        h, m = map(int, t.split(':')[:2])
+                    else:
+                        h, m = t.hour, t.minute
+                    return h * 60 + m
+                
+                # ADIM 1: Geçişleri plaka ve tarife bazında grupla
+                # Aynı plaka için aynı tarifeye yakın geçişler varsa, EN ERKEN olanı al
+                gecis_grouped = {}  # Key: (plaka, tarife_saati), Value: list of geçişler
+                
+                for gecis in tum_gecisler:
                     plaka = gecis['plaka']
-                    gecis_zamani = gecis['gecis_zamani'].strftime('%H:%M:%S')
-                    
-                    print(f"\n[{idx}/{len(tum_gecisler)}] {plaka} - {gecis_zamani}")
-                    
-                    # Zaman parse
-                    def time_to_minutes(t):
-                        if isinstance(t, str):
-                            h, m = map(int, t.split(':')[:2])
-                        else:
-                            h, m = t.hour, t.minute
-                        return h * 60 + m
-                    
                     gecis_mins = time_to_minutes(gecis['gecis_zamani'])
                     
-                    # En yakın tarife satırını bul (±30 dakika)
-                    best_match = None
-                    best_diff = 9999
-                    
-                    print(f"   🔍 Tarife satırlarında eşleşme aranıyor...")
-                    
+                    # Bu geçişe uygun tarife bul
                     for row in tarife_rows:
-                        # Plaka eşleşmesi
                         if row.get('Plaka') != plaka:
                             continue
                         
@@ -524,9 +517,46 @@ def main():
                         tarife_mins = time_to_minutes(tarife_saati)
                         fark = abs(tarife_mins - gecis_mins)
                         
-                        if fark <= 30 and fark < best_diff:
-                            best_diff = fark
-                            best_match = row
+                        if fark <= 30:  # ±30 dakika içinde
+                            key = (plaka, tarife_saati)
+                            if key not in gecis_grouped:
+                                gecis_grouped[key] = []
+                            gecis_grouped[key].append({
+                                'gecis': gecis,
+                                'tarife_row': row,
+                                'fark': fark
+                            })
+                            break  # Bu geçiş için ilk uygun tarife bulundu
+                
+                # ADIM 2: Her grup için EN ERKEN geçişi seç (600m+ lineer artış sonrası ilk geçiş)
+                filtered_gecisler = []
+                
+                for key, matches in gecis_grouped.items():
+                    if len(matches) > 1:
+                        # Birden fazla geçiş var, EN ERKEN olanı al
+                        matches_sorted = sorted(matches, key=lambda x: x['gecis']['gecis_zamani'])
+                        selected = matches_sorted[0]
+                        print(f"\n⚠️  {key[0]} - Tarife {key[1]}: {len(matches)} geçiş bulundu, EN ERKEN seçildi:")
+                        for m in matches_sorted:
+                            marker = "✅ SEÇİLDİ" if m == selected else "❌ ATLANDI"
+                            print(f"   {marker} {m['gecis']['gecis_zamani'].strftime('%H:%M:%S')} (Fark: {m['fark']} dk)")
+                        filtered_gecisler.append(selected)
+                    else:
+                        # Tek geçiş var, direkt al
+                        filtered_gecisler.append(matches[0])
+                
+                # ADIM 3: Filtrelenmiş geçişleri işle
+                for idx, item in enumerate(filtered_gecisler, 1):
+                    gecis = item['gecis']
+                    best_match = item['tarife_row']
+                    best_diff = item['fark']
+                    
+                    plaka = gecis['plaka']
+                    gecis_zamani = gecis['gecis_zamani'].strftime('%H:%M:%S')
+                    
+                    print(f"\n[{idx}/{len(filtered_gecisler)}] {plaka} - {gecis_zamani}")
+                    print(f"   🔍 Tarife satırlarında eşleşme aranıyor...")
+                    print(f"   🔍 Tarife satırlarında eşleşme aranıyor...")
                     
                     if best_match:
                         print(f"   ✅ Eşleşme bulundu: Tarife {best_match.get('Tarife_Saati')} (Fark: {best_diff} dk)")
