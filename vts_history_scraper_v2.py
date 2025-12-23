@@ -311,7 +311,11 @@ def analyze_crossings_linear(history_data, plaka):
             
             # START_POINT'ten uzaklaşırken 600m'yi geçti mi?
             if is_leaving_start and min_distance_to_start is not None:
-                if not crossed_600m and distance_to_start > 600 and min_distance_to_start < 600:
+                # Geçiş kriteri:
+                # 1. En yakın mesafe 100-500m arası olmalı (çok yakına gelirse park/durma olabilir)
+                # 2. Şu an 600m'den uzak olmalı
+                # 3. Lineer artış olmalı (yaklaşma → uzaklaşma)
+                if not crossed_600m and distance_to_start > 600 and 100 <= min_distance_to_start < 600:
                     # Geçiş zamanında DURAK'a ne kadar yakındı?
                     if min_distance_lat and min_distance_lon:
                         distance_to_durak = haversine_distance(
