@@ -359,15 +359,16 @@ def analyze_crossings_linear(history_data, plaka):
                                 print(f"      SKIP (Duraktan uzak: {distance_to_durak:.1f}m)")
                                 crossed_500m = True
         
-        # YAKLAŞMA: START_POINT'e yaklaşıyor (giriş yapıyor - IGNORE)
+        # YAKLAŞMA: START_POINT'e yaklaşıyor (geriş yapıyor - IGNORE)
         elif distance_change < -5:
-            # Uzaklaşma fazı bittiyse sıfırla
+            # Uzaklaşma fazı bittiyse sıfırla (yeni döngü için hazırla)
             if is_leaving_start:
                 is_leaving_start = False
                 leaving_start_distance = None
                 leaving_start_time = None
                 leaving_start_lat = None
                 leaving_start_lon = None
+                crossed_500m = False  # YENİ ÇIKIŞ DÖNGÜSİ İÇİN SIFIRLA
                 crossed_500m = False
         
         # Mesafe sabit - değişiklik yok
