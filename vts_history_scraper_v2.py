@@ -243,7 +243,7 @@ def analyze_crossings_linear(history_data, plaka):
     
     if not tracks:
         print(f"   Veri yok")
-        return []
+        return [], {'min_dist': None, 'max_dist': None, 'leaving_triggered': False, 'leaving_start_dist': None}
     
     print(f"   {len(tracks)} nokta analiz ediliyor...")
     
@@ -257,6 +257,12 @@ def analyze_crossings_linear(history_data, plaka):
     leaving_start_lat = None
     leaving_start_lon = None
     crossed_500m = False  # Bu uzaklaşma için 500m geçildi mi?
+    
+    # Debug tracking
+    min_distance_to_start = float('inf')
+    max_distance_to_start = 0
+    leaving_ever_triggered = False
+    debug_leaving_start_distance = None
     
     for point in tracks:
         lat = point.get('lat')
@@ -272,6 +278,12 @@ def analyze_crossings_linear(history_data, plaka):
             START_POINT['boylam'],
             lat, lon
         )
+        
+        # Debug: Track min/max distances
+        if distance_to_start < min_distance_to_start:
+            min_distance_to_start = distance_to_start
+        if distance_to_start > max_distance_to_start:
+            max_distance_to_start = distance_to_start
         
         # İlk nokta
         if previous_distance_to_start is None:
@@ -293,6 +305,9 @@ def analyze_crossings_linear(history_data, plaka):
                     leaving_start_lat = lat
                     leaving_start_lon = lon
                     crossed_500m = False
+                    # Debug tracking
+                    leaving_ever_triggered = True
+                    debug_leaving_start_distance = leaving_start_distance
                 # Eğer zaten 400m+ uzaktaysa, bu uzaklaşma geçersiz (0'dan başlamadı)
                 else:
                     # 0 noktasından başlamadan uzaklaşıyor, ignore
@@ -302,8 +317,8 @@ def analyze_crossings_linear(history_data, plaka):
             if is_leaving_start and not crossed_500m:
                 # Başlangıç mesafesi kaydedilmiş ve şimdi 500m'yi geçtik mi?
                 if leaving_start_distance is not None and distance_to_start > 500:
-                    # Başlangıç mesafesi 100-500m arası olmalı (çok yakın değil)
-                    if 100 <= leaving_start_distance < 500:
+                    # Başlangıç mesafesi 10-500m arası olmalı (çok yakında bile olabilir)
+                    if 10 <= leaving_start_distance < 500:
                         # DURAK'a yakınlık kontrolü
                         if leaving_start_lat and leaving_start_lon:
                             distance_to_durak = haversine_distance(
@@ -361,7 +376,15 @@ def analyze_crossings_linear(history_data, plaka):
         
         previous_distance_to_start = distance_to_start
     
-    return gecisler
+    # Return crossings and debug info
+    debug_info = {
+        'min_dist': min_distance_to_start if min_distance_to_start != float('inf') else 0,
+        'max_dist': max_distance_to_start,
+        'leaving_triggered': leaving_ever_triggered,
+        'leaving_start_dist': debug_leaving_start_distance
+    }
+    
+    return gecisler, debug_info
 
 def main():
     print("="*70)
@@ -418,11 +441,15 @@ def main():
             if history:
                 print(f"   ✅ {len(history)} konum verisi alındı")
                 print(f"   🔍 Geçişler analiz ediliyor...")
-                gecisler = analyze_crossings_linear(history, plaka)
+                gecisler, debug_info = analyze_crossings_linear(history, plaka)
                 tum_gecisler.extend(gecisler)
                 if len(gecisler) > 0:
                     print(f"   ✅ {len(gecisler)} geçiş tespit edildi")
                 else:
+                    # Debug output for problematic routes
+                    if route_code in ['400', '521C', 'KL08', 'KL08G', 'SD20', 'SD20A', 'VS18']:
+                        leaving_dist_str = f"{debug_info['leaving_start_dist']:.1f}" if debug_info['leaving_start_dist'] is not None else "None"
+                        print(f"   🐛 DEBUG: min_dist={debug_info['min_dist']:.1f}m, max_dist={debug_info['max_dist']:.1f}m, leaving_triggered={debug_info['leaving_triggered']}, leaving_start_dist={leaving_dist_str}m")
                     print(f"   ⚠️  Geçiş tespit edilemedi")
             else:
                 print(f"   ❌ VTS verisi alınamadı")
