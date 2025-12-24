@@ -249,7 +249,7 @@ def analyze_crossings_linear(history_data, plaka):
     
     gecisler = []
     
-    # Durum takibi (START_POINT bazlı - SADECE UZAKLAŞMA)
+    # Durum takibi (START_POINT bazlı - 0 NOKTASINDAN BAŞLAYAN UZAKLAŞMA)
     previous_distance_to_start = None
     is_leaving_start = False  # UZAKLAŞMA fazında mı?
     leaving_start_distance = None  # Uzaklaşma başlangıç mesafesi
@@ -282,15 +282,21 @@ def analyze_crossings_linear(history_data, plaka):
         distance_change = distance_to_start - previous_distance_to_start
         
         # UZAKLAŞMA BAŞLANGICI: START_POINT'ten uzaklaşmaya başladı
+        # ÖNEMLİ: SADECE 0 NOKTASINA YAKINKEN (0-200m) başlayan uzaklaşmalar geçerli
         if distance_change > 5:  # 5m'den fazla artış
             if not is_leaving_start:
-                # Yeni uzaklaşma fazı başladı
-                is_leaving_start = True
-                leaving_start_distance = previous_distance_to_start  # Uzaklaşmaya başladığı mesafe
-                leaving_start_time = time_str
-                leaving_start_lat = lat
-                leaving_start_lon = lon
-                crossed_500m = False
+                # Yeni uzaklaşma fazı - SADECE 0 NOKTASINA YAKINKEN başlamalı
+                if previous_distance_to_start < 200:  # 200m içindeyse geçerli başlangıç
+                    is_leaving_start = True
+                    leaving_start_distance = previous_distance_to_start  # Uzaklaşmaya başladığı mesafe
+                    leaving_start_time = time_str
+                    leaving_start_lat = lat
+                    leaving_start_lon = lon
+                    crossed_500m = False
+                # Eğer zaten 200m+ uzaktaysa, bu uzaklaşma geçersiz (0'dan başlamadı)
+                else:
+                    # 0 noktasından başlamadan uzaklaşıyor, ignore
+                    pass
             
             # UZAKLAŞMA DEVAM EDİYOR: 500m kontrolü
             if is_leaving_start and not crossed_500m:
