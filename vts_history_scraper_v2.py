@@ -448,8 +448,11 @@ def main():
                 else:
                     # Debug output for problematic routes
                     if route_code in ['400', '521C', 'KL08', 'KL08G', 'SD20', 'SD20A', 'VS18']:
-                        leaving_dist_str = f"{debug_info['leaving_start_dist']:.1f}" if debug_info['leaving_start_dist'] is not None else "None"
-                        print(f"   🐛 DEBUG: min_dist={debug_info['min_dist']:.1f}m, max_dist={debug_info['max_dist']:.1f}m, leaving_triggered={debug_info['leaving_triggered']}, leaving_start_dist={leaving_dist_str}m")
+                        if debug_info['min_dist'] is not None and debug_info['max_dist'] is not None:
+                            leaving_dist_str = f"{debug_info['leaving_start_dist']:.1f}" if debug_info['leaving_start_dist'] is not None else "None"
+                            print(f"   🐛 DEBUG: min_dist={debug_info['min_dist']:.1f}m, max_dist={debug_info['max_dist']:.1f}m, leaving_triggered={debug_info['leaving_triggered']}, leaving_start_dist={leaving_dist_str}m")
+                        else:
+                            print(f"   🐛 DEBUG: No GPS data available")
                     print(f"   ⚠️  Geçiş tespit edilemedi")
             else:
                 print(f"   ❌ VTS verisi alınamadı")
