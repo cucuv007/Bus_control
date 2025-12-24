@@ -317,8 +317,8 @@ def analyze_crossings_linear(history_data, plaka):
             if is_leaving_start and not crossed_500m:
                 # Başlangıç mesafesi kaydedilmiş ve şimdi 500m'yi geçtik mi?
                 if leaving_start_distance is not None and distance_to_start > 500:
-                    # Başlangıç mesafesi 10-500m arası olmalı (çok yakında bile olabilir)
-                    if 10 <= leaving_start_distance < 500:
+                    # Başlangıç mesafesi 100-500m arası olmalı (çok yakın olan dönüş hareketleri değil)
+                    if 100 <= leaving_start_distance < 500:
                         # DURAK'a yakınlık kontrolü
                         if leaving_start_lat and leaving_start_lon:
                             distance_to_durak = haversine_distance(
