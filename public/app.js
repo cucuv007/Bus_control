@@ -1985,7 +1985,6 @@ async function loadTableData() {
     data.forEach(row => {
       const tr = document.createElement('tr');
       tr.dataset.rowData = JSON.stringify(row);
-      allKeys.forEach(k => {SON.stringify(row);
       allKeys.forEach(k => {
         const td = document.createElement('td');
         const value = row[k];
@@ -2180,11 +2179,11 @@ async function loadTableData() {
           this.disabled = false;
           alert(`✅ ${processed} satırın açıklama ikonu yenilendi!`);
         }
-      });
-    }
+      }); // addEventListener kapandı
+    } // if (refreshAllCheckbox) kapandı
     
     let filterMsg = currentHareket ? ` (${currentHareket})` : '';
-    statusEl.innerHTML = `Başarılı: ${data.length} kayıt alındı${filterMsg} <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timer'ı Tekrar Aç">⏱️</span>`;
+    statusEl.innerHTML = `Başarılı: ${data.length} kayıt alındı${filterMsg} <span id="reopenTimerIcon" class="reopen-timer-icon" title="Timerı Tekrar Aç">⏱️</span>`;
     meta.textContent = `Tablo: ${currentTable} | Toplam sütun: ${allKeys.length}`;
     
     // Kronometre ikonunu referans al
