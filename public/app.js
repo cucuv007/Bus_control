@@ -1984,6 +1984,8 @@ async function loadTableData() {
     tbody.innerHTML = '';
     data.forEach(row => {
       const tr = document.createElement('tr');
+      tr.dataset.rowData = JSON.stringify(row);
+      allKeys.forEach(k => {SON.stringify(row);
       allKeys.forEach(k => {
         const td = document.createElement('td');
         const value = row[k];
@@ -3751,6 +3753,7 @@ async function handleApplyHatSelection() {
     tbody.innerHTML = '';
     allData.forEach(row => {
       const tr = document.createElement('tr');
+      tr.dataset.rowData = JSON.stringify(row);
       allKeys.forEach(k => {
         const td = document.createElement('td');
         const value = row[k];
@@ -4087,6 +4090,7 @@ async function refreshTableData(hatList, hareket) {
     tbody.innerHTML = '';
     allData.forEach(row => {
       const tr = document.createElement('tr');
+      tr.dataset.rowData = JSON.stringify(row);
       allKeys.forEach(k => {
         const td = document.createElement('td');
         const value = row[k];
@@ -6720,17 +6724,20 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
           messageIcon.title = 'Açıklama mesajlarını görüntüle';
           messageIcon.onclick = (e) => {
             e.stopPropagation();
-            // Row datasını bul
+            // Row datasını TR elementinden al
             const tr = cell.closest('tr');
-            const cells = tr.querySelectorAll('td');
-            const headers = Array.from(document.querySelectorAll('thead th')).map(th => th.textContent.trim());
-            const rowData = {};
-            cells.forEach((td, i) => {
-              if (headers[i] && !headers[i].includes('💬')) {
-                rowData[headers[i]] = td.textContent;
-              }
-            });
-            openRowAciklamaModal(rowData);
+            const rowDataStr = tr.dataset.rowData;
+            if (rowDataStr) {
+              const rowData = JSON.parse(rowDataStr);
+              openRowAciklamaModal(rowData);
+            } else {
+              // Fallback: En azından key alanları kullan
+              openRowAciklamaModal({
+                Hat_Adi: hatAdi,
+                Tarife: tarife,
+                Tarife_Saati: tarifeSaati
+              });
+            }
           };
           cell.appendChild(messageIcon);
         } else {
@@ -6745,16 +6752,20 @@ async function updateAciklamaIconsForRow(hatAdi, tarife, tarifeSaati) {
           refreshIcon.onclick = async (e) => {
             e.stopPropagation();
             refreshIcon.style.opacity = '0.3';
-            // Row data'yı bul
+            // Row data'yı TR elementinden al
             const tr = cell.closest('tr');
-            const cells = tr.querySelectorAll('td');
-            const headers = Array.from(document.querySelectorAll('thead th')).map(th => th.textContent.trim());
-            const rowData = {};
-            cells.forEach((td, i) => {
-              if (headers[i] && !headers[i].includes('💬')) {
-                rowData[headers[i]] = td.textContent;
-              }
-            });
+            const rowDataStr = tr.dataset.rowData;
+            let rowData = null;
+            if (rowDataStr) {
+              rowData = JSON.parse(rowDataStr);
+            } else {
+              // Fallback: En azından key alanları kullan
+              rowData = {
+                Hat_Adi: hatAdi,
+                Tarife: tarife,
+                Tarife_Saati: tarifeSaati
+              };
+            }
             
             const hasAciklama = await checkRowHasAciklama(rowData);
             const cacheKey = `${hatAdi}|${tarife}|${tarifeSaati}`;
