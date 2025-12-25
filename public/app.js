@@ -2154,15 +2154,18 @@ async function loadTableData() {
                 messageIcon.onclick = (e) => {
                   e.stopPropagation();
                   const tr = iconCell.closest('tr');
-                  const cells = tr.querySelectorAll('td');
-                  const headers = Array.from(theadRow.querySelectorAll('th')).map(th => th.textContent.trim());
-                  const fullRowData = {};
-                  cells.forEach((cell, i) => {
-                    if (headers[i] && !headers[i].includes('💬')) {
-                      fullRowData[headers[i]] = cell.textContent;
-                    }
-                  });
-                  openRowAciklamaModal(fullRowData);
+                  const rowDataStr = tr.dataset.rowData;
+                  if (rowDataStr) {
+                    const fullRowData = JSON.parse(rowDataStr);
+                    openRowAciklamaModal(fullRowData);
+                  } else {
+                    // Fallback: Key alanları kullan
+                    openRowAciklamaModal({
+                      Hat_Adi: hatAdi,
+                      Tarife: tarife,
+                      Tarife_Saati: tarifeSaati
+                    });
+                  }
                 };
                 iconCell.appendChild(messageIcon);
               }
