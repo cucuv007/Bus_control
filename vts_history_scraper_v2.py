@@ -61,6 +61,12 @@ START_POINT = {
     'boylam': 30.596079
 }
 
+# İkinci kontrol noktası (Hedef yön - gerçek çıkışlar bu yöne gider)
+KONTROL_NOKTASI = {
+    'enlem': 36.836035,
+    'boylam': 30.595817
+}
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     """İki koordinat arası mesafe (metre)"""
     from math import radians, cos, sin, asin, sqrt
@@ -249,14 +255,17 @@ def analyze_crossings_linear(history_data, plaka):
     
     gecisler = []
     
-    # Durum takibi (START_POINT bazlı - 0 NOKTASINDAN BAŞLAYAN UZAKLAŞMA)
+    # YENİ MANTIK: YÖN BAZLI TESPİT
+    # START_POINT -> KONTROL_NOKTASI yönünde hareket eden araçları tespit et
+    
+    previous_lat = None
+    previous_lon = None
     previous_distance_to_start = None
-    is_leaving_start = False  # UZAKLAŞMA fazında mı?
-    leaving_start_distance = None  # Uzaklaşma başlangıç mesafesi
-    leaving_start_time = None
-    leaving_start_lat = None
-    leaving_start_lon = None
-    crossed_500m = False  # Bu uzaklaşma için 500m geçildi mi?
+    
+    is_moving_to_control = False  # START_POINT'ten KONTROL_NOKTASI'na doğru mu gidiyor?
+    movement_start_time = None
+    movement_start_distance = None
+    total_distance_moved = 0  # START_POINT'ten ne kadar uzaklaştı
     
     # Debug tracking
     min_distance_to_start = float('inf')
@@ -279,102 +288,118 @@ def analyze_crossings_linear(history_data, plaka):
             lat, lon
         )
         
+        # KONTROL_NOKTASI'na olan mesafe
+        distance_to_control = haversine_distance(
+            KONTROL_NOKTASI['enlem'],
+            KONTROL_NOKTASI['boylam'],
+            lat, lon
+        )
+        
         # Debug: Track min/max distances
         if distance_to_start < min_distance_to_start:
             min_distance_to_start = distance_to_start
         if distance_to_start > max_distance_to_start:
             max_distance_to_start = distance_to_start
         
-        # İlk nokta
-        if previous_distance_to_start is None:
+        # İlk nokta - referans olarak sakla
+        if previous_lat is None or previous_lon is None:
+            previous_lat = lat
+            previous_lon = lon
             previous_distance_to_start = distance_to_start
             continue
         
-        # Mesafe değişimi
-        distance_change = distance_to_start - previous_distance_to_start
+        # Önceki noktadan bu noktaya hareket mesafesi
+        movement_distance = haversine_distance(previous_lat, previous_lon, lat, lon)
         
-        # UZAKLAŞMA BAŞLANGICI: START_POINT'ten uzaklaşmaya başladı
-        # ÖNEMLİ: SADECE 0 NOKTASINA YAKINKEN (0-400m) başlayan uzaklaşmalar geçerli
-        if distance_change > 5:  # 5m'den fazla artış
-            if not is_leaving_start:
-                # Yeni uzaklaşma fazı - SADECE 0 NOKTASINA YAKINKEN başlamalı
-                if previous_distance_to_start < 400:  # 400m içindeyse geçerli başlangıç
-                    is_leaving_start = True
-                    leaving_start_distance = previous_distance_to_start  # Uzaklaşmaya başladığı mesafe
-                    leaving_start_time = time_str
-                    leaving_start_lat = lat
-                    leaving_start_lon = lon
-                    crossed_500m = False
+        # START_POINT'e yakınlık kontrolü (400m içinde mi?)
+        if distance_to_start < 400:
+            # YÖN KONTROLÜ: START_POINT -> KONTROL_NOKTASI yönünde mi?
+            # Önceki nokta START_POINT'e daha yakınsa VE şimdi KONTROL_NOKTASI'na yaklaşıyorsa
+            previous_distance_to_control = haversine_distance(
+                KONTROL_NOKTASI['enlem'],
+                KONTROL_NOKTASI['boylam'],
+                previous_lat, previous_lon
+            )
+            
+            # Doğru yön: START_POINT'ten uzaklaşıyor VE KONTROL_NOKTASI'na yaklaşıyor
+            moving_away_from_start = distance_to_start > previous_distance_to_start
+            moving_toward_control = distance_to_control < previous_distance_to_control
+            
+            if moving_away_from_start and moving_toward_control and movement_distance > 5:
+                if not is_moving_to_control:
+                    # Hareket başladı!
+                    is_moving_to_control = True
+                    movement_start_time = time_str
+                    movement_start_distance = previous_distance_to_start
+                    total_distance_moved = 0
+                    
                     # Debug tracking
                     leaving_ever_triggered = True
-                    debug_leaving_start_distance = leaving_start_distance
-                # Eğer zaten 400m+ uzaktaysa, bu uzaklaşma geçersiz (0'dan başlamadı)
-                else:
-                    # 0 noktasından başlamadan uzaklaşıyor, ignore
-                    pass
-            
-            # UZAKLAŞMA DEVAM EDİYOR: 500m kontrolü
-            if is_leaving_start and not crossed_500m:
-                # Başlangıç mesafesi kaydedilmiş ve şimdi 500m'yi geçtik mi?
-                if leaving_start_distance is not None and distance_to_start > 500:
-                    # Başlangıç mesafesi 50-500m arası olmalı (çok yakın olan dönüş hareketleri değil)
-                    if 50 <= leaving_start_distance < 500:
+                    debug_leaving_start_distance = movement_start_distance
+                
+                # Hareket devam ediyor
+                if is_moving_to_control:
+                    total_distance_moved += movement_distance
+                    
+                    # 200m KONTROL: KONTROL_NOKTASI yönünde 200m hareket etti mi?
+                    if total_distance_moved >= 200:
                         # DURAK'a yakınlık kontrolü
-                        if leaving_start_lat and leaving_start_lon:
-                            distance_to_durak = haversine_distance(
-                                DURAK_CONFIG['enlem'],
-                                DURAK_CONFIG['boylam'],
-                                leaving_start_lat,
-                                leaving_start_lon
-                            )
-                            
-                            # START_POINT ile DURAK arası mesafe
-                            start_durak_distance = haversine_distance(
-                                START_POINT['enlem'],
-                                START_POINT['boylam'],
-                                DURAK_CONFIG['enlem'],
-                                DURAK_CONFIG['boylam']
-                            )
-                            
-                            # DURAK'a makul mesafede mi?
-                            if distance_to_durak < (start_durak_distance + 100):
-                                crossed_500m = True
+                        distance_to_durak = haversine_distance(
+                            DURAK_CONFIG['enlem'],
+                            DURAK_CONFIG['boylam'],
+                            lat, lon
+                        )
+                        
+                        # START_POINT ile DURAK arası mesafe
+                        start_durak_distance = haversine_distance(
+                            START_POINT['enlem'],
+                            START_POINT['boylam'],
+                            DURAK_CONFIG['enlem'],
+                            DURAK_CONFIG['boylam']
+                        )
+                        
+                        # DURAK'a makul mesafede mi?
+                        if distance_to_durak < (start_durak_distance + 100):
+                            # GEÇİŞ TESPİT EDİLDİ!
+                            if movement_start_time and len(movement_start_time) >= 14:
+                                gecis_time = datetime.strptime(movement_start_time[:14], '%Y%m%d%H%M%S')
                                 
-                                # Geçiş zamanı = UZAKLAŞMA BAŞLANGICI
-                                if leaving_start_time and len(leaving_start_time) >= 14:
-                                    gecis_time = datetime.strptime(leaving_start_time[:14], '%Y%m%d%H%M%S')
-                                    
-                                    gecis = {
-                                        'plaka': plaka,
-                                        'durak_adi': DURAK_CONFIG['adi'],
-                                        'gecis_zamani': gecis_time,
-                                        'min_mesafe': round(leaving_start_distance, 1),
-                                        'cikis_mesafe': round(distance_to_start, 1)
-                                    }
-                                    
-                                    gecisler.append(gecis)
-                                    print(f"      OK {gecis_time.strftime('%H:%M:%S')} - StartDist: {leaving_start_distance:.1f}m, Exit: {distance_to_start:.1f}m, DurakDist: {distance_to_durak:.1f}m")
-                            else:
-                                # DURAK'tan çok uzak
-                                print(f"      SKIP (Duraktan uzak: {distance_to_durak:.1f}m)")
-                                crossed_500m = True
-        
-        # YAKLAŞMA: START_POINT'e yaklaşıyor (geriş yapıyor - IGNORE)
-        elif distance_change < -5:
-            # Uzaklaşma fazı bittiyse sıfırla (yeni döngü için hazırla)
-            if is_leaving_start:
-                is_leaving_start = False
-                leaving_start_distance = None
-                leaving_start_time = None
-                leaving_start_lat = None
-                leaving_start_lon = None
-                crossed_500m = False  # YENİ ÇIKIŞ DÖNGÜSİ İÇİN SIFIRLA
-                crossed_500m = False
-        
-        # Mesafe sabit - değişiklik yok
+                                gecis = {
+                                    'plaka': plaka,
+                                    'durak_adi': DURAK_CONFIG['adi'],
+                                    'gecis_zamani': gecis_time,
+                                    'min_mesafe': round(movement_start_distance, 1),
+                                    'cikis_mesafe': round(total_distance_moved, 1)
+                                }
+                                
+                                gecisler.append(gecis)
+                                print(f"      OK {gecis_time.strftime('%H:%M:%S')} - StartDist: {movement_start_distance:.1f}m, Moved: {total_distance_moved:.1f}m, DurakDist: {distance_to_durak:.1f}m")
+                        else:
+                            print(f"      SKIP (Duraktan uzak: {distance_to_durak:.1f}m)")
+                        
+                        # Reset için hareket durduğunda
+                        is_moving_to_control = False
+                        movement_start_time = None
+                        movement_start_distance = None
+                        total_distance_moved = 0
+            else:
+                # Ters yön veya duruş - reset
+                if is_moving_to_control:
+                    is_moving_to_control = False
+                    movement_start_time = None
+                    movement_start_distance = None
+                    total_distance_moved = 0
         else:
-            pass
+            # 400m'den uzakta - reset
+            if is_moving_to_control:
+                is_moving_to_control = False
+                movement_start_time = None
+                movement_start_distance = None
+                total_distance_moved = 0
         
+        # Bir sonraki iterasyon için güncelle
+        previous_lat = lat
+        previous_lon = lon
         previous_distance_to_start = distance_to_start
     
     # Return crossings and debug info
