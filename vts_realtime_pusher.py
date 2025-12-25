@@ -66,15 +66,17 @@ def fetch_vts_data():
         
         print(f"✅ VTS: {len(all_vehicles)} toplam, {len(sa65_vehicles)} SA65 araç")
         
-        # Geofence kontrolü - durak geçişlerini tespit et
-        gecisler = []
+        # Geofence kontrolü - TÜM duraklar için geçişleri tespit et
+        tum_gecisler = []
         for vehicle in sa65_vehicles:
-            gecis = check_vehicle_crossing(vehicle)
-            if gecis:
-                gecisler.append(gecis)
+            gecisler = check_vehicle_crossing(vehicle)  # Artık liste dönüyor
+            if gecisler:
+                tum_gecisler.extend(gecisler)
         
-        if gecisler:
-            print(f"🎯 {len(gecisler)} yeni durak geçişi tespit edildi!")
+        if tum_gecisler:
+            print(f"🎯 {len(tum_gecisler)} yeni durak geçişi tespit edildi!")
+            for gecis in tum_gecisler:
+                print(f"   📍 {gecis['durak_adi']}: {gecis['plaka']}")
         
         return sa65_vehicles
         
