@@ -1,0 +1,35 @@
+<!-- Icon generator - Bu HTML'i tarayıcıda açın, sağ tık -> Save Image As -> icon.png -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Generator</title>
+</head>
+<body>
+  <canvas id="canvas" width="128" height="128"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 128, 128);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    
+    // Bus icon (simple)
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 80px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🚍', 64, 64);
+    
+    // Download link
+    const link = document.createElement('a');
+    link.download = 'icon.png';
+    link.href = canvas.toDataURL();
+    link.textContent = 'Download icon.png';
+    document.body.appendChild(link);
+  </script>
+</body>
+</html>

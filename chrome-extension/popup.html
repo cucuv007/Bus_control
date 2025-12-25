@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .token-info {
+      background: rgba(255,255,255,0.1);
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    .button {
+      width: 100%;
+      padding: 10px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .button:hover {
+      background: #229954;
+    }
+    .status {
+      text-align: center;
+      padding: 8px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .success { background: rgba(39, 174, 96, 0.3); }
+    .error { background: rgba(231, 76, 60, 0.3); }
+  </style>
+</head>
+<body>
+  <div class="title">🚀 VTS Token Extractor</div>
+  
+  <div class="token-info">
+    <strong>Durum:</strong> <span id="status">Kontrol ediliyor...</span><br>
+    <strong>Token:</strong> <span id="tokenPreview">-</span><br>
+    <small id="timestamp"></small>
+  </div>
+  
+  <button class="button" id="copyBtn">📋 Token'ı Kopyala</button>
+  <button class="button" id="openVtsBtn">🌐 VTS'yi Aç</button>
+  <button class="button" id="sendToAppBtn">🚍 Ana Uygulamaya Gönder</button>
+  
+  <div id="message"></div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

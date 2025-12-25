@@ -97,8 +97,22 @@ def check_vehicle_crossing(vehicle: Dict) -> Optional[Dict]:
         time_in_zone = (current_time - state['enter_time']).total_seconds()
         state['last_check'] = current_time
         
-        # 2 saniye zone içinde kaldıysa geçiş yaptı
+        # 2 saniye zone içinde kaldıysa VE konum değiştiyse geçiş yaptı
         if time_in_zone >= 2.0:
+            # Konum değişimi kontrolü (en az 5 metre hareket etmeli)
+            if state['last_pos']:
+                hareket_mesafesi = haversine_distance(
+                    state['last_pos'][0], state['last_pos'][1],
+                    lat, lon
+                )
+                
+                # Park halinde mi? (5 metreden az hareket)
+                if hareket_mesafesi < 5.0:
+                    print(f"🟠 {plaka} park halinde - hareket yok ({hareket_mesafesi:.1f}m)")
+                    # Zone'dan çıkana kadar bekle
+                    return None
+            
+            # Durağa olan mesafe
             mesafe = haversine_distance(
                 DURAK_CONFIG['enlem'], 
                 DURAK_CONFIG['boylam'],

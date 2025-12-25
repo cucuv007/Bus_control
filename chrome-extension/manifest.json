@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "VTS Token Auto Extractor",
+  "version": "1.0",
+  "description": "Otomatik olarak VTS token'ını alır ve ana sayfaya gönderir",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://vts.kentkart.com.tr/*",
+    "https://*.vercel.app/*",
+    "http://localhost:*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://vts.kentkart.com.tr/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
