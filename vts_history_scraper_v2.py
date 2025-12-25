@@ -327,15 +327,24 @@ def analyze_crossings_linear(history_data, plaka):
             
             if moving_away_from_start and moving_toward_control and movement_distance > 5:
                 if not is_moving_to_control:
-                    # Hareket başladı!
-                    is_moving_to_control = True
-                    movement_start_time = time_str
-                    movement_start_distance = previous_distance_to_start
-                    total_distance_moved = 0
+                    # DURAK'a yakınlık kontrolü - BAŞLANGIÇTA kontrol et
+                    distance_to_durak = haversine_distance(
+                        DURAK_CONFIG['enlem'],
+                        DURAK_CONFIG['boylam'],
+                        previous_lat, previous_lon
+                    )
                     
-                    # Debug tracking
-                    leaving_ever_triggered = True
-                    debug_leaving_start_distance = movement_start_distance
+                    # DURAK'a 400m içinde mi? (START_POINT yakınında olmalı)
+                    if distance_to_durak < 400:
+                        # Hareket başladı!
+                        is_moving_to_control = True
+                        movement_start_time = time_str
+                        movement_start_distance = previous_distance_to_start
+                        total_distance_moved = 0
+                        
+                        # Debug tracking
+                        leaving_ever_triggered = True
+                        debug_leaving_start_distance = movement_start_distance
                 
                 # Hareket devam ediyor
                 if is_moving_to_control:
@@ -343,39 +352,27 @@ def analyze_crossings_linear(history_data, plaka):
                     
                     # 200m KONTROL: KONTROL_NOKTASI yönünde 200m hareket etti mi?
                     if total_distance_moved >= 200:
-                        # DURAK'a yakınlık kontrolü
-                        distance_to_durak = haversine_distance(
-                            DURAK_CONFIG['enlem'],
-                            DURAK_CONFIG['boylam'],
-                            lat, lon
-                        )
-                        
-                        # START_POINT ile DURAK arası mesafe
-                        start_durak_distance = haversine_distance(
-                            START_POINT['enlem'],
-                            START_POINT['boylam'],
-                            DURAK_CONFIG['enlem'],
-                            DURAK_CONFIG['boylam']
-                        )
-                        
-                        # DURAK'a makul mesafede mi?
-                        if distance_to_durak < (start_durak_distance + 100):
-                            # GEÇİŞ TESPİT EDİLDİ!
-                            if movement_start_time and len(movement_start_time) >= 14:
-                                gecis_time = datetime.strptime(movement_start_time[:14], '%Y%m%d%H%M%S')
-                                
-                                gecis = {
-                                    'plaka': plaka,
-                                    'durak_adi': DURAK_CONFIG['adi'],
-                                    'gecis_zamani': gecis_time,
-                                    'min_mesafe': round(movement_start_distance, 1),
-                                    'cikis_mesafe': round(total_distance_moved, 1)
-                                }
-                                
-                                gecisler.append(gecis)
-                                print(f"      OK {gecis_time.strftime('%H:%M:%S')} - StartDist: {movement_start_distance:.1f}m, Moved: {total_distance_moved:.1f}m, DurakDist: {distance_to_durak:.1f}m")
-                        else:
-                            print(f"      SKIP (Duraktan uzak: {distance_to_durak:.1f}m)")
+                        # GEÇİŞ TESPİT EDİLDİ!
+                        if movement_start_time and len(movement_start_time) >= 14:
+                            gecis_time = datetime.strptime(movement_start_time[:14], '%Y%m%d%H%M%S')
+                            
+                            # Final position (after 200m movement)
+                            final_distance_from_durak = haversine_distance(
+                                DURAK_CONFIG['enlem'],
+                                DURAK_CONFIG['boylam'],
+                                lat, lon
+                            )
+                            
+                            gecis = {
+                                'plaka': plaka,
+                                'durak_adi': DURAK_CONFIG['adi'],
+                                'gecis_zamani': gecis_time,
+                                'min_mesafe': round(movement_start_distance, 1),
+                                'cikis_mesafe': round(total_distance_moved, 1)
+                            }
+                            
+                            gecisler.append(gecis)
+                            print(f"      OK {gecis_time.strftime('%H:%M:%S')} - StartDist: {movement_start_distance:.1f}m, Moved: {total_distance_moved:.1f}m, FinalDist: {final_distance_from_durak:.1f}m")
                         
                         # Reset için hareket durduğunda
                         is_moving_to_control = False
