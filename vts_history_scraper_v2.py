@@ -57,8 +57,8 @@ DURAK_CONFIG = {
 
 # İlk koordinat (Başlangıç noktası - otobüsler buradan gelir)
 START_POINT = {
-    'enlem': 36.837545,
-    'boylam': 30.596079
+    'enlem': 36.830803,
+    'boylam': 30.596275
 }
 
 # İkinci kontrol noktası (Hedef yön - gerçek çıkışlar bu yöne gider)
